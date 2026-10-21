@@ -1,19 +1,5 @@
 # Bloxorz
 
-## A* solver
-
-Đã có A* chạy độc lập qua CLI, hỗ trợ cầu/công tắc và tách/ghép khối:
-
-```bash
-python -m solvers.astar levels/level_01.json
-python -m pytest
-```
-
-Cài dependency trong `requirements.txt` trước khi chạy. Xem
-[hướng dẫn A*](docs/astar.md) để đọc thiết kế trạng thái, heuristic, thống kê,
-quy ước cơ chế và API tích hợp GUI. `main.py` và GUI hiện chưa triển khai;
-mô tả bên dưới là thiết kế tổng thể dự kiến của dự án.
-
 Tài liệu này mô tả cấu trúc dự án và vai trò của các thành phần đã tạo cho game
 Bloxorz bằng Python và Pygame. Đây là bộ khung có thể cài đặt, chạy màn mẫu và
 mở rộng thêm màn chơi, cơ chế, hình ảnh, âm thanh và hoạt ảnh.
