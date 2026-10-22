@@ -32,6 +32,12 @@ Bloxorz/
 │   ├── level_loader.py
 │   ├── level_manager.py
 │   └── level_01.json
+├── solvers/
+│   ├── common.py
+│   ├── BFS.py
+│   ├── DFS.py
+│   ├── UCS.py
+│   └── astar.py
 ├── rendering/
 │   ├── __init__.py
 │   ├── board_renderer.py
@@ -146,6 +152,35 @@ Trong `level_01.json`, công tắc mềm đảo cầu `north_bridge`; công tắ
 cầu đó mở vĩnh viễn; công tắc tách đưa hai khối đơn tới các tọa độ đã định sẵn.
 Ô `[3, 2]` là ô dễ vỡ. Hai vị trí tách `[1, 5]` và `[3, 5]` đã được khai báo
 trong `tiles` và được đặt cách nhau một ô để không nhập lại ngay sau khi tách.
+
+### `solvers/` — các thuật toán tìm lời giải
+
+Các solver nhận trạng thái hiện tại của Bloxorz, sinh các nước đi hợp lệ thông qua
+`core/`, kiểm tra trạng thái đã thăm và trả về chuỗi hướng di chuyển dẫn tới ô đích.
+Trạng thái tìm kiếm cần bao gồm vị trí, tư thế của block và trạng thái các cơ chế trên
+bàn (ví dụ trạng thái đóng/mở của bridge), không chỉ riêng tọa độ block.
+
+- **`common.py`**: Chứa các kiểu dữ liệu và hàm dùng chung cho các solver, chẳng hạn
+  biểu diễn trạng thái, sinh successor, kiểm tra trạng thái đích, khôi phục đường đi
+  và thống kê số node đã mở rộng. Các thuật toán khác nhau nên dùng chung phần này
+  để bảo đảm kết quả và cách đo lường nhất quán.
+- **`BFS.py`**: Cài đặt Breadth-First Search. Thuật toán duyệt theo từng lớp độ sâu,
+  dùng hàng đợi FIFO và tập `visited`. Khi mỗi nước đi có cùng chi phí, BFS tìm được
+  lời giải có ít bước nhất; đổi lại có thể dùng nhiều bộ nhớ.
+- **`DFS.py`**: Cài đặt Depth-First Search. Thuật toán đi sâu theo một nhánh trước,
+  dùng stack hoặc đệ quy và tập trạng thái đã thăm để tránh chu kỳ. DFS thường ít
+  tốn bộ nhớ hơn BFS nhưng không bảo đảm lời giải ngắn nhất; nên có giới hạn độ sâu
+  hoặc cơ chế chống lặp phù hợp.
+- **`UCS.py`**: Cài đặt Uniform-Cost Search. Thuật toán dùng hàng đợi ưu tiên và luôn
+  mở rộng trạng thái có tổng chi phí từ đầu nhỏ nhất. Hàm chi phí phải được định nghĩa
+  rõ trong report; nếu mọi nước đi đều có cost bằng 1 thì UCS tương đương BFS.
+- **`astar.py`**: Cài đặt A*. Thuật toán ưu tiên trạng thái theo `f(n) = g(n) + h(n)`,
+  trong đó `g(n)` là chi phí đã đi và `h(n)` ước lượng chi phí còn lại. Heuristic có
+  thể dùng khoảng cách Manhattan kết hợp phạt tư thế chưa đứng; nếu heuristic không
+  vượt quá chi phí thật thì A* vẫn bảo đảm lời giải tối ưu theo hàm cost đã chọn.
+
+Tất cả solver cần dùng cùng một stage/test set và ghi lại thời gian tìm kiếm, bộ nhớ,
+số node mở rộng và độ dài lời giải để phục vụ phần thực nghiệm của project.
 
 ### `rendering/` — vẽ và hoạt ảnh
 
