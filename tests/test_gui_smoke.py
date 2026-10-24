@@ -114,11 +114,13 @@ def test_async_solver_bridge_and_replayer():
     game_screen.trigger_solve("BFS")
     assert game_screen.solver_bridge.state == SolverBridgeState.RUNNING
 
-    # Poll until worker completes (mock completes instantly, poll with timeout)
+    # Poll until worker completes with real-time timeout protection and sleep
     t0 = time.time()
-    while game_screen.solver_bridge.state == SolverBridgeState.RUNNING and (time.time() - t0) < 3.0:
+    while game_screen.solver_bridge.state == SolverBridgeState.RUNNING:
         game_screen.update(0.05)
-        time.sleep(0.02)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out after 3.0 seconds")
 
     assert game_screen.solver_bridge.state == SolverBridgeState.FINISHED
     assert game_screen.latest_result is not None
@@ -248,6 +250,45 @@ def test_game_screen_speed_button_cycle_and_persistence():
     game_screen.load_level(1)
     assert game_screen.speed_preset_idx == 0
     assert game_screen.btn_speed.text == "Speed: 0.5x"
+
+
+def test_game_screen_speed_button_click_and_persistence():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface)
+    assert "1.0x" in game_screen.btn_speed.text
+
+    # Post real mouse click on btn_speed
+    click_pos = game_screen.btn_speed.rect.center
+    down_ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=click_pos)
+    up_ev = pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=click_pos)
+    game_screen.handle_event(down_ev)
+    game_screen.handle_event(up_ev)
+
+    assert "2.0x" in game_screen.btn_speed.text
+
+    # Test persistence across restart and level switch
+    game_screen.restart_level()
+    assert "2.0x" in game_screen.btn_speed.text
+
+    game_screen.next_level()
+    assert "2.0x" in game_screen.btn_speed.text
+
+
+def test_strict_import_hygiene():
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    scanned_files = []
+    for folder in ("ui", "rendering"):
+        for py_path in (root / folder).rglob("*.py"):
+            if py_path.name == "dependencies.py":
+                continue
+            scanned_files.append(py_path)
+            content = py_path.read_text(encoding="utf-8")
+            assert "from tests.mocks" not in content, f"Direct mock import found in {py_path}"
+            assert "import tests.mocks" not in content, f"Direct mock import found in {py_path}"
+
+    assert len(scanned_files) >= 6
+
 
 
 
