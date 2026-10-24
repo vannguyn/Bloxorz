@@ -67,9 +67,8 @@ Bloxorz/
 
 ### Tệp ở thư mục gốc
 
-- **`main.py`**: Điểm khởi chạy game. Khởi tạo Pygame, tạo cửa sổ, nạp cấu hình
-  và màn chơi, chạy vòng lặp chính (nhận sự kiện, cập nhật trạng thái, vẽ hình),
-  rồi giải phóng tài nguyên khi thoát.
+- **`main.py`**: Chạy bộ kiểm tra nhanh các luật trong `core/` mà không cần mở
+  GUI; chương trình trả mã lỗi nếu có nhóm luật không đạt.
 - **`requirements.txt`**: Liệt kê các thư viện cần cài, tối thiểu là phiên bản
   Pygame phù hợp. Người chơi cài thư viện bằng `pip install -r requirements.txt`.
 - **`README.md`**: Tài liệu hướng dẫn cấu trúc dự án, cách cài đặt, chạy và kiểm
@@ -242,8 +241,8 @@ dung khi thiết lập quy trình đóng gói; không chỉnh sửa thủ công 
    chế và chiến thắng.
 3. **Nạp và quản lý màn**: Cài đặt loader có kiểm tra dữ liệu, manager chuyển
    màn và tạo ít nhất một màn JSON có thể chơi từ đầu đến đích.
-4. **Kết nối Pygame**: Cài đặt cấu hình, vòng lặp trong `main.py`, nhận phím,
-   cập nhật trạng thái theo logic và vẽ bàn/khối.
+4. **Kết nối Pygame**: Tạo điểm khởi chạy GUI riêng, nhận phím, cập nhật trạng
+   thái theo logic và vẽ bàn/khối.
 5. **Hoàn thiện trải nghiệm**: Thêm menu, HUD, tạm dừng, màn kết quả, hoạt ảnh,
    âm thanh và tài nguyên đồ họa. Kiểm tra có thể bắt đầu lại và chuyển màn.
 6. **Kiểm thử và đóng gói**: Chạy toàn bộ kiểm thử, thử chơi bằng bàn phím ở
@@ -259,6 +258,9 @@ python -m pip install -r requirements.txt
 python main.py
 python -m pytest
 ```
+
+`python main.py` chạy bộ kiểm tra luật dạng độc lập; `python -m pytest` chạy
+toàn bộ kiểm thử tự động.
 
 Nếu dự án chọn công cụ kiểm thử khác pytest, cập nhật lệnh và khai báo thư viện
 trong `requirements.txt` cho nhất quán.
