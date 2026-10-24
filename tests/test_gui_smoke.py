@@ -160,3 +160,40 @@ def test_button_hover_and_click():
     btn.handle_event(ev_up)
     assert btn.is_pressed is False
     assert clicked == [True]
+
+
+def test_dependencies_adapter_contract(monkeypatch):
+    from ui import dependencies
+    assert isinstance(dependencies.IS_MOCK_CORE, bool)
+    assert isinstance(dependencies.IS_MOCK_SOLVERS, bool)
+    assert dependencies.IS_MOCK_MODE == (dependencies.IS_MOCK_CORE or dependencies.IS_MOCK_SOLVERS)
+    assert callable(dependencies.apply_move)
+    assert callable(dependencies.is_goal)
+    assert callable(dependencies.get_solver)
+    assert callable(dependencies.run_solver)
+    assert callable(dependencies.get_levels)
+    assert len(dependencies.get_levels()) >= 4
+    solver = dependencies.get_solver("BFS")
+    assert solver is not None
+    assert dependencies.get_mode_badge_text() in (
+        "[REAL]", "[MOCK CORE]", "[MOCK SOLVERS]", "[MOCK CORE+SOLVERS]"
+    )
+
+    # Validate all 4 mode badge variations
+    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", False)
+    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", False)
+    assert dependencies.get_mode_badge_text() == "[REAL]"
+
+    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", True)
+    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", False)
+    assert dependencies.get_mode_badge_text() == "[MOCK CORE]"
+
+    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", False)
+    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", True)
+    assert dependencies.get_mode_badge_text() == "[MOCK SOLVERS]"
+
+    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", True)
+    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", True)
+    assert dependencies.get_mode_badge_text() == "[MOCK CORE+SOLVERS]"
+
+

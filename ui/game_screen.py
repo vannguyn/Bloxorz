@@ -13,15 +13,11 @@ from rendering.animation import SolutionReplayer
 from ui.button import Button
 from ui.result_screen import ResultOverlay
 from ui.solver_bridge import AsyncSolverBridge, SolverBridgeState
-
-# Swappable imports (mock core until M1 merge)
-from tests.mocks import (
+from ui.dependencies import (
     apply_move,
     is_goal,
-    mock_level_simple,
-    mock_level_with_fragile,
-    mock_level_with_bridge,
-    mock_level_split,
+    get_levels,
+    get_mode_badge_text,
 )
 
 
@@ -47,12 +43,7 @@ class GameScreen:
         self.block_renderer = BlockRenderer(self.board_renderer)
 
         # Available levels
-        self.levels: list[Level] = [
-            mock_level_simple(),
-            mock_level_with_fragile(),
-            mock_level_with_bridge(),
-            mock_level_split(),
-        ]
+        self.levels: list[Level] = get_levels()
         self.level_index = 0
         self.level: Level = self.levels[0]
 
@@ -303,6 +294,13 @@ class GameScreen:
         stats_info = f"Moves: {self.moves_count}{split_tag}"
         stats_surf = self.font_body.render(stats_info, True, settings.COLOR_TEXT_MAIN)
         self.surface.blit(stats_surf, (bx, y))
+        y += 24
+
+        # Mode Badge
+        badge_text = get_mode_badge_text()
+        badge_color = (70, 210, 245) if badge_text == "[REAL]" else (255, 160, 40)
+        badge_surf = self.font_mono.render(badge_text, True, badge_color)
+        self.surface.blit(badge_surf, (bx, y))
         y += 24
 
         # Section: Controls

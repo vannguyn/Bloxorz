@@ -9,15 +9,7 @@ import multiprocessing as mp
 from enum import Enum
 from typing import Callable
 from core.interfaces import GameState, Level, SolverResult
-from solvers.common import Solver, run_solver
-
-# Swappable import for solvers (Mock stubs until M3-M5 merge)
-from tests.mocks import (
-    MockBFSSolver,
-    MockDFSSolver,
-    MockUCSSolver,
-    MockAStarSolver,
-)
+from ui.dependencies import get_solver, run_solver
 
 
 class SolverBridgeState(Enum):
@@ -28,25 +20,12 @@ class SolverBridgeState(Enum):
     ERROR = "error"
 
 
-def _get_solver_instance(algo: str) -> Solver:
-    name = algo.strip().upper()
-    if name == "BFS":
-        return MockBFSSolver()
-    elif name == "DFS":
-        return MockDFSSolver()
-    elif name == "UCS":
-        return MockUCSSolver()
-    elif name in ("ASTAR", "A*"):
-        return MockAStarSolver()
-    raise ValueError(f"Unknown solver algorithm: {algo}")
-
-
 def on_solve(algo: str, level: Level, start: GameState) -> SolverResult:
     """
     Synchronous solver invocation per docs/parallel-engineering-plan.en.md §4.
     Runs the chosen solver directly and returns SolverResult.
     """
-    solver = _get_solver_instance(algo)
+    solver = get_solver(algo)
     return run_solver(solver, level, start)
 
 
@@ -58,7 +37,7 @@ def _worker_entry(
 ) -> None:
     """Entry point for the isolated background solver process."""
     try:
-        solver = _get_solver_instance(algo)
+        solver = get_solver(algo)
         res = run_solver(solver, level, start)
         result_queue.put(("SUCCESS", res))
     except Exception as exc:

@@ -8,8 +8,7 @@ from __future__ import annotations
 from typing import Callable
 from core.interfaces import GameState, Level
 
-# Swappable import for transition (mock until M1 core merges)
-from tests.mocks import apply_move
+# Integration adapter import for transitions deferred to bottom to avoid circular import with ui package
 
 
 class SolutionReplayer:
@@ -21,8 +20,10 @@ class SolutionReplayer:
         initial_state: GameState,
         path: list[str],
         step_delay: float = 0.35,
-        apply_fn: Callable[[GameState, str, Level], GameState | None] = apply_move,
+        apply_fn: Callable[[GameState, str, Level], GameState | None] | None = None,
     ):
+        if apply_fn is None:
+            apply_fn = apply_move
         self.level = level
         self.path = list(path)
         self.step_delay = step_delay
@@ -106,3 +107,8 @@ class SolutionReplayer:
             self.current_index += 1
             return True
         return False
+
+
+# Integration adapter import for transitions
+from ui.dependencies import apply_move  # noqa: E402
+
