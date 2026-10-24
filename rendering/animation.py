@@ -24,6 +24,7 @@ class SolutionReplayer:
         apply_fn: Callable[[GameState, str, Level], GameState | None] | None = None,
     ):
         if apply_fn is None:
+            from ui.dependencies import apply_move
             apply_fn = apply_move
         self.level = level
         self.path = list(path)
@@ -123,8 +124,4 @@ class SolutionReplayer:
             steps_taken += 1
 
         return changed
-
-
-# Integration adapter import for transitions
-from ui.dependencies import apply_move  # noqa: E402
 

@@ -61,7 +61,6 @@ class GameScreen:
         self.replayer: SolutionReplayer | None = None
 
         # Playback speed settings
-        self.SPEED_PRESETS = [0.5, 1.0, 2.0, 4.0]
         self.speed_preset_idx = 1  # Default 1.0x
 
         # Build UI Buttons
