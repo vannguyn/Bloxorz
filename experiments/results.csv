@@ -1,0 +1,17 @@
+level_id,level_name,algorithm,success,time_ms,memory_kb,expanded_nodes,solution_length,cost
+mock_simple,Mock 1: Simple Corridor,BFS,True,0.02,0,12,4,4.0
+mock_simple,Mock 1: Simple Corridor,DFS,True,0.005,0,28,4,4.0
+mock_simple,Mock 1: Simple Corridor,UCS,True,0.003,0,15,4,4.0
+mock_simple,Mock 1: Simple Corridor,A*,True,0.003,0,6,4,4.0
+mock_fragile,Mock 2: Fragile Tiles,BFS,True,0.003,0,12,4,4.0
+mock_fragile,Mock 2: Fragile Tiles,DFS,True,0.003,0,28,4,4.0
+mock_fragile,Mock 2: Fragile Tiles,UCS,True,0.002,0,15,4,4.0
+mock_fragile,Mock 2: Fragile Tiles,A*,True,0.003,0,6,4,4.0
+mock_bridge,Mock 3: Switches & Bridges,BFS,True,0.003,0,12,4,4.0
+mock_bridge,Mock 3: Switches & Bridges,DFS,True,0.002,0,28,4,4.0
+mock_bridge,Mock 3: Switches & Bridges,UCS,True,0.002,0,15,4,4.0
+mock_bridge,Mock 3: Switches & Bridges,A*,True,0.002,0,6,4,4.0
+mock_split,Mock 4: Split Cubes,BFS,True,0.002,0,12,4,4.0
+mock_split,Mock 4: Split Cubes,DFS,True,0.002,0,28,4,4.0
+mock_split,Mock 4: Split Cubes,UCS,True,0.002,0,15,4,4.0
+mock_split,Mock 4: Split Cubes,A*,True,0.002,0,6,4,4.0
