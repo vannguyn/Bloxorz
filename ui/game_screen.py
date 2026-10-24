@@ -24,6 +24,8 @@ from ui.dependencies import (
 class GameScreen:
     """Coordinates manual play, rendering, solver execution, and replay."""
 
+    SPEED_PRESETS = [0.5, 1.0, 2.0, 4.0]
+
     def __init__(self, surface: pygame.Surface):
         self.surface = surface
         self.board_rect = pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
@@ -58,6 +60,10 @@ class GameScreen:
         self.latest_result: SolverResult | None = None
         self.replayer: SolutionReplayer | None = None
 
+        # Playback speed settings
+        self.SPEED_PRESETS = [0.5, 1.0, 2.0, 4.0]
+        self.speed_preset_idx = 1  # Default 1.0x
+
         # Build UI Buttons
         self.buttons: list[Button] = []
         self._init_buttons()
@@ -89,13 +95,29 @@ class GameScreen:
 
         # Cancel button (for running search)
         self.btn_cancel = Button((bx, y, bw, 32), "Cancel Search", self.cancel_solve, enabled=False)
-        y += 48
+        y += 44
 
-        # Replay controls
-        rep_btn_w = (bw - 20) // 3
-        self.btn_replay_prev = Button((bx, y, rep_btn_w, 30), "< Step", self.replay_prev_step)
-        self.btn_replay_toggle = Button((bx + rep_btn_w + 10, y, rep_btn_w, 30), "Pause", self.replay_toggle_play)
-        self.btn_replay_next = Button((bx + (rep_btn_w + 10) * 2, y, rep_btn_w, 30), "Step >", self.replay_next_step)
+        # Replay Section Title is at rep_y = 398; place replay buttons below it
+        y += 32
+
+        # Replay controls: [< Step] [Pause] [Step >] [Speed: 1.0x]
+        w1, w2, w3 = 62, 58, 62
+        gap = 6
+        w4 = bw - (w1 + w2 + w3 + 3 * gap)  # 100
+        x1 = bx
+        x2 = x1 + w1 + gap
+        x3 = x2 + w2 + gap
+        x4 = x3 + w3 + gap
+
+        self.btn_replay_prev = Button((x1, y, w1, 30), "< Step", self.replay_prev_step)
+        self.btn_replay_toggle = Button((x2, y, w2, 30), "Pause", self.replay_toggle_play)
+        self.btn_replay_next = Button((x3, y, w3, 30), "Step >", self.replay_next_step)
+        self.btn_speed = Button(
+            (x4, y, w4, 30),
+            f"Speed: {self.SPEED_PRESETS[self.speed_preset_idx]}x",
+            self.cycle_speed,
+            enabled=True,
+        )
 
         self.buttons = [
             self.btn_prev_lvl,
@@ -109,6 +131,7 @@ class GameScreen:
             self.btn_replay_prev,
             self.btn_replay_toggle,
             self.btn_replay_next,
+            self.btn_speed,
         ]
 
     def load_level(self, index: int) -> None:
@@ -158,6 +181,13 @@ class GameScreen:
     def replay_next_step(self) -> None:
         if self.replayer:
             self.replayer.step_forward()
+
+    def cycle_speed(self) -> None:
+        self.speed_preset_idx = (self.speed_preset_idx + 1) % len(self.SPEED_PRESETS)
+        mult = self.SPEED_PRESETS[self.speed_preset_idx]
+        self.btn_speed.text = f"Speed: {mult}x"
+        if self.replayer:
+            self.replayer.set_speed_multiplier(mult)
 
     def handle_manual_move(self, action: str) -> None:
         """Processes manual roll or spacebar cube toggle."""
@@ -216,7 +246,13 @@ class GameScreen:
             if res:
                 self.latest_result = res
                 if res.success and res.path:
-                    self.replayer = SolutionReplayer(self.level, self.current_state, res.path)
+                    current_speed = self.SPEED_PRESETS[self.speed_preset_idx]
+                    self.replayer = SolutionReplayer(
+                        self.level,
+                        self.current_state,
+                        res.path,
+                        speed_multiplier=current_speed,
+                    )
                     self.btn_replay_toggle.text = "Pause"
                 else:
                     self.outcome_status = "UNSOLVABLE"
@@ -233,6 +269,7 @@ class GameScreen:
         self.btn_replay_prev.enabled = has_replayer
         self.btn_replay_toggle.enabled = has_replayer
         self.btn_replay_next.enabled = has_replayer
+        self.btn_speed.enabled = True
 
         # 3. Update Replay
         if self.replayer:

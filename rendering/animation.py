@@ -20,6 +20,7 @@ class SolutionReplayer:
         initial_state: GameState,
         path: list[str],
         step_delay: float = 0.35,
+        speed_multiplier: float = 1.0,
         apply_fn: Callable[[GameState, str, Level], GameState | None] | None = None,
     ):
         if apply_fn is None:
@@ -27,6 +28,7 @@ class SolutionReplayer:
         self.level = level
         self.path = list(path)
         self.step_delay = step_delay
+        self.speed_multiplier = float(speed_multiplier)
         self.apply_fn = apply_fn
 
         # Pre-compute or trace trajectory states
@@ -36,6 +38,13 @@ class SolutionReplayer:
         self.current_index = 0
         self.is_playing = True
         self.timer = 0.0
+
+    def set_speed_multiplier(self, multiplier: float) -> None:
+        self.speed_multiplier = float(multiplier)
+
+    @property
+    def effective_delay(self) -> float:
+        return self.step_delay / max(0.1, self.speed_multiplier)
 
     def _build_trajectory(self, start_state: GameState) -> None:
         curr = start_state
@@ -102,11 +111,18 @@ class SolutionReplayer:
             return False
 
         self.timer += dt
-        if self.timer >= self.step_delay:
-            self.timer -= self.step_delay
+        eff = self.effective_delay
+        changed = False
+        steps_taken = 0
+        max_steps_per_frame = 10  # Cap against frame freezes
+
+        while self.timer >= eff and not self.is_finished and steps_taken < max_steps_per_frame:
+            self.timer -= eff
             self.current_index += 1
-            return True
-        return False
+            changed = True
+            steps_taken += 1
+
+        return changed
 
 
 # Integration adapter import for transitions

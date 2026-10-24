@@ -197,3 +197,57 @@ def test_dependencies_adapter_contract(monkeypatch):
     assert dependencies.get_mode_badge_text() == "[MOCK CORE+SOLVERS]"
 
 
+def test_replayer_speed_control():
+    from tests.mocks import mock_level_simple
+    from core.interfaces import GameState
+    from rendering.animation import SolutionReplayer
+    level = mock_level_simple()
+    state = GameState(block=level.start, bridge_mask=0)
+    replayer = SolutionReplayer(level, state, ["R", "R", "R", "R"], step_delay=0.4)
+
+    assert replayer.speed_multiplier == 1.0
+    assert replayer.effective_delay == pytest.approx(0.4)
+
+    replayer.set_speed_multiplier(2.0)
+    assert replayer.speed_multiplier == 2.0
+    assert replayer.effective_delay == pytest.approx(0.2)
+
+    # Test update with drift-free accumulator
+    replayer.update(0.45)
+    # At delay 0.2, 0.45s should advance 2 steps (timer keeps remaining 0.05s)
+    assert replayer.current_index == 2
+    assert replayer.timer == pytest.approx(0.05)
+
+
+def test_game_screen_speed_button_cycle_and_persistence():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface)
+
+    assert game_screen.btn_speed.enabled is True
+    assert game_screen.btn_speed.text == "Speed: 1.0x"
+    assert game_screen.speed_preset_idx == 1
+
+    # Cycle speed: 1.0x -> 2.0x -> 4.0x -> 0.5x -> 1.0x
+    game_screen.cycle_speed()
+    assert game_screen.btn_speed.text == "Speed: 2.0x"
+    assert game_screen.speed_preset_idx == 2
+
+    game_screen.cycle_speed()
+    assert game_screen.btn_speed.text == "Speed: 4.0x"
+    assert game_screen.speed_preset_idx == 3
+
+    game_screen.cycle_speed()
+    assert game_screen.btn_speed.text == "Speed: 0.5x"
+    assert game_screen.speed_preset_idx == 0
+
+    # Persistence across restart and load_level
+    game_screen.restart_level()
+    assert game_screen.speed_preset_idx == 0
+    assert game_screen.btn_speed.text == "Speed: 0.5x"
+
+    game_screen.load_level(1)
+    assert game_screen.speed_preset_idx == 0
+    assert game_screen.btn_speed.text == "Speed: 0.5x"
+
+
+
