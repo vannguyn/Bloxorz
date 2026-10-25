@@ -9,15 +9,16 @@ from core.interfaces import GameState, Level, SolverResult
 from solvers.common import Solver, run_solver
 
 # --- Core Transition & Levels (Toggle to real core when M1 lands) ---
+from core.game_rules import apply_move, is_goal
+from levels.level_loader import load_all_levels
 from tests.mocks import (
-    apply_move,
-    is_goal,
     mock_level_simple,
     mock_level_with_fragile,
     mock_level_with_bridge,
     mock_level_split,
 )
-IS_MOCK_CORE: bool = True
+
+IS_MOCK_CORE: bool = False
 
 # --- Search Solvers & Harness (Toggle to real solvers when M3-M5 land) ---
 from tests.mocks import (
@@ -33,12 +34,14 @@ IS_MOCK_MODE: bool = IS_MOCK_CORE or IS_MOCK_SOLVERS
 
 def get_levels() -> list[Level]:
     """Returns the list of playable levels."""
-    return [
-        mock_level_simple(),
-        mock_level_with_fragile(),
-        mock_level_with_bridge(),
-        mock_level_split(),
-    ]
+    if IS_MOCK_CORE:
+        return [
+            mock_level_simple(),
+            mock_level_with_fragile(),
+            mock_level_with_bridge(),
+            mock_level_split(),
+        ]
+    return load_all_levels()
 
 
 def get_solver(algo: str) -> Solver:

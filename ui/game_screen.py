@@ -26,7 +26,7 @@ class GameScreen:
 
     SPEED_PRESETS = [0.5, 1.0, 2.0, 4.0]
 
-    def __init__(self, surface: pygame.Surface):
+    def __init__(self, surface: pygame.Surface, levels: list[Level] | None = None):
         self.surface = surface
         self.board_rect = pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
         self.sidebar_rect = pygame.Rect(
@@ -45,12 +45,13 @@ class GameScreen:
         self.block_renderer = BlockRenderer(self.board_renderer)
 
         # Available levels
-        self.levels: list[Level] = get_levels()
+        self.levels: list[Level] = list(levels) if levels is not None else get_levels()
         self.level_index = 0
         self.level: Level = self.levels[0]
 
         # State & Session
-        self.current_state: GameState = GameState(block=self.level.start, bridge_mask=0)
+        init_mask = getattr(self.level, "initial_bridge_mask", 0)
+        self.current_state: GameState = GameState(block=self.level.start, bridge_mask=init_mask)
         self.initial_state: GameState = self.current_state
         self.moves_count = 0
         self.outcome_status: str | None = None  # None, "WIN", "LOST_FALL", "LOST_FRAGILE", "UNSOLVABLE"
@@ -141,7 +142,8 @@ class GameScreen:
         self.latest_result = None
         self.outcome_status = None
         self.moves_count = 0
-        self.initial_state = GameState(block=self.level.start, bridge_mask=0)
+        init_mask = getattr(self.level, "initial_bridge_mask", 0)
+        self.initial_state = GameState(block=self.level.start, bridge_mask=init_mask)
         self.current_state = self.initial_state
 
     def next_level(self) -> None:

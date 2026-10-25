@@ -37,6 +37,15 @@ def init_pygame():
     pygame.quit()
 
 
+def _mock_levels():
+    return [
+        mock_level_simple(),
+        mock_level_with_fragile(),
+        mock_level_with_bridge(),
+        mock_level_split(),
+    ]
+
+
 def test_headless_game_initialization():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
@@ -47,7 +56,7 @@ def test_headless_game_initialization():
 
 def test_render_all_mock_levels():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
-    game_screen = GameScreen(surface)
+    game_screen = GameScreen(surface, levels=_mock_levels())
 
     # Render each mock level to ensure board & block renderers handle all tile types
     for idx in range(len(game_screen.levels)):
@@ -59,9 +68,23 @@ def test_render_all_mock_levels():
         assert any(b > 0 for b in raw_bytes)
 
 
-def test_manual_input_movement():
+def test_render_all_real_levels():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
+    assert len(game_screen.levels) == 10
+
+    # Render each real level to ensure board & block renderers handle all 10 levels
+    for idx in range(len(game_screen.levels)):
+        game_screen.load_level(idx)
+        game_screen.update(0.016)
+        game_screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+
+def test_manual_input_movement():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
     game_screen.load_level(0)  # Simple corridor
 
     start_pos = (game_screen.current_state.block.r, game_screen.current_state.block.c)
@@ -79,7 +102,7 @@ def test_manual_input_movement():
 
 def test_split_level_and_space_key():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
-    game_screen = GameScreen(surface)
+    game_screen = GameScreen(surface, levels=_mock_levels())
     # Mock level 3 is split level
     game_screen.load_level(3)
     assert game_screen.current_state.block.is_split is True
@@ -107,7 +130,7 @@ def test_sync_solver_bridge_contract():
 
 def test_async_solver_bridge_and_replayer():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
-    game_screen = GameScreen(surface)
+    game_screen = GameScreen(surface, levels=_mock_levels())
     game_screen.load_level(0)
 
     # Trigger async BFS solve
