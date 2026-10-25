@@ -9,7 +9,7 @@ from core.interfaces import GameState, Level, SolverResult
 from solvers.common import Solver, run_solver
 
 # --- Core Transition & Levels (Toggle to real core when M1 lands) ---
-from core.game_rules import apply_move, is_goal
+from core.game_rules import apply_move, is_goal, get_successors
 from levels.level_loader import load_all_levels
 from tests.mocks import (
     mock_level_simple,
@@ -75,6 +75,7 @@ __all__ = [
     "IS_MOCK_MODE",
     "apply_move",
     "is_goal",
+    "get_successors",
     "get_levels",
     "get_solver",
     "run_solver",

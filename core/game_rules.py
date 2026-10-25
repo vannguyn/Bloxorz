@@ -172,4 +172,29 @@ def apply_move(state: GameState, action: str, level: Level) -> GameState | None:
                                     elif mode == "close":
                                         new_bridge_mask &= ~(1 << idx)
 
+
     return GameState(block=next_block, bridge_mask=new_bridge_mask)
+
+
+def get_successors(state: GameState, level: Level) -> list[tuple[str, GameState]]:
+    """
+    Generates all valid (action, next_state) successor pairs from the current state.
+    Candidate actions are ('U', 'D', 'L', 'R') plus 'SPACE' when the block is split.
+    Used by search solvers (M3-M5: BFS, DFS, UCS, A*) for graph expansion.
+    """
+    actions = ("U", "D", "L", "R", "SPACE") if state.block.is_split else ("U", "D", "L", "R")
+    successors: list[tuple[str, GameState]] = []
+    for action in actions:
+        next_state = apply_move(state, action, level)
+        if next_state is not None:
+            successors.append((action, next_state))
+    return successors
+
+
+__all__ = [
+    "VALID_ACTIONS",
+    "is_goal",
+    "apply_move",
+    "get_successors",
+]
+

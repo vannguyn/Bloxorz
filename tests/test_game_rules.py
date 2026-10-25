@@ -594,3 +594,36 @@ class TestEdgeCasesAndImmutability:
         assert state.block.c == 1
         assert state.block.orientation == Orientation.STANDING
         assert state.bridge_mask == 0
+
+
+class TestGetSuccessors:
+    def test_get_successors_unsplit(self):
+        from core.game_rules import get_successors
+        level = create_simple_level()
+        state = GameState(
+            block=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+            bridge_mask=0,
+        )
+        succs = get_successors(state, level)
+        actions = [a for a, s in succs]
+        assert "R" in actions
+        assert "SPACE" not in actions
+
+    def test_get_successors_split(self):
+        from core.game_rules import get_successors
+        level = create_simple_level()
+        state = GameState(
+            block=BlockState(
+                r=1,
+                c=1,
+                orientation=Orientation.STANDING,
+                is_split=True,
+                cube_positions=((1, 1), (1, 4)),
+                active_cube=0,
+            ),
+            bridge_mask=0,
+        )
+        succs = get_successors(state, level)
+        actions = [a for a, s in succs]
+        assert "SPACE" in actions
+
