@@ -4,6 +4,8 @@ import pytest
 
 from core.interfaces import BlockState, GameState, Level, Orientation, Switch, TileType
 from rendering.isometric_board_renderer import IsometricBoardRenderer
+from rendering.isometric_block_renderer import IsometricBlockRenderer
+from config import settings
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -192,3 +194,158 @@ class TestIsometricBoardRenderer:
             surf = pygame.Surface((800, 600))
             renderer.draw(surf, lvl, st)
             assert renderer.tile_size >= 16
+
+
+class TestIsometricBlockRenderer:
+    def test_standing_block_renders_and_has_vertical_height(self):
+        """A standing block should render with height=2.0 above its base tile."""
+        board_renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+        level = create_test_level()
+        board_renderer.compute_layout(level)
+
+        block_renderer = IsometricBlockRenderer(board_renderer)
+        state = GameState(
+            block=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+            bridge_mask=0,
+        )
+
+        surf = pygame.Surface((800, 600))
+        surf.fill((0, 0, 0))
+        block_renderer.draw(surf, state)
+
+        # Check that top center of standing block (z ~ 1.5 - 2.0) contains non-black pixels
+        top_center_x, top_center_y = board_renderer.project(1.5, 1.5, 1.8)
+        assert surf.get_at((top_center_x, top_center_y))[:3] != (0, 0, 0)
+
+        # Count drawn pixels across block region
+        drawn = sum(
+            1 for x in range(top_center_x - 30, top_center_x + 30, 2)
+            for y in range(top_center_y - 30, top_center_y + 60, 2)
+            if surf.get_at((x, y))[:3] != (0, 0, 0)
+        )
+        assert drawn > 50
+
+    def test_lying_blocks_geometry(self):
+        """LYING_H (2 cols) and LYING_V (2 rows) must render across their occupied cells."""
+        board_renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+        level = create_test_level()
+        board_renderer.compute_layout(level)
+        block_renderer = IsometricBlockRenderer(board_renderer)
+
+        # LYING_H at (0, 0): spans (0, 0) and (0, 1)
+        state_h = GameState(
+            block=BlockState(r=0, c=0, orientation=Orientation.LYING_H),
+            bridge_mask=0,
+        )
+        surf_h = pygame.Surface((800, 600))
+        surf_h.fill((0, 0, 0))
+        block_renderer.draw(surf_h, state_h)
+
+        # Both cell centers at z=0.8 should have block pixels
+        p1 = board_renderer.project(0.5, 0.5, 0.8)
+        p2 = board_renderer.project(0.5, 1.5, 0.8)
+        assert surf_h.get_at(p1)[:3] != (0, 0, 0)
+        assert surf_h.get_at(p2)[:3] != (0, 0, 0)
+
+        # LYING_V at (0, 0): spans (0, 0) and (1, 0)
+        state_v = GameState(
+            block=BlockState(r=0, c=0, orientation=Orientation.LYING_V),
+            bridge_mask=0,
+        )
+        surf_v = pygame.Surface((800, 600))
+        surf_v.fill((0, 0, 0))
+        block_renderer.draw(surf_v, state_v)
+
+        pv1 = board_renderer.project(0.5, 0.5, 0.8)
+        pv2 = board_renderer.project(1.5, 0.5, 0.8)
+        assert surf_v.get_at(pv1)[:3] != (0, 0, 0)
+        assert surf_v.get_at(pv2)[:3] != (0, 0, 0)
+
+    def test_split_cubes_and_active_cube_highlight(self):
+        """Split cubes must both render, and the active cube must have golden highlight."""
+        board_renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+        level = create_test_level()
+        board_renderer.compute_layout(level)
+        block_renderer = IsometricBlockRenderer(board_renderer)
+
+        # Split: cube 0 at (0, 0) [active], cube 1 at (2, 1) [inactive]
+        state_0_active = GameState(
+            block=BlockState(
+                r=0, c=0, orientation=Orientation.STANDING,
+                is_split=True, cube_positions=((0, 0), (2, 1)), active_cube=0
+            ),
+            bridge_mask=0,
+        )
+        surf_0 = pygame.Surface((800, 600))
+        surf_0.fill((0, 0, 0))
+        block_renderer.draw(surf_0, state_0_active)
+
+        # Split: cube 0 inactive, cube 1 active
+        state_1_active = GameState(
+            block=BlockState(
+                r=0, c=0, orientation=Orientation.STANDING,
+                is_split=True, cube_positions=((0, 0), (2, 1)), active_cube=1
+            ),
+            bridge_mask=0,
+        )
+        surf_1 = pygame.Surface((800, 600))
+        surf_1.fill((0, 0, 0))
+        block_renderer.draw(surf_1, state_1_active)
+
+        # Both positions must be drawn
+        p_c0 = board_renderer.project(0.5, 0.5, 0.5)
+        p_c1 = board_renderer.project(2.5, 1.5, 0.5)
+        assert surf_0.get_at(p_c0)[:3] != (0, 0, 0)
+        assert surf_0.get_at(p_c1)[:3] != (0, 0, 0)
+
+        # Cube 0 top face center when active vs inactive should be visibly different (e.g. golden badge)
+        p_badge_0 = board_renderer.project(0.5, 0.5, 1.0)
+        color_active = surf_0.get_at(p_badge_0)[:3]
+        color_inactive = surf_1.get_at(p_badge_0)[:3]
+        assert color_active != color_inactive
+
+    def test_transition_interpolation_lift_and_lerp(self):
+        """Transition interpolation must smoothly move block and apply parabolic lift."""
+        board_renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+        level = create_test_level()
+        board_renderer.compute_layout(level)
+        block_renderer = IsometricBlockRenderer(board_renderer)
+
+        start_state = GameState(
+            block=BlockState(r=0, c=0, orientation=Orientation.STANDING),
+            bridge_mask=0,
+        )
+        end_state = GameState(
+            block=BlockState(r=0, c=1, orientation=Orientation.LYING_H),
+            bridge_mask=0,
+        )
+
+        # Render at intermediate progress steps without exception
+        surfaces = []
+        for prog in [0.0, 0.25, 0.5, 0.75, 1.0]:
+            surf = pygame.Surface((800, 600))
+            surf.fill((0, 0, 0))
+            block_renderer.draw(surf, start_state, transition_to=end_state, progress=prog)
+            surfaces.append(surf)
+
+        # Check midpoint (prog=0.5) has lift:
+        # At t=0.5, r=0, c=0.5, orientation snaps to LYING_H (h=1), lift ~ 0.25 - 0.35.
+        # Top of the block should be higher than a resting LYING_H block at z=0.
+        surf_mid = surfaces[2]
+        # Midpoint top face center: r=0.5, c=1.5, z=1.0 + lift ~ 1.35
+        p_elevated = board_renderer.project(0.5, 1.5, 1.3)
+        assert surf_mid.get_at(p_elevated)[:3] != (0, 0, 0)
+
+    def test_transition_progress_clamping(self):
+        """Progress values outside [0.0, 1.0] must be clamped without error."""
+        board_renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+        level = create_test_level()
+        board_renderer.compute_layout(level)
+        block_renderer = IsometricBlockRenderer(board_renderer)
+
+        s1 = GameState(block=BlockState(r=1, c=1, orientation=Orientation.STANDING), bridge_mask=0)
+        s2 = GameState(block=BlockState(r=1, c=2, orientation=Orientation.STANDING), bridge_mask=0)
+
+        surf = pygame.Surface((800, 600))
+        block_renderer.draw(surf, s1, transition_to=s2, progress=-0.5)
+        block_renderer.draw(surf, s1, transition_to=s2, progress=1.5)
