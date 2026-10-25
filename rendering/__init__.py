@@ -2,5 +2,6 @@
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
+from rendering.isometric_board_renderer import IsometricBoardRenderer
 
-__all__ = ["BoardRenderer", "BlockRenderer", "SolutionReplayer"]
+__all__ = ["BoardRenderer", "BlockRenderer", "SolutionReplayer", "IsometricBoardRenderer"]
