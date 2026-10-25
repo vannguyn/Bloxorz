@@ -1,0 +1,59 @@
+{
+  "id": "level_10",
+  "name": "Master Circuit",
+  "difficulty": "advanced",
+  "description": "Split, activate the bridge with one cube, reunite, then cross the fragile pair while lying flat.",
+  "width": 12,
+  "height": 9,
+  "start": {
+    "position": [5, 1],
+    "orientation": "standing"
+  },
+  "goal": [5, 10],
+  "tiles": [
+    [5, 1], [5, 2], [5, 3], [5, 4], [5, 7], [5, 8], [5, 9], [5, 10],
+    [4, 4], [4, 5], [3, 4], [3, 5], [3, 6],
+    [6, 4], [6, 5], [7, 4], [7, 5], [7, 6],
+    [4, 7], [3, 7], [6, 7], [7, 7], [5, 11]
+  ],
+  "fragile_tiles": [
+    [5, 8], [5, 9]
+  ],
+  "bridges": [
+    {
+      "id": "bridge_final",
+      "tiles": [[5, 5], [5, 6]],
+      "initial_state": "closed"
+    }
+  ],
+  "switches": [
+    {
+      "id": "split_master",
+      "type": "split",
+      "position": [5, 4],
+      "effect": {
+        "type": "split",
+        "destinations": [[4, 4], [6, 4]],
+        "trigger": "enter"
+      }
+    },
+    {
+      "id": "soft_master",
+      "type": "soft",
+      "position": [4, 5],
+      "effect": {
+        "type": "bridge",
+        "bridge_ids": ["bridge_final"],
+        "mode": "toggle",
+        "trigger": "enter"
+      }
+    }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": ["soft"],
+    "single_cube_cannot_activate": ["heavy", "split"]
+  }
+}

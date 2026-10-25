@@ -43,8 +43,6 @@ def main() -> None:
             pygame.display.flip()
 
     finally:
-        # Clean up solver worker process if any
-        game_screen.solver_bridge.cancel()
         pygame.quit()
 
 

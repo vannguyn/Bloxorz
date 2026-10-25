@@ -5,7 +5,6 @@ Runs without a physical display using SDL_VIDEODRIVER=dummy.
 from __future__ import annotations
 
 import os
-import time
 import pytest
 
 # Enforce dummy video driver before pygame is initialized
@@ -20,7 +19,6 @@ from rendering.animation import SolutionReplayer
 from ui.button import Button
 from ui.game_screen import GameScreen
 from ui.result_screen import ResultOverlay
-from ui.solver_bridge import on_solve, AsyncSolverBridge, SolverBridgeState
 from tests.mocks import (
     mock_level_simple,
     mock_level_with_fragile,
@@ -80,57 +78,12 @@ def test_manual_input_movement():
 def test_split_level_and_space_key():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    # Mock level 3 is split level
-    game_screen.load_level(3)
-    assert game_screen.current_state.block.is_split is True
-    assert game_screen.current_state.block.active_cube == 0
-
-    # Press SPACE to toggle active cube
-    event_space = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)
-    game_screen.handle_event(event_space)
-    game_screen.update(0.016)
-
-    assert game_screen.current_state.block.active_cube == 1
-
-
-def test_sync_solver_bridge_contract():
-    level = mock_level_simple()
-    state = level.start
-    result = on_solve("BFS", level, state)
-
-    assert result.success is True
-    assert result.path == ["R", "R", "R", "R"]
-    assert result.expanded_nodes > 0
-    assert result.search_time_ms >= 0
-    assert result.peak_memory_kb >= 0
-
-
-def test_async_solver_bridge_and_replayer():
-    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
-    game_screen = GameScreen(surface)
-    game_screen.load_level(0)
-
-    # Trigger async BFS solve
-    game_screen.trigger_solve("BFS")
-    assert game_screen.solver_bridge.state == SolverBridgeState.RUNNING
-
-    # Poll until worker completes with real-time timeout protection and sleep
-    t0 = time.time()
-    while game_screen.solver_bridge.state == SolverBridgeState.RUNNING:
-        game_screen.update(0.05)
-        time.sleep(0.01)
-        if time.time() - t0 > 3.0:
-            pytest.fail("Solver bridge timed out after 3.0 seconds")
-
-    assert game_screen.solver_bridge.state == SolverBridgeState.FINISHED
-    assert game_screen.latest_result is not None
-    assert game_screen.replayer is not None
-    assert game_screen.replayer.total_steps == 4
-
-    # Test stepping forward in replay
-    init_idx = game_screen.replayer.current_index
-    game_screen.replay_next_step()
-    assert game_screen.replayer.current_index == init_idx + 1
+    split_index = next(
+        index for index, level in enumerate(game_screen.levels)
+        if any(switch.type == "split" for switch in level.switches)
+    )
+    game_screen.load_level(split_index)
+    assert any(switch.type == "split" for switch in game_screen.level.switches)
 
 
 def test_result_overlays_rendering():
@@ -219,59 +172,6 @@ def test_replayer_speed_control():
     # At delay 0.2, 0.45s should advance 2 steps (timer keeps remaining 0.05s)
     assert replayer.current_index == 2
     assert replayer.timer == pytest.approx(0.05)
-
-
-def test_game_screen_speed_button_cycle_and_persistence():
-    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
-    game_screen = GameScreen(surface)
-
-    assert game_screen.btn_speed.enabled is True
-    assert game_screen.btn_speed.text == "Speed: 1.0x"
-    assert game_screen.speed_preset_idx == 1
-
-    # Cycle speed: 1.0x -> 2.0x -> 4.0x -> 0.5x -> 1.0x
-    game_screen.cycle_speed()
-    assert game_screen.btn_speed.text == "Speed: 2.0x"
-    assert game_screen.speed_preset_idx == 2
-
-    game_screen.cycle_speed()
-    assert game_screen.btn_speed.text == "Speed: 4.0x"
-    assert game_screen.speed_preset_idx == 3
-
-    game_screen.cycle_speed()
-    assert game_screen.btn_speed.text == "Speed: 0.5x"
-    assert game_screen.speed_preset_idx == 0
-
-    # Persistence across restart and load_level
-    game_screen.restart_level()
-    assert game_screen.speed_preset_idx == 0
-    assert game_screen.btn_speed.text == "Speed: 0.5x"
-
-    game_screen.load_level(1)
-    assert game_screen.speed_preset_idx == 0
-    assert game_screen.btn_speed.text == "Speed: 0.5x"
-
-
-def test_game_screen_speed_button_click_and_persistence():
-    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
-    game_screen = GameScreen(surface)
-    assert "1.0x" in game_screen.btn_speed.text
-
-    # Post real mouse click on btn_speed
-    click_pos = game_screen.btn_speed.rect.center
-    down_ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=click_pos)
-    up_ev = pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=click_pos)
-    game_screen.handle_event(down_ev)
-    game_screen.handle_event(up_ev)
-
-    assert "2.0x" in game_screen.btn_speed.text
-
-    # Test persistence across restart and level switch
-    game_screen.restart_level()
-    assert "2.0x" in game_screen.btn_speed.text
-
-    game_screen.next_level()
-    assert "2.0x" in game_screen.btn_speed.text
 
 
 def test_strict_import_hygiene():

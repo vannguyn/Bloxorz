@@ -48,6 +48,11 @@ class BlockState:
 class GameState:
     block: BlockState
     bridge_mask: int  # bitmask: bit i = 1 -> bridge i open, 0 -> closed
+    # Runtime-only information kept by the UI adapter.  The original public
+    # contract intentionally remains compatible with callers that only pass
+    # ``block`` and ``bridge_mask``.
+    locked_switches: frozenset[str] = frozenset()
+    moves: int = 0
 
     def occupied_cells(self) -> list[tuple[int, int]]:
         return self.block.occupied_cells()
@@ -60,6 +65,11 @@ class Switch:
     position: tuple[int, int]
     bridge_ids: list[str]
     mode: str  # "toggle" | "permanent"
+    effect_type: str = "bridge"
+    state: str | None = None
+    trigger: str = "enter"
+    destinations: tuple[tuple[int, int], tuple[int, int]] | None = None
+    lock_after_activation: bool = False
 
 
 @dataclass
@@ -74,6 +84,10 @@ class Level:
     split_rules: dict
     id: str = "level_01"
     name: str = "Level"
+    difficulty: str = "basic"
+    description: str = ""
+    advanced_controls: tuple[str, ...] = ()
+    bridge_initial_states: dict[str, str] | None = None
 
 
 @dataclass

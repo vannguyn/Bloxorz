@@ -39,7 +39,7 @@ class ResultOverlay:
             border_color = settings.COLOR_TEXT_DANGER
             title_text = "FRAGILE TILE COLLAPSED!"
             title_color = settings.COLOR_TEXT_DANGER
-            sub_text = "The block cannot stand upright on fragile tiles! [Press R]"
+            sub_text = "Cover both fragile cells while lying flat! [Press R]"
         elif status == "LOST_FALL":
             border_color = settings.COLOR_TEXT_DANGER
             title_text = "YOU FELL INTO THE VOID!"

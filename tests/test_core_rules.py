@@ -35,11 +35,18 @@ def test_orientation_transition_table():
 
 
 def test_void_and_fragile_rules():
-    board = board_from_level()
+    board = Board(
+        width=5,
+        height=3,
+        tiles=frozenset((x, y) for x in range(5) for y in range(3)),
+        goal=(4, 2),
+        fragile_tiles=frozenset({(2, 1), (3, 1)}),
+    )
     states = board.initial_bridge_states()
-    assert not is_legal_piece(board, Block((0, 0)), states)
-    assert not is_legal_piece(board, Block((3, 2), Orientation.STANDING), states)
-    assert is_legal_piece(board, Block((2, 2), Orientation.HORIZONTAL), states)
+    assert not is_legal_piece(board, Block((5, 0)), states)
+    assert not is_legal_piece(board, Block((2, 1), Orientation.STANDING), states)
+    assert not is_legal_piece(board, Block((1, 1), Orientation.HORIZONTAL), states)
+    assert is_legal_piece(board, Block((2, 1), Orientation.HORIZONTAL), states)
 
     full_board = Board(
         width=3,
@@ -112,7 +119,19 @@ def test_closed_bridge_is_void_and_soft_switch_opens_it():
 
 
 def test_switch_weight_rules():
-    board = board_from_level()
+    board = Board.from_dict(
+        {
+            "width": 7,
+            "height": 7,
+            "tiles": [[x, y] for x in range(7) for y in range(7)],
+            "goal": [0, 0],
+            "switches": [
+                {"id": "soft", "type": "soft", "position": [2, 2]},
+                {"id": "heavy", "type": "heavy", "position": [4, 4]},
+                {"id": "split", "type": "split", "position": [5, 4]},
+            ],
+        }
+    )
     soft = board.switch_at((2, 2))
     heavy = board.switch_at((4, 4))
     split = board.switch_at((5, 4))

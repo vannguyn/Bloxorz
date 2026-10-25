@@ -1,0 +1,63 @@
+{
+  "id": "level_06",
+  "name": "Twin Controls",
+  "difficulty": "intermediate",
+  "description": "Use two soft switches on elevated side paths to open both bridge spans.",
+  "width": 11,
+  "height": 8,
+  "start": {
+    "position": [4, 1],
+    "orientation": "standing"
+  },
+  "goal": [4, 9],
+  "tiles": [
+    [4, 1], [4, 2], [4, 3], [4, 6], [4, 9],
+    [3, 2], [3, 3], [2, 2], [2, 3],
+    [3, 5], [2, 5], [3, 6], [2, 6], [3, 7], [2, 7],
+    [5, 6], [5, 7], [5, 8]
+  ],
+  "fragile_tiles": [],
+  "bridges": [
+    {
+      "id": "bridge_a",
+      "tiles": [[4, 4], [4, 5]],
+      "initial_state": "closed"
+    },
+    {
+      "id": "bridge_b",
+      "tiles": [[4, 7], [4, 8]],
+      "initial_state": "closed"
+    }
+  ],
+  "switches": [
+    {
+      "id": "soft_a",
+      "type": "soft",
+      "position": [3, 2],
+      "effect": {
+        "type": "bridge",
+        "bridge_ids": ["bridge_a"],
+        "mode": "toggle",
+        "trigger": "enter"
+      }
+    },
+    {
+      "id": "soft_b",
+      "type": "soft",
+      "position": [3, 6],
+      "effect": {
+        "type": "bridge",
+        "bridge_ids": ["bridge_b"],
+        "mode": "toggle",
+        "trigger": "enter"
+      }
+    }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": ["soft"],
+    "single_cube_cannot_activate": ["heavy", "split"]
+  }
+}
