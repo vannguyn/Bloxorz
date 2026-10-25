@@ -179,10 +179,13 @@ số node mở rộng và độ dài lời giải để phục vụ phần thự
 
 ### `rendering/` — vẽ và hoạt ảnh
 
-- **`board_renderer.py`**: Vẽ lưới, ô, ô đích, công tắc và cầu theo trạng thái
-  bàn chơi.
-- **`block_renderer.py`**: Vẽ khối ở đúng vị trí, tư thế và tỷ lệ trên màn hình.
-- **`animation.py`**: Nội suy chuyển động giữa vị trí cũ và mới để khối lăn mượt.
+- **`board_renderer.py`**: Chiếu lưới xoay ngược chiều kim đồng hồ 90 độ lên mặt
+  phẳng isometric; vẽ mặt sàn có viền/vân đá, cạnh sâu và các ô void như hố đen.
+- **`block_renderer.py`**: Vẽ block/cube dạng khối hộp 3D giả lập, tô sáng các mặt
+  và chiếu bóng theo trạng thái logic.
+- **`animation.py`**: Cấp tiến độ chuyển động cho replay; renderer nội suy vị trí
+  và góc lăn trong không gian 3D giả lập. Nước đi tay dùng cùng renderer;
+  bridge được gập mở/đóng khi switch kích hoạt.
   Hoạt ảnh chỉ trình bày nước đi đã được logic chấp nhận, không thay thế việc
   kiểm tra luật.
 
@@ -238,7 +241,7 @@ dung khi thiết lập quy trình đóng gói; không chỉnh sửa thủ công 
 3. **Nạp và quản lý màn**: Cài đặt loader có kiểm tra dữ liệu, manager chuyển
    màn và tạo ít nhất một màn JSON có thể chơi từ đầu đến đích.
 4. **Kết nối Pygame**: Tạo điểm khởi chạy GUI riêng, nhận phím, cập nhật trạng
-   thái theo logic và vẽ bàn/khối.
+   thái theo logic và vẽ bàn/khối theo phối cảnh isometric.
 5. **Hoàn thiện trải nghiệm**: Thêm menu, HUD, tạm dừng, màn kết quả, hoạt ảnh,
    âm thanh và tài nguyên đồ họa. Kiểm tra có thể bắt đầu lại và chuyển màn.
 6. **Kiểm thử và đóng gói**: Chạy toàn bộ kiểm thử, thử chơi bằng bàn phím ở

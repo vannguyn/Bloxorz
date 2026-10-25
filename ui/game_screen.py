@@ -28,6 +28,7 @@ class GameScreen:
     """Coordinates manual play, rendering, solver execution, and replay."""
 
     SPEED_PRESETS = [0.5, 1.0, 2.0, 4.0]
+    MANUAL_ANIMATION_SECONDS = 0.24
 
     def __init__(self, surface: pygame.Surface):
         self.surface = surface
@@ -37,7 +38,8 @@ class GameScreen:
         )
 
         # Fonts (Use default font to guarantee cross-platform availability without warnings)
-        self.font_title = pygame.font.Font(None, 28)
+        self.font_title = pygame.font.SysFont(None, 30, bold=True)
+        self.font_subtitle = pygame.font.SysFont(None, 17, bold=True)
         self.font_section = pygame.font.Font(None, 20)
         self.font_body = pygame.font.Font(None, 18)
         self.font_mono = pygame.font.Font(None, 16)
@@ -58,6 +60,8 @@ class GameScreen:
         self.initial_state: GameState = self.current_state
         self.moves_count = 0
         self.outcome_status: str | None = None  # None, "WIN", "LOST_FALL", "LOST_FRAGILE", "UNSOLVABLE"
+        self.manual_transition: tuple[GameState, GameState] | None = None
+        self.manual_transition_elapsed = 0.0
 
         # Solver & Replay
         self.solver_bridge = AsyncSolverBridge()
@@ -142,6 +146,8 @@ class GameScreen:
         self.level_index = self.level_manager.index
         self.solver_bridge.cancel()
         self.replayer = None
+        self.manual_transition = None
+        self.manual_transition_elapsed = 0.0
         self.latest_result = None
         self.outcome_status = None
         self.moves_count = 0
@@ -157,6 +163,8 @@ class GameScreen:
     def restart_level(self) -> None:
         self.solver_bridge.cancel()
         self.replayer = None
+        self.manual_transition = None
+        self.manual_transition_elapsed = 0.0
         self.outcome_status = None
         self.moves_count = 0
         self.current_state = self.initial_state
@@ -165,6 +173,8 @@ class GameScreen:
         if self.solver_bridge.state == SolverBridgeState.RUNNING:
             return
         self.replayer = None
+        self.manual_transition = None
+        self.manual_transition_elapsed = 0.0
         self.latest_result = None
         self.outcome_status = None
         self.solver_bridge.start_solve(algo, self.level, self.current_state)
@@ -201,12 +211,18 @@ class GameScreen:
         if self.replayer:
             self.replayer = None
 
+        previous_state = self.current_state
         next_state = apply_move(self.current_state, action, self.level)
         if next_state is None:
             self.outcome_status = "LOST_FALL"
             return
 
         self.current_state = next_state
+        if action != "SPACE" and previous_state.block != next_state.block:
+            self.manual_transition = (previous_state, next_state)
+            self.manual_transition_elapsed = 0.0
+        else:
+            self.manual_transition = None
         self.moves_count = self.current_state.moves
 
         if is_goal(self.current_state, self.level):
@@ -270,8 +286,14 @@ class GameScreen:
             self.replayer.update(dt)
             self.current_state = self.replayer.current_state
             self.moves_count = self.current_state.moves
+            self.manual_transition = None
             if self.replayer.is_finished and is_goal(self.current_state, self.level):
                 self.outcome_status = "WIN"
+        elif self.manual_transition is not None:
+            self.manual_transition_elapsed += max(0.0, dt)
+            if self.manual_transition_elapsed >= self.MANUAL_ANIMATION_SECONDS:
+                self.manual_transition = None
+                self.manual_transition_elapsed = 0.0
 
     def draw(self) -> None:
         """Paints the board, block, sidebar, and status overlays."""
@@ -279,13 +301,41 @@ class GameScreen:
         self.surface.fill(settings.COLOR_BG)
 
         # 1. Draw Board & Block
-        self.board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
-        next_state = self.replayer.next_state if self.replayer else None
+        if self.replayer:
+            bridge_transition = (
+                self.replayer.current_state,
+                self.replayer.next_state,
+                self.replayer.transition_progress,
+            ) if self.replayer.next_state is not None else None
+        elif self.manual_transition is not None:
+            bridge_transition = (
+                self.manual_transition[0],
+                self.manual_transition[1],
+                min(1.0, self.manual_transition_elapsed / self.MANUAL_ANIMATION_SECONDS),
+            )
+        else:
+            bridge_transition = None
+        self.board_renderer.draw(
+            self.surface,
+            self.level,
+            self.current_state,
+            self.board_rect,
+            bridge_transition=bridge_transition,
+        )
+        if self.replayer:
+            block_state = self.replayer.current_state
+            next_state = self.replayer.next_state
+            progress = self.replayer.transition_progress
+        elif self.manual_transition is not None:
+            block_state, next_state = self.manual_transition
+            progress = min(1.0, self.manual_transition_elapsed / self.MANUAL_ANIMATION_SECONDS)
+        else:
+            block_state, next_state, progress = self.current_state, None, 0.0
         self.block_renderer.draw(
             self.surface,
-            self.current_state,
+            block_state,
             transition_to=next_state,
-            progress=self.replayer.transition_progress if self.replayer else 0.0,
+            progress=progress,
         )
 
         # 2. Draw Win/Loss Overlay if applicable
@@ -316,10 +366,17 @@ class GameScreen:
         bx = self.sidebar_rect.left + 20
         y = 20
 
-        # Title
-        t_surf = self.font_title.render("BLOXORZ SOLVER", True, settings.COLOR_TEXT_MAIN)
-        self.surface.blit(t_surf, (bx, y))
-        y += 32
+        # Isometric cube mark and high-contrast game title.
+        icon_x, icon_y = bx + 14, y + 15
+        top = [(icon_x, icon_y - 11), (icon_x + 11, icon_y - 5), (icon_x, icon_y + 1), (icon_x - 11, icon_y - 5)]
+        pygame.draw.polygon(self.surface, (255, 180, 112), top)
+        pygame.draw.polygon(self.surface, (185, 82, 50), [top[3], top[2], (icon_x, icon_y + 13), (icon_x - 11, icon_y + 7)])
+        pygame.draw.polygon(self.surface, (135, 57, 42), [top[2], top[1], (icon_x + 11, icon_y + 7), (icon_x, icon_y + 13)])
+        title_surface = self.font_title.render("BLOXORZ", True, (247, 250, 255))
+        self.surface.blit(title_surface, (bx + 34, y - 1))
+        subtitle = self.font_subtitle.render("3D PUZZLE  /  AI SOLVER", True, settings.COLOR_TEXT_ACCENT)
+        self.surface.blit(subtitle, (bx + 35, y + 21))
+        y += 48
 
         # Level details
         lvl_info = f"{self.level.name} ({self.level.width}x{self.level.height})"

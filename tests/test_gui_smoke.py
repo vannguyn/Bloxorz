@@ -76,6 +76,13 @@ def test_manual_input_movement():
     assert game_screen.current_state.block.orientation == Orientation.HORIZONTAL
     assert game_screen.current_state.block.position == (start_pos[0] + 1, start_pos[1])
 
+    assert game_screen.manual_transition is not None
+    game_screen.update(game_screen.MANUAL_ANIMATION_SECONDS / 2)
+    assert game_screen.manual_transition_elapsed == pytest.approx(0.016 + game_screen.MANUAL_ANIMATION_SECONDS / 2)
+    game_screen.draw()
+    game_screen.update(game_screen.MANUAL_ANIMATION_SECONDS / 2)
+    assert game_screen.manual_transition is None
+
 
 def test_split_level_and_space_key():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
@@ -242,6 +249,93 @@ def test_replayer_draws_intermediate_block_position():
     )
 
 
+def test_board_uses_isometric_diamond_projection():
+    level = get_levels()[0]
+    renderer = BoardRenderer(settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
+    renderer.compute_layout(level, pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT))
+
+    origin = renderer.project(0, 0)
+    right = renderer.project(1, 0)
+    down = renderer.project(0, 1)
+    assert right[0] - origin[0] == pytest.approx(renderer.tile_size / 2, abs=1)
+    assert right[1] - origin[1] == pytest.approx(-renderer.tile_height / 2, abs=1)
+    assert down[0] - origin[0] == pytest.approx(renderer.tile_size / 2, abs=1)
+    assert down[1] - origin[1] == pytest.approx(renderer.tile_height / 2, abs=1)
+    assert renderer.tile_size > settings.TILE_SIZE * 1.65
+
+
+def test_void_tile_renders_as_a_black_hole():
+    surface = pygame.Surface((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    renderer = BoardRenderer(settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
+    level = get_levels()[0]
+    renderer.compute_layout(
+        level,
+        pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT),
+    )
+    renderer._draw_void(surface, 0, 0)
+    center = renderer._average(renderer.tile_corners(0, 0))
+
+    assert surface.get_at(center)[:3] == (2, 4, 8)
+
+
+def test_horizontal_roll_has_distinct_intermediate_animation_frames():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    level = get_levels()[0]
+    start = level.start_state
+    end = start.move("right")
+    assert end is not None
+    renderer = BoardRenderer(settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
+    renderer.compute_layout(
+        level,
+        pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT),
+    )
+    block_renderer = BlockRenderer(renderer)
+
+    block_renderer.draw(surface, start)
+    standing = pygame.image.tobytes(surface, "RGB")
+    block_renderer.draw(surface, start, transition_to=end, progress=0.5)
+    rolling = pygame.image.tobytes(surface, "RGB")
+    block_renderer.draw(surface, end)
+    horizontal = pygame.image.tobytes(surface, "RGB")
+
+    assert standing != rolling
+    assert rolling != horizontal
+
+
+def test_bridge_folds_between_closed_and_open_states():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    level = next(item for item in get_levels() if item.board.bridges)
+    bridge_id, bridge = next(iter(level.board.bridges.items()))
+    start = level.start_state
+    closed_states = start.bridge_map
+    open_states = dict(closed_states)
+    closed_states[bridge_id] = "closed"
+    open_states[bridge_id] = "open"
+    closed = GameState(level.board, start.block, bridge_states=closed_states)
+    opened = GameState(level.board, start.block, bridge_states=open_states)
+    renderer = BoardRenderer(settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
+
+    renderer.draw(
+        surface,
+        level,
+        opened,
+        pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT),
+        bridge_transition=(closed, opened, 0.5),
+    )
+    halfway = pygame.image.tobytes(surface, "RGB")
+    renderer.draw(
+        surface,
+        level,
+        opened,
+        pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT),
+        bridge_transition=(closed, opened, 1.0),
+    )
+    fully_open = pygame.image.tobytes(surface, "RGB")
+
+    assert bridge.tiles
+    assert halfway != fully_open
+
+
 def test_game_screen_speed_button_cycle_and_persistence():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
@@ -309,4 +403,3 @@ def test_strict_import_hygiene():
             assert "import tests.mocks" not in content, f"Direct mock import found in {py_path}"
 
     assert len(scanned_files) >= 6
-

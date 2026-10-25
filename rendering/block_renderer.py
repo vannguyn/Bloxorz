@@ -1,20 +1,23 @@
-"""
-Block Renderer for Bloxorz.
-Draws the 1x1x2 rectangular block across all orientations (Standing, Lying_H, Lying_V)
-and split 1x1x1 cubes with active cube indicators.
-"""
+"""Isometric 3D cuboid renderer for Bloxorz blocks and split cubes."""
+
 from __future__ import annotations
 
+import math
+
 import pygame
-from core.block import Block, Cube, Orientation
-from core.game_state import GameState
+
 from config import settings
-from entities.block_entity import BlockEntity
+from core.block import Block, Cube, Orientation, Piece
+from core.game_state import GameState
 from rendering.board_renderer import BoardRenderer
+
+Vector3 = tuple[float, float, float]
 
 
 class BlockRenderer:
-    """Renders the player block or split cubes atop the board."""
+    """Draws extruded cuboids and animates roll transitions in 3D space."""
+
+    CAMERA = (-1.0, 1.0, 1.4)
 
     def __init__(self, board_renderer: BoardRenderer):
         self.board_renderer = board_renderer
@@ -27,18 +30,18 @@ class BlockRenderer:
         transition_to: GameState | None = None,
         progress: float = 0.0,
     ) -> None:
+        progress = self._ease(min(1.0, max(0.0, progress)))
         if transition_to is not None and self._draw_transition(
-            surface, state, transition_to, min(1.0, max(0.0, progress))
+            surface, state, transition_to, progress
         ):
             return
-        block = state.block
+
         if state.is_split:
-            self._draw_split_cubes(surface, state)
-        else:
-            entity = BlockEntity(block)
-            if not isinstance(entity.piece, Block):
-                raise TypeError("A non-split game state must contain a solid block")
-            self._draw_solid_block(surface, entity.piece)
+            for index, piece in enumerate(state.pieces):
+                if isinstance(piece, Cube):
+                    self._draw_cube(surface, piece.position, index == 0, 0.0)
+        elif isinstance(state.block, Block):
+            self._draw_block(surface, state.block, settings.COLOR_BLOCK, 0.0)
 
     def _draw_transition(
         self,
@@ -47,135 +50,268 @@ class BlockRenderer:
         end: GameState,
         progress: float,
     ) -> bool:
-        if start.is_split != end.is_split:
+        if start.is_split or end.is_split:
+            if start.is_split and end.is_split:
+                if (
+                    start.controlled_index != end.controlled_index
+                    and sorted(piece.position for piece in start.pieces)
+                    == sorted(piece.position for piece in end.pieces)
+                ):
+                    return False
+                old = list(start.pieces)
+                new = list(end.pieces)
+                if len(old) != len(new):
+                    return False
+                if self._match_swapped_cubes(old, new):
+                    new.reverse()
+                for index, (first, second) in enumerate(zip(old, new)):
+                    if not isinstance(first, Cube) or not isinstance(second, Cube):
+                        return False
+                    position = self._lerp3(
+                        (first.position[0] + 0.5, first.position[1] + 0.5, 0.55),
+                        (second.position[0] + 0.5, second.position[1] + 0.5, 0.55),
+                        progress,
+                    )
+                    self._draw_cube(surface, (position[0] - 0.5, position[1] - 0.5), index == 0, math.sin(progress * math.pi) * 0.12)
+                return True
             return False
-        if start.is_split:
-            if (
-                start.controlled_index != end.controlled_index
-                and sorted(piece.position for piece in start.pieces)
-                == sorted(piece.position for piece in end.pieces)
-            ):
-                return False
-            start_pieces = start.pieces
-            end_pieces = end.pieces
-            if len(start_pieces) != len(end_pieces):
-                return False
-            start_positions = [piece.position for piece in start_pieces]
-            end_positions = [piece.position for piece in end_pieces]
-            direct = sum(
-                abs(a[0] - b[0]) + abs(a[1] - b[1])
-                for a, b in zip(start_positions, end_positions)
-            )
-            swapped = sum(
-                abs(a[0] - b[1]) + abs(a[1] - b[0])
-                for a, b in zip(start_positions, reversed(end_positions))
-            )
-            if swapped < direct:
-                end_positions.reverse()
-            for index, (origin, target) in enumerate(zip(start_positions, end_positions)):
-                origin_rect = self.board_renderer.get_cell_rect(*origin)
-                target_rect = self.board_renderer.get_cell_rect(*target)
-                rect = pygame.Rect(
-                    round(origin_rect.x + (target_rect.x - origin_rect.x) * progress),
-                    round(origin_rect.y + (target_rect.y - origin_rect.y) * progress),
-                    origin_rect.width,
-                    origin_rect.height,
-                )
-                self._draw_cube_rect(surface, rect, active=index == 0)
-            return True
 
-        start_piece = start.block
-        end_piece = end.block
-        if not isinstance(start_piece, Block) or not isinstance(end_piece, Block):
+        if not isinstance(start.block, Block) or not isinstance(end.block, Block):
             return False
-        start_rect = self._block_rect(start_piece)
-        end_rect = self._block_rect(end_piece)
-        rect = pygame.Rect(
-            round(start_rect.x + (end_rect.x - start_rect.x) * progress),
-            round(start_rect.y + (end_rect.y - start_rect.y) * progress),
-            round(start_rect.width + (end_rect.width - start_rect.width) * progress),
-            round(start_rect.height + (end_rect.height - start_rect.height) * progress),
+        if start.block == end.block:
+            return False
+
+        start_center = self._piece_center(start.block)
+        end_center = self._piece_center(end.block)
+        old_axis = self._long_axis(start.block.orientation)
+        new_axis = self._long_axis(end.block.orientation)
+        axis, angle = self._rotation_between(old_axis, new_axis)
+        center = self._lerp3(start_center, end_center, progress)
+        center = (center[0], center[1], center[2] + math.sin(progress * math.pi) * 0.28)
+        roll_progress = progress * progress * (3 - 2 * progress)
+        self._draw_oriented_block(
+            surface,
+            center,
+            old_axis,
+            axis,
+            angle * roll_progress,
+            settings.COLOR_BLOCK,
         )
-        pad = max(2, self.board_renderer.tile_size // 14)
-        body = rect.inflate(-pad * 2, -pad * 2)
-        pygame.draw.rect(surface, settings.COLOR_BLOCK, body, border_radius=4)
-        pygame.draw.rect(surface, settings.COLOR_BLOCK_BORDER, body, 2, border_radius=4)
         return True
 
-    def _block_rect(self, block: Block) -> pygame.Rect:
-        cells = block.cells
-        left = min(position[0] for position in cells)
-        top = min(position[1] for position in cells)
-        right = max(position[0] for position in cells)
-        bottom = max(position[1] for position in cells)
-        first = self.board_renderer.get_cell_rect(left, top)
-        last = self.board_renderer.get_cell_rect(right, bottom)
-        return pygame.Rect(first.left, first.top, last.right - first.left, last.bottom - first.top)
+    def _draw_block(
+        self,
+        surface: pygame.Surface,
+        block: Block,
+        color: tuple[int, int, int],
+        lift: float,
+    ) -> None:
+        self._draw_oriented_block(
+            surface,
+            self._piece_center(block, lift),
+            self._long_axis(block.orientation),
+            (0.0, 0.0, 0.0),
+            0.0,
+            color,
+        )
 
-    def _draw_cube_entity(self, surface: pygame.Surface, entity: BlockEntity) -> None:
-        cell_rect = self.board_renderer.get_cell_rect(*entity.piece.position)
-        self._draw_cube_rect(surface, cell_rect, entity.active)
+    def _draw_oriented_block(
+        self,
+        surface: pygame.Surface,
+        center: Vector3,
+        start_axis: Vector3,
+        roll_axis: Vector3,
+        roll_angle: float,
+        color: tuple[int, int, int],
+    ) -> None:
+        half_extents = (0.5, 0.5, 1.0)
+        vertices: list[Vector3] = []
+        for x_sign in (-1, 1):
+            for y_sign in (-1, 1):
+                for z_sign in (-1, 1):
+                    local = (
+                        x_sign * half_extents[0],
+                        y_sign * half_extents[1],
+                        z_sign * half_extents[2],
+                    )
+                    oriented = self._rotate_between(local, (0.0, 0.0, 1.0), start_axis)
+                    if roll_angle:
+                        oriented = self._rotate(oriented, roll_axis, roll_angle)
+                    vertices.append(
+                        (center[0] + oriented[0], center[1] + oriented[1], center[2] + oriented[2])
+                    )
+        self._draw_shadow(surface, center)
+        self._draw_cuboid_faces(surface, vertices, color)
+        seam = []
+        for x_sign, y_sign in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+            local = (x_sign * half_extents[0], y_sign * half_extents[1], 0.0)
+            oriented = self._rotate_between(local, (0.0, 0.0, 1.0), start_axis)
+            if roll_angle:
+                oriented = self._rotate(oriented, roll_axis, roll_angle)
+            seam.append(self._project((
+                center[0] + oriented[0],
+                center[1] + oriented[1],
+                center[2] + oriented[2],
+            )))
+        pygame.draw.polygon(
+            surface,
+            self._shade(settings.COLOR_BLOCK_BORDER, 0.82),
+            seam,
+            max(1, round(self.board_renderer.tile_size / 38)),
+        )
 
-    def _draw_cube_rect(self, surface: pygame.Surface, cell_rect: pygame.Rect, active: bool) -> None:
-        ts = self.board_renderer.tile_size
-        pad = max(4, ts // 8)
-        cube_rect = cell_rect.inflate(-pad * 2, -pad * 2)
-        if active:
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_TOP, cube_rect, border_radius=4)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_ACTIVE, cube_rect, 3, border_radius=4)
-            pygame.draw.circle(surface, (255, 255, 255), cube_rect.center, max(3, ts // 10))
-        else:
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_INACTIVE, cube_rect, border_radius=4)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_BORDER, cube_rect, 1, border_radius=4)
+    def _draw_cube(self, surface: pygame.Surface, position: tuple[float, float], active: bool, lift: float) -> None:
+        center = (position[0] + 0.5, position[1] + 0.5, 0.5 + lift)
+        self._draw_shadow(surface, center)
+        vertices = [
+            (center[0] + x * 0.42, center[1] + y * 0.42, center[2] + z * 0.42)
+            for x in (-1, 1)
+            for y in (-1, 1)
+            for z in (-1, 1)
+        ]
+        color = settings.COLOR_BLOCK_TOP if active else settings.COLOR_BLOCK_INACTIVE
+        self._draw_cuboid_faces(surface, vertices, color, active=active)
 
-    def _draw_solid_block(self, surface: pygame.Surface, block: Block) -> None:
-        x, y = block.position
-        cell_rect = self.board_renderer.get_cell_rect(x, y)
-        ts = self.board_renderer.tile_size
-        pad = max(2, ts // 14)
+    def _draw_shadow(self, surface: pygame.Surface, center: Vector3) -> None:
+        shadow_center = self.board_renderer.project(center[0], center[1], 0.015)
+        width = max(8, round(self.board_renderer.tile_size * 1.25))
+        height = max(5, round(self.board_renderer.tile_height * 0.58))
+        shadow = pygame.Surface((width + 4, height + 4), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (4, 8, 15, 112), (2, 2, width, height))
+        surface.blit(shadow, shadow.get_rect(center=shadow_center))
 
-        if block.orientation == Orientation.STANDING:
-            # 1x1 upright block: draw with prominent 3D bevel to convey height
-            b_rect = cell_rect.inflate(-pad * 2, -pad * 2)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK, b_rect, border_radius=4)
-            # Inset bevel
-            inner_rect = b_rect.inflate(-ts // 4, -ts // 4)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_TOP, inner_rect, border_radius=3)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_BORDER, b_rect, 2, border_radius=4)
+    def _draw_cuboid_faces(
+        self,
+        surface: pygame.Surface,
+        vertices: list[Vector3],
+        color: tuple[int, int, int],
+        *,
+        active: bool = False,
+    ) -> None:
+        sign_index = {
+            (x, y, z): index
+            for index, (x, y, z) in enumerate(
+                ( (xs, ys, zs) for xs in (-1, 1) for ys in (-1, 1) for zs in (-1, 1) )
+            )
+        }
+        face_specs = (
+            ((1, 0, 0), [(1, -1, -1), (1, 1, -1), (1, 1, 1), (1, -1, 1)], 0.76),
+            ((-1, 0, 0), [(-1, -1, -1), (-1, -1, 1), (-1, 1, 1), (-1, 1, -1)], 0.6),
+            ((0, 1, 0), [(-1, 1, -1), (-1, 1, 1), (1, 1, 1), (1, 1, -1)], 0.86),
+            ((0, -1, 0), [(-1, -1, -1), (1, -1, -1), (1, -1, 1), (-1, -1, 1)], 0.68),
+            ((0, 0, 1), [(-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)], 1.12),
+            ((0, 0, -1), [(-1, -1, -1), (-1, 1, -1), (1, 1, -1), (1, -1, -1)], 0.48),
+        )
+        faces = []
+        for _, corners, shade in face_specs:
+            points3d = [vertices[sign_index[corner]] for corner in corners]
+            first_edge = tuple(points3d[1][i] - points3d[0][i] for i in range(3))
+            second_edge = tuple(points3d[2][i] - points3d[0][i] for i in range(3))
+            normal = self._cross(first_edge, second_edge)
+            if self._dot(normal, self.CAMERA) <= 0:
+                continue
+            depth = sum(self._dot(point, self.CAMERA) for point in points3d) / 4
+            points2d = [self._project(point) for point in points3d]
+            faces.append((depth, points2d, self._shade(color, shade)))
 
+        for _, points, face_color in sorted(faces, key=lambda face: face[0]):
+            pygame.draw.polygon(surface, face_color, points)
+            outline = settings.COLOR_BLOCK_ACTIVE if active else settings.COLOR_BLOCK_BORDER
+            pygame.draw.polygon(surface, outline, points, max(1, round(self.board_renderer.tile_size / 35)))
+
+    def _project(self, point: Vector3) -> tuple[int, int]:
+        x, y, z = point
+        return self.board_renderer.project(x, y, z)
+
+    def _piece_center(self, block: Block, lift: float = 0.0) -> Vector3:
+        if block.orientation is Orientation.STANDING:
+            x, y = block.position[0] + 0.5, block.position[1] + 0.5
+            z = 1.0
         elif block.orientation is Orientation.HORIZONTAL:
-            # 2x1 horizontal block
-            rect_right = self.board_renderer.get_cell_rect(x + 1, y)
-            full_w = cell_rect.width + rect_right.width
-            full_rect = pygame.Rect(cell_rect.left + pad, cell_rect.top + pad, full_w - pad * 2, cell_rect.height - pad * 2)
+            x, y = block.position[0] + 1.0, block.position[1] + 0.5
+            z = 0.5
+        else:
+            x, y = block.position[0] + 0.5, block.position[1] + 1.0
+            z = 0.5
+        return (x, y, z + lift)
 
-            pygame.draw.rect(surface, settings.COLOR_BLOCK, full_rect, border_radius=4)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_BORDER, full_rect, 2, border_radius=4)
+    @staticmethod
+    def _long_axis(orientation: Orientation) -> Vector3:
+        if orientation is Orientation.HORIZONTAL:
+            return (1.0, 0.0, 0.0)
+        if orientation is Orientation.VERTICAL:
+            return (0.0, 1.0, 0.0)
+        return (0.0, 0.0, 1.0)
 
-            # Center seam
-            mid_x = cell_rect.right
-            pygame.draw.line(surface, settings.COLOR_BLOCK_BORDER, (mid_x, full_rect.top + 2), (mid_x, full_rect.bottom - 2), 2)
-            # Subtle top highlights
-            pygame.draw.line(surface, settings.COLOR_BLOCK_TOP, (full_rect.left + 3, full_rect.top + 3), (full_rect.right - 3, full_rect.top + 3), 1)
+    @classmethod
+    def _rotation_between(cls, start: Vector3, end: Vector3) -> tuple[Vector3, float]:
+        axis = cls._cross(start, end)
+        length = math.sqrt(cls._dot(axis, axis))
+        if length < 1e-8:
+            return (1.0, 0.0, 0.0), 0.0
+        axis = (axis[0] / length, axis[1] / length, axis[2] / length)
+        angle = math.acos(max(-1.0, min(1.0, cls._dot(start, end))))
+        return axis, angle
 
-        elif block.orientation is Orientation.VERTICAL:
-            # 1x2 vertical block
-            rect_down = self.board_renderer.get_cell_rect(x, y + 1)
-            full_h = cell_rect.height + rect_down.height
-            full_rect = pygame.Rect(cell_rect.left + pad, cell_rect.top + pad, cell_rect.width - pad * 2, full_h - pad * 2)
+    @classmethod
+    def _rotate_between(cls, vector: Vector3, start: Vector3, end: Vector3) -> Vector3:
+        axis, angle = cls._rotation_between(start, end)
+        return cls._rotate(vector, axis, angle)
 
-            pygame.draw.rect(surface, settings.COLOR_BLOCK, full_rect, border_radius=4)
-            pygame.draw.rect(surface, settings.COLOR_BLOCK_BORDER, full_rect, 2, border_radius=4)
+    @classmethod
+    def _rotate(cls, vector: Vector3, axis: Vector3, angle: float) -> Vector3:
+        if angle == 0:
+            return vector
+        cosine = math.cos(angle)
+        sine = math.sin(angle)
+        cross = cls._cross(axis, vector)
+        dot = cls._dot(axis, vector)
+        return (
+            vector[0] * cosine + cross[0] * sine + axis[0] * dot * (1 - cosine),
+            vector[1] * cosine + cross[1] * sine + axis[1] * dot * (1 - cosine),
+            vector[2] * cosine + cross[2] * sine + axis[2] * dot * (1 - cosine),
+        )
 
-            # Center seam
-            mid_y = cell_rect.bottom
-            pygame.draw.line(surface, settings.COLOR_BLOCK_BORDER, (full_rect.left + 2, mid_y), (full_rect.right - 2, mid_y), 2)
-            # Subtle top highlight
-            pygame.draw.line(surface, settings.COLOR_BLOCK_TOP, (full_rect.left + 3, full_rect.top + 3), (full_rect.right - 3, full_rect.top + 3), 1)
+    @staticmethod
+    def _cross(first: Vector3, second: Vector3) -> Vector3:
+        return (
+            first[1] * second[2] - first[2] * second[1],
+            first[2] * second[0] - first[0] * second[2],
+            first[0] * second[1] - first[1] * second[0],
+        )
 
-    def _draw_split_cubes(self, surface: pygame.Surface, state: GameState) -> None:
-        # GameState.pieces orders the controlled cube first.
-        for i, piece in enumerate(state.pieces):
-            assert isinstance(piece, Cube)
-            entity = BlockEntity(piece, active=i == 0)
-            self._draw_cube_entity(surface, entity)
+    @staticmethod
+    def _dot(first: Vector3, second: Vector3) -> float:
+        return sum(a * b for a, b in zip(first, second))
+
+    @staticmethod
+    def _lerp3(start: Vector3, end: Vector3, amount: float) -> Vector3:
+        return (
+            start[0] + (end[0] - start[0]) * amount,
+            start[1] + (end[1] - start[1]) * amount,
+            start[2] + (end[2] - start[2]) * amount,
+        )
+
+    @staticmethod
+    def _ease(amount: float) -> float:
+        return amount * amount * (3 - 2 * amount)
+
+    @staticmethod
+    def _shade(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
+        return tuple(max(0, min(255, round(channel * amount))) for channel in color)
+
+    @staticmethod
+    def _match_swapped_cubes(old: list[Piece], new: list[Piece]) -> bool:
+        if len(old) != 2 or len(new) != 2:
+            return False
+        direct = sum(
+            abs(first.position[0] - second.position[0]) + abs(first.position[1] - second.position[1])
+            for first, second in zip(old, new)
+            if isinstance(first, Cube) and isinstance(second, Cube)
+        )
+        swapped = sum(
+            abs(first.position[0] - second.position[0]) + abs(first.position[1] - second.position[1])
+            for first, second in zip(old, reversed(new))
+            if isinstance(first, Cube) and isinstance(second, Cube)
+        )
+        return swapped < direct
