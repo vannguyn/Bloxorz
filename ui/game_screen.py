@@ -9,6 +9,8 @@ from config import settings
 from core.interfaces import GameState, Level, Orientation, SolverResult, TileType
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
+from rendering.isometric_board_renderer import IsometricBoardRenderer
+from rendering.isometric_block_renderer import IsometricBlockRenderer
 from rendering.animation import SolutionReplayer
 from ui.button import Button
 from ui.result_screen import ResultOverlay
@@ -43,6 +45,11 @@ class GameScreen:
         # Renderers
         self.board_renderer = BoardRenderer(self.board_rect.width, self.board_rect.height)
         self.block_renderer = BlockRenderer(self.board_renderer)
+        self.iso_board_renderer = IsometricBoardRenderer(self.board_rect.width, self.board_rect.height)
+        self.iso_block_renderer = IsometricBlockRenderer(self.iso_board_renderer)
+
+        # View mode: "2D" (default) or "3D"
+        self.view_mode = "2D"
 
         # Available levels
         self.levels: list[Level] = list(levels) if levels is not None else get_levels()
@@ -79,8 +86,13 @@ class GameScreen:
         self.btn_next_lvl = Button((bx + half_w + 10, y, half_w, 32), "Next Level >", self.next_level)
         y += 42
 
-        # Restart
-        self.btn_restart = Button((bx, y, bw, 32), "Restart Stage (R)", self.restart_level)
+        # Restart & View Mode
+        self.btn_restart = Button((bx, y, half_w, 32), "Restart (R)", self.restart_level)
+        self.btn_view_mode = Button(
+            (bx + half_w + 10, y, half_w, 32),
+            f"View: {self.view_mode}",
+            self.cycle_view_mode,
+        )
         y += 50
 
         # Solvers
@@ -123,6 +135,7 @@ class GameScreen:
             self.btn_prev_lvl,
             self.btn_next_lvl,
             self.btn_restart,
+            self.btn_view_mode,
             self.btn_solve_bfs,
             self.btn_solve_dfs,
             self.btn_solve_ucs,
@@ -190,6 +203,12 @@ class GameScreen:
         if self.replayer:
             self.replayer.set_speed_multiplier(mult)
 
+    def cycle_view_mode(self) -> None:
+        """Toggles view mode between 2D top-down and 3D isometric view."""
+        self.view_mode = "3D" if self.view_mode == "2D" else "2D"
+        if hasattr(self, "btn_view_mode"):
+            self.btn_view_mode.text = f"View: {self.view_mode}"
+
     def handle_manual_move(self, action: str) -> None:
         """Processes manual roll or spacebar cube toggle."""
         if self.outcome_status is not None or self.solver_bridge.state == SolverBridgeState.RUNNING:
@@ -238,6 +257,8 @@ class GameScreen:
                 self.restart_level()
             elif event.key == pygame.K_n:
                 self.next_level()
+            elif event.key == pygame.K_v:
+                self.cycle_view_mode()
 
     def update(self, dt: float) -> None:
         """Polls async solver and updates replay animations."""
@@ -285,8 +306,12 @@ class GameScreen:
         self.surface.fill(settings.COLOR_BG)
 
         # 1. Draw Board & Block
-        self.board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
-        self.block_renderer.draw(self.surface, self.current_state)
+        if self.view_mode == "3D":
+            self.iso_board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
+            self.iso_block_renderer.draw(self.surface, self.current_state)
+        else:
+            self.board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
+            self.block_renderer.draw(self.surface, self.current_state)
 
         # 2. Draw Win/Loss Overlay if applicable
         if self.outcome_status is not None:
@@ -399,11 +424,13 @@ class GameScreen:
             self.surface.blit(line_surf, (bx + 12, box_y + 32 + i * 18))
 
         # Hotkeys footer
-        footer_y = 625
+        footer_y = 620
         h_surf1 = self.font_mono.render("Arrows/WASD: Roll  |  R: Restart", True, (110, 120, 140))
         h_surf2 = self.font_mono.render("SPACE: Switch Cube |  N: Next Level", True, (110, 120, 140))
+        h_surf3 = self.font_mono.render("V: Toggle 2D/3D", True, (110, 120, 140))
         self.surface.blit(h_surf1, (bx, footer_y))
-        self.surface.blit(h_surf2, (bx, footer_y + 18))
+        self.surface.blit(h_surf2, (bx, footer_y + 17))
+        self.surface.blit(h_surf3, (bx, footer_y + 34))
 
         # Render all buttons
         for btn in self.buttons:

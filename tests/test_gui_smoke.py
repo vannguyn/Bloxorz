@@ -313,5 +313,65 @@ def test_strict_import_hygiene():
     assert len(scanned_files) >= 6
 
 
+def test_view_mode_toggle_and_persistence():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface)
+
+    # 1. Starts with "2D" mode as default
+    assert game_screen.view_mode == "2D"
+    assert hasattr(game_screen, "btn_view_mode")
+    assert "2D" in game_screen.btn_view_mode.text
+
+    # 2. cycle_view_mode() switches to "3D" and updates button text
+    game_screen.cycle_view_mode()
+    assert game_screen.view_mode == "3D"
+    assert "3D" in game_screen.btn_view_mode.text
+
+    # 3. Pressing 'V' key toggles view mode back to "2D" then "3D"
+    ev_v = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v)
+    game_screen.handle_event(ev_v)
+    assert game_screen.view_mode == "2D"
+    assert "2D" in game_screen.btn_view_mode.text
+
+    game_screen.handle_event(ev_v)
+    assert game_screen.view_mode == "3D"
+    assert "3D" in game_screen.btn_view_mode.text
+
+    # 4. Clicking btn_view_mode via mouse event toggles back to "2D" then "3D"
+    click_pos = game_screen.btn_view_mode.rect.center
+    down_ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=click_pos)
+    up_ev = pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=click_pos)
+    game_screen.handle_event(down_ev)
+    game_screen.handle_event(up_ev)
+    assert game_screen.view_mode == "2D"
+    assert "2D" in game_screen.btn_view_mode.text
+
+    game_screen.handle_event(down_ev)
+    game_screen.handle_event(up_ev)
+    assert game_screen.view_mode == "3D"
+    assert "3D" in game_screen.btn_view_mode.text
+
+    # 5. Calling restart_level() and load_level(1) preserves view_mode == "3D"
+    game_screen.restart_level()
+    assert game_screen.view_mode == "3D"
+    assert "3D" in game_screen.btn_view_mode.text
+
+    game_screen.load_level(1)
+    assert game_screen.view_mode == "3D"
+    assert "3D" in game_screen.btn_view_mode.text
+
+    # 6. Rendering with game_screen.draw() in both "2D" and "3D" runs cleanly and produces non-empty surface pixels
+    game_screen.draw()
+    raw_3d = pygame.image.tobytes(surface, "RGB")
+    assert any(b > 0 for b in raw_3d)
+
+    game_screen.cycle_view_mode()
+    assert game_screen.view_mode == "2D"
+    game_screen.draw()
+    raw_2d = pygame.image.tobytes(surface, "RGB")
+    assert any(b > 0 for b in raw_2d)
+
+
+
 
 
