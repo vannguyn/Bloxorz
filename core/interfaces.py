@@ -13,6 +13,18 @@ class Orientation(Enum):
     LYING_H = 1    # occupies (r, c) and (r, c+1)
     LYING_V = 2    # occupies (r, c) and (r+1, c)
 
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            v = value.strip().upper()
+            if v in ("STANDING", "STAND", "0"):
+                return cls.STANDING
+            if v in ("HORIZONTAL", "LYING_H", "H", "1"):
+                return cls.LYING_H
+            if v in ("VERTICAL", "LYING_V", "V", "2"):
+                return cls.LYING_V
+        return None
+
 
 class TileType(Enum):
     VOID = 0
@@ -20,6 +32,15 @@ class TileType(Enum):
     GOAL = 2
     FRAGILE = 3    # orange — only supports lying block
     BRIDGE = 4     # passability controlled by switches
+    SWITCH = 5
+
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            v = value.strip().upper()
+            if v in cls.__members__:
+                return cls.__members__[v]
+        return None
 
 
 @dataclass(frozen=True)
@@ -60,6 +81,7 @@ class Switch:
     position: tuple[int, int]
     bridge_ids: list[str]
     mode: str  # "toggle" | "permanent"
+    destinations: tuple[tuple[int, int], tuple[int, int]] | None = None
 
 
 @dataclass
@@ -74,6 +96,7 @@ class Level:
     split_rules: dict
     id: str = "level_01"
     name: str = "Level"
+    initial_bridge_mask: int = 0
 
 
 @dataclass
