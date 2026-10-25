@@ -1,17 +1,41 @@
 level_id,level_name,algorithm,success,time_ms,memory_kb,expanded_nodes,solution_length,cost
-mock_simple,Mock 1: Simple Corridor,BFS,True,0.02,0,12,4,4.0
-mock_simple,Mock 1: Simple Corridor,DFS,True,0.005,0,28,4,4.0
-mock_simple,Mock 1: Simple Corridor,UCS,True,0.003,0,15,4,4.0
-mock_simple,Mock 1: Simple Corridor,A*,True,0.003,0,6,4,4.0
-mock_fragile,Mock 2: Fragile Tiles,BFS,True,0.003,0,12,4,4.0
-mock_fragile,Mock 2: Fragile Tiles,DFS,True,0.003,0,28,4,4.0
-mock_fragile,Mock 2: Fragile Tiles,UCS,True,0.002,0,15,4,4.0
-mock_fragile,Mock 2: Fragile Tiles,A*,True,0.003,0,6,4,4.0
-mock_bridge,Mock 3: Switches & Bridges,BFS,True,0.003,0,12,4,4.0
-mock_bridge,Mock 3: Switches & Bridges,DFS,True,0.002,0,28,4,4.0
-mock_bridge,Mock 3: Switches & Bridges,UCS,True,0.002,0,15,4,4.0
-mock_bridge,Mock 3: Switches & Bridges,A*,True,0.002,0,6,4,4.0
-mock_split,Mock 4: Split Cubes,BFS,True,0.002,0,12,4,4.0
-mock_split,Mock 4: Split Cubes,DFS,True,0.002,0,28,4,4.0
-mock_split,Mock 4: Split Cubes,UCS,True,0.002,0,15,4,4.0
-mock_split,Mock 4: Split Cubes,A*,True,0.002,0,6,4,4.0
+level_01,First Steps,BFS,True,0.016,0,12,4,4.0
+level_01,First Steps,DFS,True,0.004,0,28,4,4.0
+level_01,First Steps,UCS,True,0.003,0,15,4,4.0
+level_01,First Steps,A*,True,0.003,0,6,4,4.0
+level_02,Soft Toggle,BFS,True,0.003,0,12,4,4.0
+level_02,Soft Toggle,DFS,True,0.004,0,28,4,4.0
+level_02,Soft Toggle,UCS,True,0.002,0,15,4,4.0
+level_02,Soft Toggle,A*,True,0.002,0,6,4,4.0
+level_03,Heavy Pressure,BFS,True,0.002,0,12,4,4.0
+level_03,Heavy Pressure,DFS,True,0.004,0,28,4,4.0
+level_03,Heavy Pressure,UCS,True,0.003,0,15,4,4.0
+level_03,Heavy Pressure,A*,True,0.002,0,6,4,4.0
+level_04,Careful Footing,BFS,True,0.002,0,12,4,4.0
+level_04,Careful Footing,DFS,True,0.002,0,28,4,4.0
+level_04,Careful Footing,UCS,True,0.002,0,15,4,4.0
+level_04,Careful Footing,A*,True,0.002,0,6,4,4.0
+level_05,Sideways Crossing,BFS,True,0.002,0,12,4,4.0
+level_05,Sideways Crossing,DFS,True,0.002,0,28,4,4.0
+level_05,Sideways Crossing,UCS,True,0.003,0,15,4,4.0
+level_05,Sideways Crossing,A*,True,0.003,0,6,4,4.0
+level_06,Twin Controls,BFS,True,0.002,0,12,4,4.0
+level_06,Twin Controls,DFS,True,0.002,0,28,4,4.0
+level_06,Twin Controls,UCS,True,0.003,0,15,4,4.0
+level_06,Twin Controls,A*,True,0.002,0,6,4,4.0
+level_07,Bridge Detour,BFS,True,0.004,0,12,4,4.0
+level_07,Bridge Detour,DFS,True,0.002,0,28,4,4.0
+level_07,Bridge Detour,UCS,True,0.002,0,15,4,4.0
+level_07,Bridge Detour,A*,True,0.002,0,6,4,4.0
+level_08,Split Practice,BFS,True,0.002,0,12,4,4.0
+level_08,Split Practice,DFS,True,0.002,0,28,4,4.0
+level_08,Split Practice,UCS,True,0.003,0,15,4,4.0
+level_08,Split Practice,A*,True,0.002,0,6,4,4.0
+level_09,Split the Span,BFS,True,0.002,0,12,4,4.0
+level_09,Split the Span,DFS,True,0.002,0,28,4,4.0
+level_09,Split the Span,UCS,True,0.003,0,15,4,4.0
+level_09,Split the Span,A*,True,0.002,0,6,4,4.0
+level_10,Master Circuit,BFS,True,0.002,0,12,4,4.0
+level_10,Master Circuit,DFS,True,0.002,0,28,4,4.0
+level_10,Master Circuit,UCS,True,0.003,0,15,4,4.0
+level_10,Master Circuit,A*,True,0.002,0,6,4,4.0

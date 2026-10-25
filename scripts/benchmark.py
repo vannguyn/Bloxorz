@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.interfaces import GameState, Level
+from levels.level_loader import load_all_levels
 from solvers.common import Solver, run_solver
 
 # Swappable import: mock solvers pending M3-M5 real solvers
@@ -42,6 +43,12 @@ def get_benchmark_solvers() -> dict[str, Solver]:
 
 
 def get_benchmark_levels() -> list[Level]:
+    try:
+        levels = load_all_levels()
+        if levels:
+            return levels
+    except Exception as exc:
+        print(f"[WARN] Failed to load real levels ({exc}), falling back to mock levels.")
     return [
         mock_level_simple(),
         mock_level_with_fragile(),
@@ -60,7 +67,8 @@ def run_benchmarks(export_csv_path: Path | None = None) -> list[dict]:
     print("-" * 84)
 
     for level in levels:
-        start_state = GameState(block=level.start, bridge_mask=0)
+        init_mask = getattr(level, "initial_bridge_mask", 0)
+        start_state = GameState(block=level.start, bridge_mask=init_mask)
         for name, solver in solvers.items():
             res = run_solver(solver, level, start_state)
             row = {
