@@ -16,6 +16,25 @@ from core.movement import roll_block
 VALID_ACTIONS: frozenset[str] = frozenset({"U", "D", "L", "R", "SPACE"})
 
 
+def _get_bridge_index(level: Level) -> dict[str, int]:
+    """
+    Returns a cached mapping of bridge ID to bitmask bit index.
+    Caches on the level object to avoid recomputation on every transition.
+    """
+    cached = getattr(level, "_bridge_index", None)
+    if cached is not None:
+        return cached
+    if not level.bridges:
+        bridge_index: dict[str, int] = {}
+    else:
+        bridge_index = {b_id: i for i, b_id in enumerate(level.bridges.keys())}
+    try:
+        setattr(level, "_bridge_index", bridge_index)
+    except (AttributeError, TypeError):
+        pass
+    return bridge_index
+
+
 def is_goal(state: GameState, level: Level) -> bool:
     """
     Evaluates whether the given GameState satisfies the level's win condition.
@@ -55,11 +74,18 @@ def apply_move(state: GameState, action: str, level: Level) -> GameState | None:
     # 2. Movement math
     next_block = roll_block(state.block, action)
 
+    # Prevent split cube overlap / collision
+    if next_block.is_split and next_block.cube_positions:
+        pos0, pos1 = next_block.cube_positions
+        if pos0 == pos1:
+            return None
+
     # 3. Support & fragile checks for all occupied cells
-    bridge_keys = list(level.bridges.keys()) if level.bridges else []
-    bridge_index = {b_id: i for i, b_id in enumerate(bridge_keys)}
+    bridge_index = _get_bridge_index(level)
 
     for cell in next_block.occupied_cells():
+        tile = level.tiles.get(cell) if level.tiles else None
+
         # Check if cell belongs to a bridge
         in_bridge = False
         bridge_open = False
@@ -76,12 +102,10 @@ def apply_move(state: GameState, action: str, level: Level) -> GameState | None:
             if not bridge_open:
                 return None  # Closed bridge acts as void
         else:
-            tile = level.tiles.get(cell) if level.tiles else None
             if tile is None or tile == TileType.VOID or tile == TileType.BRIDGE:
                 return None  # Void or unlinked bridge tile -> fall into void
 
         # Fragile tile check: standing upright or single split cube collapses fragile tile
-        tile = level.tiles.get(cell) if level.tiles else None
         if tile == TileType.FRAGILE:
             if next_block.is_split or next_block.orientation == Orientation.STANDING:
                 return None  # Falls through fragile tile
@@ -100,51 +124,52 @@ def apply_move(state: GameState, action: str, level: Level) -> GameState | None:
                 next_block = BlockState(min_r, min_c, Orientation.LYING_V)
 
     # 5. Switch triggers
-    entered_cells = set(next_block.occupied_cells()) - set(state.block.occupied_cells())
     new_bridge_mask = state.bridge_mask
 
-    if level.switches and entered_cells:
-        for switch in level.switches:
-            if switch.position in entered_cells:
-                sw_type = switch.type.lower()
-                can_trigger = False
-                if sw_type == "soft":
-                    can_trigger = True
-                elif sw_type == "heavy":
-                    can_trigger = not next_block.is_split and next_block.orientation == Orientation.STANDING
-                elif sw_type == "split":
-                    can_trigger = not next_block.is_split and next_block.orientation == Orientation.STANDING
+    if level.switches:
+        entered_cells = set(next_block.occupied_cells()) - set(state.block.occupied_cells())
+        if entered_cells:
+            for switch in level.switches:
+                if switch.position in entered_cells:
+                    sw_type = switch.type.lower()
+                    can_trigger = False
+                    if sw_type == "soft":
+                        can_trigger = True
+                    elif sw_type == "heavy":
+                        can_trigger = not next_block.is_split and next_block.orientation == Orientation.STANDING
+                    elif sw_type == "split":
+                        can_trigger = not next_block.is_split and next_block.orientation == Orientation.STANDING
 
-                if can_trigger:
-                    # Split switch effect: teleport and separate into 2 cubes
-                    if sw_type == "split":
-                        destinations = getattr(switch, "destinations", None)
-                        if destinations is None and hasattr(switch, "effect") and isinstance(switch.effect, dict):
-                            destinations = switch.effect.get("destinations")
-                        if destinations and len(destinations) >= 2:
-                            dest0 = (int(destinations[0][0]), int(destinations[0][1]))
-                            dest1 = (int(destinations[1][0]), int(destinations[1][1]))
-                            next_block = BlockState(
-                                r=dest0[0],
-                                c=dest0[1],
-                                orientation=Orientation.STANDING,
-                                is_split=True,
-                                cube_positions=(dest0, dest1),
-                                active_cube=0,
-                            )
+                    if can_trigger:
+                        # Split switch effect: teleport and separate into 2 cubes
+                        if sw_type == "split":
+                            destinations = getattr(switch, "destinations", None)
+                            if destinations is None and hasattr(switch, "effect") and isinstance(switch.effect, dict):
+                                destinations = switch.effect.get("destinations")
+                            if destinations and len(destinations) >= 2:
+                                dest0 = (int(destinations[0][0]), int(destinations[0][1]))
+                                dest1 = (int(destinations[1][0]), int(destinations[1][1]))
+                                next_block = BlockState(
+                                    r=dest0[0],
+                                    c=dest0[1],
+                                    orientation=Orientation.STANDING,
+                                    is_split=True,
+                                    cube_positions=(dest0, dest1),
+                                    active_cube=0,
+                                )
 
-                    # Bridge toggling / opening / closing
-                    bridge_ids = getattr(switch, "bridge_ids", None)
-                    if bridge_ids:
-                        for b_id in bridge_ids:
-                            if b_id in bridge_index:
-                                idx = bridge_index[b_id]
-                                mode = getattr(switch, "mode", "toggle").lower()
-                                if mode == "toggle":
-                                    new_bridge_mask ^= (1 << idx)
-                                elif mode in ("open", "permanent"):
-                                    new_bridge_mask |= (1 << idx)
-                                elif mode == "close":
-                                    new_bridge_mask &= ~(1 << idx)
+                        # Bridge toggling / opening / closing
+                        bridge_ids = getattr(switch, "bridge_ids", None)
+                        if bridge_ids:
+                            for b_id in bridge_ids:
+                                if b_id in bridge_index:
+                                    idx = bridge_index[b_id]
+                                    mode = getattr(switch, "mode", "toggle").lower()
+                                    if mode == "toggle":
+                                        new_bridge_mask ^= (1 << idx)
+                                    elif mode in ("open", "permanent"):
+                                        new_bridge_mask |= (1 << idx)
+                                    elif mode == "close":
+                                        new_bridge_mask &= ~(1 << idx)
 
     return GameState(block=next_block, bridge_mask=new_bridge_mask)

@@ -542,6 +542,36 @@ class TestSplitMechanicsAndCubeMerge:
         assert next_state.block.is_split is True
         assert next_state.block.cube_positions == ((1, 2), (2, 3))
 
+    def test_split_cube_cannot_overlap_other_cube(self):
+        level = create_simple_level()
+        # Active cube 0 at (1, 2) rolling R into cube 1 at (1, 3) -> pos0 == pos1 -> returns None
+        state_0_into_1 = GameState(
+            block=BlockState(
+                r=1,
+                c=2,
+                orientation=Orientation.STANDING,
+                is_split=True,
+                cube_positions=((1, 2), (1, 3)),
+                active_cube=0,
+            ),
+            bridge_mask=0,
+        )
+        assert apply_move(state_0_into_1, "R", level) is None
+
+        # Active cube 1 at (1, 4) rolling L into cube 0 at (1, 3) -> pos0 == pos1 -> returns None
+        state_1_into_0 = GameState(
+            block=BlockState(
+                r=1,
+                c=4,
+                orientation=Orientation.STANDING,
+                is_split=True,
+                cube_positions=((1, 3), (1, 4)),
+                active_cube=1,
+            ),
+            bridge_mask=0,
+        )
+        assert apply_move(state_1_into_0, "L", level) is None
+
 
 class TestEdgeCasesAndImmutability:
     def test_invalid_action_returns_none(self):

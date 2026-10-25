@@ -24,7 +24,7 @@
       "position": [4, 4],
       "effect": {
         "type": "split",
-        "destinations": [[4, 5], [4, 6]],
+        "destinations": [[2, 5], [6, 5]],
         "trigger": "enter"
       }
     }
