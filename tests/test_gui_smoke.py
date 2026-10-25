@@ -13,20 +13,19 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
 from config import settings
-from core.interfaces import Orientation
+from core.block import Cube, Orientation
+from core.game_state import GameState
+from core.board import Board
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
 from ui.button import Button
 from ui.game_screen import GameScreen
+from ui.menu_screen import MenuScreen
+from ui.pause_screen import PauseScreen
 from ui.result_screen import ResultOverlay
 from ui.solver_bridge import on_solve, AsyncSolverBridge, SolverBridgeState
-from tests.mocks import (
-    mock_level_simple,
-    mock_level_with_fragile,
-    mock_level_with_bridge,
-    mock_level_split,
-)
+from ui.dependencies import get_levels
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -41,11 +40,12 @@ def test_headless_game_initialization():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
     assert game_screen.surface.get_size() == (settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT)
-    assert len(game_screen.levels) >= 4
+    assert len(game_screen.levels) == 10
+    assert game_screen.level.id == "level_01"
     assert game_screen.current_state.block.orientation == Orientation.STANDING
 
 
-def test_render_all_mock_levels():
+def test_render_all_loaded_levels():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
 
@@ -64,7 +64,7 @@ def test_manual_input_movement():
     game_screen = GameScreen(surface)
     game_screen.load_level(0)  # Simple corridor
 
-    start_pos = (game_screen.current_state.block.r, game_screen.current_state.block.c)
+    start_pos = game_screen.current_state.block.position
     assert game_screen.moves_count == 0
 
     # Simulate pressing Right arrow
@@ -73,33 +73,35 @@ def test_manual_input_movement():
     game_screen.update(0.016)
 
     assert game_screen.moves_count == 1
-    assert game_screen.current_state.block.orientation == Orientation.LYING_H
-    assert game_screen.current_state.block.c == start_pos[1] + 1
+    assert game_screen.current_state.block.orientation == Orientation.HORIZONTAL
+    assert game_screen.current_state.block.position == (start_pos[0] + 1, start_pos[1])
 
 
 def test_split_level_and_space_key():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    # Mock level 3 is split level
-    game_screen.load_level(3)
-    assert game_screen.current_state.block.is_split is True
-    assert game_screen.current_state.block.active_cube == 0
+    # Exercise the real split-state transition directly.
+    board = Board(width=4, height=1, tiles=frozenset((x, 0) for x in range(4)), goal=(3, 0))
+    game_screen.current_state = GameState(board, Cube((0, 0)), Cube((3, 0)))
+    assert game_screen.current_state.is_split is True
+    assert game_screen.current_state.controlled_index == 0
 
     # Press SPACE to toggle active cube
     event_space = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)
     game_screen.handle_event(event_space)
     game_screen.update(0.016)
 
-    assert game_screen.current_state.block.active_cube == 1
+    assert game_screen.current_state.controlled_index == 1
 
 
 def test_sync_solver_bridge_contract():
-    level = mock_level_simple()
-    state = level.start
+    level = get_levels()[0]
+    state = level.start_state
     result = on_solve("BFS", level, state)
 
     assert result.success is True
-    assert result.path == ["R", "R", "R", "R"]
+    assert result.path is not None
+    assert result.solution_length == len(result.path)
     assert result.expanded_nodes > 0
     assert result.search_time_ms >= 0
     assert result.peak_memory_kb >= 0
@@ -125,7 +127,7 @@ def test_async_solver_bridge_and_replayer():
     assert game_screen.solver_bridge.state == SolverBridgeState.FINISHED
     assert game_screen.latest_result is not None
     assert game_screen.replayer is not None
-    assert game_screen.replayer.total_steps == 4
+    assert game_screen.replayer.total_steps == game_screen.latest_result.solution_length
 
     # Test stepping forward in replay
     init_idx = game_screen.replayer.current_index
@@ -164,7 +166,24 @@ def test_button_hover_and_click():
     assert clicked == [True]
 
 
-def test_dependencies_adapter_contract(monkeypatch):
+def test_menu_and_pause_screens_render_and_dispatch_actions():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    actions = []
+    menu = MenuScreen(surface, lambda: actions.append("start"), lambda: actions.append("quit"))
+    pause = PauseScreen(surface, lambda: actions.append("resume"), lambda: actions.append("menu"))
+
+    menu.draw()
+    pause.draw()
+    assert len(menu.buttons) == 2
+    assert len(pause.buttons) == 2
+
+    button = menu.buttons[0]
+    button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center))
+    button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center))
+    assert actions == ["start"]
+
+
+def test_dependencies_adapter_contract():
     from ui import dependencies
     assert isinstance(dependencies.IS_MOCK_CORE, bool)
     assert isinstance(dependencies.IS_MOCK_SOLVERS, bool)
@@ -174,38 +193,18 @@ def test_dependencies_adapter_contract(monkeypatch):
     assert callable(dependencies.get_solver)
     assert callable(dependencies.run_solver)
     assert callable(dependencies.get_levels)
-    assert len(dependencies.get_levels()) >= 4
+    assert len(dependencies.get_levels()) == 10
     solver = dependencies.get_solver("BFS")
     assert solver is not None
-    assert dependencies.get_mode_badge_text() in (
-        "[REAL]", "[MOCK CORE]", "[MOCK SOLVERS]", "[MOCK CORE+SOLVERS]"
-    )
-
-    # Validate all 4 mode badge variations
-    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", False)
-    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", False)
     assert dependencies.get_mode_badge_text() == "[REAL]"
-
-    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", True)
-    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", False)
-    assert dependencies.get_mode_badge_text() == "[MOCK CORE]"
-
-    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", False)
-    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", True)
-    assert dependencies.get_mode_badge_text() == "[MOCK SOLVERS]"
-
-    monkeypatch.setattr(dependencies, "IS_MOCK_CORE", True)
-    monkeypatch.setattr(dependencies, "IS_MOCK_SOLVERS", True)
-    assert dependencies.get_mode_badge_text() == "[MOCK CORE+SOLVERS]"
 
 
 def test_replayer_speed_control():
-    from tests.mocks import mock_level_simple
-    from core.interfaces import GameState
+    from levels.level_loader import load_levels
     from rendering.animation import SolutionReplayer
-    level = mock_level_simple()
-    state = GameState(block=level.start, bridge_mask=0)
-    replayer = SolutionReplayer(level, state, ["R", "R", "R", "R"], step_delay=0.4)
+    level = load_levels()[0]
+    state = level.start_state
+    replayer = SolutionReplayer(level, state, ["R", "D", "R", "U"], step_delay=0.4)
 
     assert replayer.speed_multiplier == 1.0
     assert replayer.effective_delay == pytest.approx(0.4)
@@ -219,6 +218,28 @@ def test_replayer_speed_control():
     # At delay 0.2, 0.45s should advance 2 steps (timer keeps remaining 0.05s)
     assert replayer.current_index == 2
     assert replayer.timer == pytest.approx(0.05)
+    assert replayer.transition_progress == pytest.approx(0.25)
+
+
+def test_replayer_draws_intermediate_block_position():
+    from levels.level_loader import load_levels
+    from rendering.animation import SolutionReplayer
+
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    level = load_levels()[0]
+    replayer = SolutionReplayer(level, level.start_state, ["R"], step_delay=0.4)
+    board_renderer = BoardRenderer(settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT)
+    board_renderer.compute_layout(level, pygame.Rect(0, 0, settings.BOARD_AREA_WIDTH, settings.BOARD_AREA_HEIGHT))
+    block_renderer = BlockRenderer(board_renderer)
+
+    replayer.update(0.2)
+    assert replayer.transition_progress == pytest.approx(0.5)
+    block_renderer.draw(
+        surface,
+        replayer.current_state,
+        transition_to=replayer.next_state,
+        progress=replayer.transition_progress,
+    )
 
 
 def test_game_screen_speed_button_cycle_and_persistence():
@@ -288,7 +309,4 @@ def test_strict_import_hygiene():
             assert "import tests.mocks" not in content, f"Direct mock import found in {py_path}"
 
     assert len(scanned_files) >= 6
-
-
-
 

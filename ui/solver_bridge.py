@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import multiprocessing as mp
 from enum import Enum
-from typing import Callable
-from core.interfaces import GameState, Level, SolverResult
+from levels.level_loader import Level
+from core.game_state import GameState
+from core.interfaces import SolverResult
 from ui.dependencies import get_solver, run_solver
 
 

@@ -8,7 +8,7 @@ from core.game_state import GameState
 
 
 def board_from_level() -> Board:
-    data = json.loads((Path(__file__).parents[1] / "levels" / "level_01.json").read_text(encoding="utf-8"))
+    data = json.loads((Path(__file__).parents[1] / "levels" / "level_10.json").read_text(encoding="utf-8"))
     return Board.from_dict(data)
 
 

@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import pygame
 from config import settings
-from core.interfaces import GameState, Level, Orientation, SolverResult, TileType
+from core.game_state import GameState
+from core.interfaces import SolverResult
+from levels.level_loader import Level
+from levels.level_manager import LevelManager
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
@@ -45,12 +48,13 @@ class GameScreen:
         self.block_renderer = BlockRenderer(self.board_renderer)
 
         # Available levels
-        self.levels: list[Level] = get_levels()
+        self.level_manager = LevelManager(get_levels())
+        self.levels: list[Level] = self.level_manager.levels
         self.level_index = 0
-        self.level: Level = self.levels[0]
+        self.level: Level = self.level_manager.current
 
         # State & Session
-        self.current_state: GameState = GameState(block=self.level.start, bridge_mask=0)
+        self.current_state: GameState = self.level.start_state
         self.initial_state: GameState = self.current_state
         self.moves_count = 0
         self.outcome_status: str | None = None  # None, "WIN", "LOST_FALL", "LOST_FRAGILE", "UNSOLVABLE"
@@ -134,14 +138,14 @@ class GameScreen:
         ]
 
     def load_level(self, index: int) -> None:
-        self.level_index = index % len(self.levels)
-        self.level = self.levels[self.level_index]
+        self.level = self.level_manager.select(index)
+        self.level_index = self.level_manager.index
         self.solver_bridge.cancel()
         self.replayer = None
         self.latest_result = None
         self.outcome_status = None
         self.moves_count = 0
-        self.initial_state = GameState(block=self.level.start, bridge_mask=0)
+        self.initial_state = self.level.start_state
         self.current_state = self.initial_state
 
     def next_level(self) -> None:
@@ -199,17 +203,11 @@ class GameScreen:
 
         next_state = apply_move(self.current_state, action, self.level)
         if next_state is None:
-            # Check why it's illegal
-            if self.current_state.block.orientation == Orientation.STANDING:
-                stand_cell = (self.current_state.block.r, self.current_state.block.c)
-                if self.level.tiles.get(stand_cell) == TileType.FRAGILE:
-                    self.outcome_status = "LOST_FRAGILE"
-                    return
             self.outcome_status = "LOST_FALL"
             return
 
         self.current_state = next_state
-        self.moves_count += 1
+        self.moves_count = self.current_state.moves
 
         if is_goal(self.current_state, self.level):
             self.outcome_status = "WIN"
@@ -222,19 +220,16 @@ class GameScreen:
 
         # 2. Key presses for manual gameplay
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_UP, pygame.K_w):
-                self.handle_manual_move("U")
-            elif event.key in (pygame.K_DOWN, pygame.K_s):
-                self.handle_manual_move("D")
-            elif event.key in (pygame.K_LEFT, pygame.K_a):
-                self.handle_manual_move("L")
-            elif event.key in (pygame.K_RIGHT, pygame.K_d):
-                self.handle_manual_move("R")
-            elif event.key == pygame.K_SPACE:
-                self.handle_manual_move("SPACE")
-            elif event.key == pygame.K_r:
+            key_name = pygame.key.name(event.key)
+            action = next(
+                (name for name, keys in settings.CONTROL_KEYS.items() if key_name in keys),
+                None,
+            )
+            if action is not None:
+                self.handle_manual_move(action)
+            elif key_name == settings.RESTART_KEY:
                 self.restart_level()
-            elif event.key == pygame.K_n:
+            elif key_name == settings.NEXT_LEVEL_KEY:
                 self.next_level()
 
     def update(self, dt: float) -> None:
@@ -274,6 +269,7 @@ class GameScreen:
         if self.replayer:
             self.replayer.update(dt)
             self.current_state = self.replayer.current_state
+            self.moves_count = self.current_state.moves
             if self.replayer.is_finished and is_goal(self.current_state, self.level):
                 self.outcome_status = "WIN"
 
@@ -284,7 +280,13 @@ class GameScreen:
 
         # 1. Draw Board & Block
         self.board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
-        self.block_renderer.draw(self.surface, self.current_state)
+        next_state = self.replayer.next_state if self.replayer else None
+        self.block_renderer.draw(
+            self.surface,
+            self.current_state,
+            transition_to=next_state,
+            progress=self.replayer.transition_progress if self.replayer else 0.0,
+        )
 
         # 2. Draw Win/Loss Overlay if applicable
         if self.outcome_status is not None:
@@ -326,8 +328,8 @@ class GameScreen:
         y += 24
 
         # Move count & status
-        split_tag = " [SPLIT]" if self.current_state.block.is_split else ""
-        stats_info = f"Moves: {self.moves_count}{split_tag}"
+        split_tag = " [SPLIT]" if self.current_state.is_split else ""
+        stats_info = f"Moves: {self.current_state.moves}{split_tag}"
         stats_surf = self.font_body.render(stats_info, True, settings.COLOR_TEXT_MAIN)
         self.surface.blit(stats_surf, (bx, y))
         y += 24

@@ -6,7 +6,10 @@ Decoupled from input and game logic per IDD plan.
 from __future__ import annotations
 
 import pygame
-from core.interfaces import GameState, Level, Switch, TileType
+from core.game_state import GameState
+from core.board import Switch
+from entities.tile import TileType
+from levels.level_loader import Level
 from config import settings
 
 
@@ -44,10 +47,10 @@ class BoardRenderer:
         self.origin_y = origin_y
         return origin_x, origin_y, tile_size
 
-    def get_cell_rect(self, row: int, col: int) -> pygame.Rect:
-        """Returns the screen Rect for a given grid cell (row, col)."""
-        x = self.origin_x + col * self.tile_size
-        y = self.origin_y + row * self.tile_size
+    def get_cell_rect(self, x_coord: int, y_coord: int) -> pygame.Rect:
+        """Return the screen rectangle for a core ``(x, y)`` cell."""
+        x = self.origin_x + x_coord * self.tile_size
+        y = self.origin_y + y_coord * self.tile_size
         return pygame.Rect(x, y, self.tile_size, self.tile_size)
 
     def draw(
@@ -60,31 +63,32 @@ class BoardRenderer:
         """Draws all board tiles, bridges, and switches."""
         self.compute_layout(level, area_rect)
 
-        # Build bridge open/closed status map from state.bridge_mask
-        bridge_index_map = {b_id: i for i, b_id in enumerate(level.bridges.keys())}
+        board = state.board
+        # Bridge status comes from the core state, not from a UI-local bitmask.
         bridge_cell_status: dict[tuple[int, int], bool] = {}
-        for b_id, b_tiles in level.bridges.items():
-            b_idx = bridge_index_map.get(b_id, 0)
-            is_open = bool(state.bridge_mask & (1 << b_idx))
-            for cell in b_tiles:
+        for b_id, bridge in board.bridges.items():
+            is_open = state.bridge_map.get(b_id, bridge.initial_state) == "open"
+            for cell in bridge.tiles:
                 bridge_cell_status[cell] = is_open
 
-        # 1. Draw tiles
-        for (r, c), tile_type in level.tiles.items():
-            cell_rect = self.get_cell_rect(r, c)
-
-            if tile_type == TileType.FLOOR:
-                self._draw_floor_tile(surface, cell_rect)
-            elif tile_type == TileType.GOAL:
+        # 1. Draw all cells from the authoritative Board.
+        cells = set(board.tiles)
+        for bridge in board.bridges.values():
+            cells.update(bridge.tiles)
+        for x, y in cells:
+            cell_rect = self.get_cell_rect(x, y)
+            tile = board.tile_at((x, y))
+            if tile.type is TileType.BRIDGE:
+                self._draw_bridge_tile(surface, cell_rect, bridge_cell_status.get((x, y), False))
+            elif tile.type is TileType.GOAL:
                 self._draw_goal_tile(surface, cell_rect)
-            elif tile_type == TileType.FRAGILE:
+            elif tile.type is TileType.FRAGILE:
                 self._draw_fragile_tile(surface, cell_rect)
-            elif tile_type == TileType.BRIDGE:
-                is_open = bridge_cell_status.get((r, c), False)
-                self._draw_bridge_tile(surface, cell_rect, is_open)
+            elif tile.type is TileType.FLOOR:
+                self._draw_floor_tile(surface, cell_rect)
 
         # 2. Draw switches
-        for sw in level.switches:
+        for sw in board.switches.values():
             cell_rect = self.get_cell_rect(sw.position[0], sw.position[1])
             self._draw_switch(surface, cell_rect, sw)
 

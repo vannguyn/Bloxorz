@@ -1,0 +1,179 @@
+{
+  "id": "level_10",
+  "name": "Final Trial",
+  "width": 8,
+  "height": 7,
+  "start": {
+    "position": [
+      1,
+      3
+    ],
+    "orientation": "standing"
+  },
+  "goal": [
+    6,
+    3
+  ],
+  "tiles": [
+    [
+      1,
+      3
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      5,
+      3
+    ],
+    [
+      6,
+      3
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      3,
+      5
+    ]
+  ],
+  "fragile_tiles": [
+    [
+      3,
+      2
+    ]
+  ],
+  "bridges": [
+    {
+      "id": "north_bridge",
+      "tiles": [
+        [
+          4,
+          1
+        ],
+        [
+          5,
+          1
+        ]
+      ],
+      "initial_state": "closed"
+    }
+  ],
+  "switches": [
+    {
+      "id": "soft_toggle",
+      "type": "soft",
+      "position": [
+        2,
+        2
+      ],
+      "effect": {
+        "type": "bridge",
+        "bridge_ids": [
+          "north_bridge"
+        ],
+        "mode": "toggle",
+        "trigger": "enter"
+      }
+    },
+    {
+      "id": "heavy_permanent",
+      "type": "heavy",
+      "position": [
+        4,
+        4
+      ],
+      "effect": {
+        "type": "bridge",
+        "bridge_ids": [
+          "north_bridge"
+        ],
+        "mode": "permanent",
+        "state": "open",
+        "lock_after_activation": true,
+        "trigger": "enter"
+      }
+    },
+    {
+      "id": "split_switch",
+      "type": "split",
+      "position": [
+        5,
+        4
+      ],
+      "effect": {
+        "type": "split",
+        "destinations": [
+          [
+            1,
+            5
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "trigger": "enter"
+      }
+    }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": [
+      "soft"
+    ],
+    "single_cube_cannot_activate": [
+      "heavy",
+      "split"
+    ]
+  }
+}

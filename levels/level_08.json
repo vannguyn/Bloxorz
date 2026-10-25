@@ -1,0 +1,169 @@
+{
+  "id": "level_08",
+  "name": "Split and Switch",
+  "width": 10,
+  "height": 7,
+  "start": {
+    "position": [
+      1,
+      3
+    ],
+    "orientation": "standing"
+  },
+  "goal": [
+    8,
+    2
+  ],
+  "tiles": [
+    [
+      1,
+      3
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      5,
+      5
+    ],
+    [
+      6,
+      5
+    ],
+    [
+      7,
+      5
+    ],
+    [
+      8,
+      5
+    ],
+    [
+      9,
+      5
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      7,
+      4
+    ],
+    [
+      8,
+      4
+    ],
+    [
+      8,
+      2
+    ]
+  ],
+  "fragile_tiles": [
+    [
+      7,
+      5
+    ]
+  ],
+  "bridges": [
+    {
+      "id": "east_bridge",
+      "tiles": [
+        [
+          5,
+          3
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          8,
+          3
+        ]
+      ],
+      "initial_state": "closed"
+    }
+  ],
+  "switches": [
+    {
+      "id": "split_switch",
+      "type": "split",
+      "position": [
+        4,
+        3
+      ],
+      "effect": {
+        "type": "split",
+        "destinations": [
+          [
+            2,
+            5
+          ],
+          [
+            4,
+            5
+          ]
+        ],
+        "trigger": "enter"
+      }
+    },
+    {
+      "id": "bridge_switch",
+      "type": "soft",
+      "position": [
+        5,
+        5
+      ],
+      "effect": {
+        "type": "bridge",
+        "bridge_ids": [
+          "east_bridge"
+        ],
+        "mode": "toggle",
+        "trigger": "enter"
+      }
+    }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": [
+      "soft"
+    ],
+    "single_cube_cannot_activate": [
+      "heavy",
+      "split"
+    ]
+  }
+}

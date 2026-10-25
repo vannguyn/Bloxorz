@@ -1,0 +1,109 @@
+{
+  "id": "level_07",
+  "name": "The Split Path",
+  "width": 9,
+  "height": 6,
+  "start": {
+    "position": [
+      1,
+      2
+    ],
+    "orientation": "standing"
+  },
+  "goal": [
+    8,
+    4
+  ],
+  "tiles": [
+    [
+      0,
+      2
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      1,
+      4
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      7,
+      4
+    ],
+    [
+      8,
+      4
+    ]
+  ],
+  "fragile_tiles": [],
+  "bridges": [],
+  "switches": [
+    {
+      "id": "split_switch",
+      "type": "split",
+      "position": [
+        4,
+        2
+      ],
+      "effect": {
+        "type": "split",
+        "destinations": [
+          [
+            1,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "trigger": "enter"
+      }
+    }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": [
+      "soft"
+    ],
+    "single_cube_cannot_activate": [
+      "heavy",
+      "split"
+    ]
+  }
+}

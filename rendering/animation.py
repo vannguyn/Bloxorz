@@ -6,7 +6,8 @@ Supports Play, Pause, Step forward/backward, and adjustable replay delay.
 from __future__ import annotations
 
 from typing import Callable
-from core.interfaces import GameState, Level
+from core.game_state import GameState
+from levels.level_loader import Level
 
 # Integration adapter import for transitions deferred to bottom to avoid circular import with ui package
 
@@ -23,6 +24,8 @@ class SolutionReplayer:
         speed_multiplier: float = 1.0,
         apply_fn: Callable[[GameState, str, Level], GameState | None] | None = None,
     ):
+        if step_delay <= 0:
+            raise ValueError("step_delay must be positive")
         if apply_fn is None:
             from ui.dependencies import apply_move
             apply_fn = apply_move
@@ -35,6 +38,9 @@ class SolutionReplayer:
         # Pre-compute or trace trajectory states
         self.states: list[GameState] = [initial_state]
         self._build_trajectory(initial_state)
+        # Only actions accepted by core are replayable. A malformed solver path
+        # must never make the GUI claim that more moves were executed.
+        self.path = self.path[: len(self.states) - 1]
 
         self.current_index = 0
         self.is_playing = True
@@ -59,11 +65,22 @@ class SolutionReplayer:
 
     @property
     def total_steps(self) -> int:
-        return len(self.path)
+        return len(self.states) - 1
 
     @property
     def current_state(self) -> GameState:
         return self.states[self.current_index]
+
+    @property
+    def next_state(self) -> GameState | None:
+        next_index = self.current_index + 1
+        return self.states[next_index] if next_index < len(self.states) else None
+
+    @property
+    def transition_progress(self) -> float:
+        if self.next_state is None:
+            return 0.0
+        return min(1.0, self.timer / self.effective_delay)
 
     @property
     def is_finished(self) -> bool:
@@ -88,6 +105,7 @@ class SolutionReplayer:
         self.pause()
         if self.current_index < len(self.states) - 1:
             self.current_index += 1
+            self.timer = 0.0
             return True
         return False
 
@@ -95,6 +113,7 @@ class SolutionReplayer:
         self.pause()
         if self.current_index > 0:
             self.current_index -= 1
+            self.timer = 0.0
             return True
         return False
 
@@ -111,7 +130,7 @@ class SolutionReplayer:
         if not self.is_playing or self.is_finished:
             return False
 
-        self.timer += dt
+        self.timer += max(0.0, dt)
         eff = self.effective_delay
         changed = False
         steps_taken = 0
@@ -124,4 +143,3 @@ class SolutionReplayer:
             steps_taken += 1
 
         return changed
-

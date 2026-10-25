@@ -14,6 +14,7 @@ from .game_rules import (
     is_legal_piece,
     is_win,
 )
+from .movement import move_block, move_cube
 
 
 def _bridge_tuple(values: Mapping[str, str] | tuple[tuple[str, str], ...], board: Board) -> tuple[tuple[str, str], ...]:
@@ -128,7 +129,7 @@ class GameState:
 
         if self.is_split:
             moving = self.controlled_cube
-            candidate = moving.moved(direction)
+            candidate = move_cube(moving, direction)
             other = self.second_cube if self.controlled_index == 0 else self.block
             assert isinstance(other, Cube)
             if not is_legal_piece(self.board, (candidate, other), bridges):
@@ -155,7 +156,7 @@ class GameState:
             )
 
         assert isinstance(self.block, Block)
-        candidate = self.block.moved(direction)
+        candidate = move_block(self.block, direction)
         if not is_legal_piece(self.board, candidate, bridges):
             return None
         next_bridges, locks, split_destinations = self._apply_entered_switches(

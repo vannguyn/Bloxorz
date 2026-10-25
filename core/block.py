@@ -75,33 +75,10 @@ class Block:
         return self.orientation is Orientation.STANDING
 
     def moved(self, direction: Direction | str) -> "Block":
-        """Tính block sau roll; board validation nằm ở ``game_rules``."""
-        direction = Direction.coerce(direction)
-        x, y = self.position
-        o = self.orientation
-        if o is Orientation.STANDING:
-            transitions = {
-                Direction.UP: ((x, y - 2), Orientation.VERTICAL),
-                Direction.DOWN: ((x, y + 1), Orientation.VERTICAL),
-                Direction.LEFT: ((x - 2, y), Orientation.HORIZONTAL),
-                Direction.RIGHT: ((x + 1, y), Orientation.HORIZONTAL),
-            }
-        elif o is Orientation.HORIZONTAL:
-            transitions = {
-                Direction.UP: ((x, y - 1), Orientation.HORIZONTAL),
-                Direction.DOWN: ((x, y + 1), Orientation.HORIZONTAL),
-                Direction.LEFT: ((x - 1, y), Orientation.STANDING),
-                Direction.RIGHT: ((x + 2, y), Orientation.STANDING),
-            }
-        else:
-            transitions = {
-                Direction.UP: ((x, y - 1), Orientation.STANDING),
-                Direction.DOWN: ((x, y + 2), Orientation.STANDING),
-                Direction.LEFT: ((x - 1, y), Orientation.VERTICAL),
-                Direction.RIGHT: ((x + 1, y), Orientation.VERTICAL),
-            }
-        position, orientation = transitions[direction]
-        return Block(position, orientation)
+        """Return the rolled block; board validation belongs to ``game_rules``."""
+        from .movement import move_block
+
+        return move_block(self, direction)
 
     def as_key(self) -> tuple[int, int, str]:
         return (*self.position, self.orientation.value)
@@ -123,14 +100,9 @@ class Cube:
         return (self.position,)
 
     def moved(self, direction: Direction | str) -> "Cube":
-        direction = Direction.coerce(direction)
-        x, y = self.position
-        offsets = {
-            Direction.UP: (0, -1), Direction.DOWN: (0, 1),
-            Direction.LEFT: (-1, 0), Direction.RIGHT: (1, 0),
-        }
-        dx, dy = offsets[direction]
-        return Cube((x + dx, y + dy))
+        from .movement import move_cube
+
+        return move_cube(self, direction)
 
     def as_key(self) -> tuple[int, int, str]:
         return (*self.position, "cube")

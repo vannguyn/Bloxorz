@@ -11,6 +11,7 @@ from collections.abc import Iterable, Mapping
 
 from .block import Block, Cube, Piece, Position, cells_of
 from .board import Board, Switch
+from .movement import move_block, move_cube
 
 
 # Chuỗi này có thể hiển thị trong UI/report hoặc dùng làm ghi chú ngay trong code.
@@ -60,7 +61,7 @@ def is_legal_piece(board: Board, piece: Piece | Iterable[Piece], bridge_states: 
 
 def is_legal_move(board: Board, piece: Piece, direction: str, bridge_states: Mapping[str, str]) -> bool:
     """Kiểm tra candidate sau roll, không làm thay đổi state hiện tại."""
-    candidate = piece.moved(direction)
+    candidate = move_cube(piece, direction) if isinstance(piece, Cube) else move_block(piece, direction)
     return is_legal_piece(board, candidate, bridge_states)
 
 
@@ -93,4 +94,3 @@ def entered_switches(board: Board, old_cells: Iterable[Position], new_cells: Ite
 
 def are_adjacent(first: Position, second: Position) -> bool:
     return abs(first[0] - second[0]) + abs(first[1] - second[1]) == 1
-

@@ -67,8 +67,8 @@ Bloxorz/
 
 ### Tệp ở thư mục gốc
 
-- **`main.py`**: Chạy bộ kiểm tra nhanh các luật trong `core/` mà không cần mở
-  GUI; chương trình trả mã lỗi nếu có nhóm luật không đạt.
+- **`main.py`**: Mở game GUI khi chạy bình thường; nhận `--test core`, `--test
+  levels`, `--test gui` hoặc `--test all` để chạy riêng các nhóm kiểm thử.
 - **`requirements.txt`**: Liệt kê các thư viện cần cài, tối thiểu là phiên bản
   Pygame phù hợp. Người chơi cài thư viện bằng `pip install -r requirements.txt`.
 - **`README.md`**: Tài liệu hướng dẫn cấu trúc dự án, cách cài đặt, chạy và kiểm
@@ -93,27 +93,26 @@ sổ game.
   xuống, trái hoặc phải. Không tự quyết định hoạt ảnh hay vẽ khối.
 - **`game_rules.py`**: Kiểm tra nước đi có hợp lệ không, khối có rơi khỏi bàn
   không, công tắc/cầu có được kích hoạt không và điều kiện chiến thắng.
-- **`game_state.py`**: Lưu trạng thái hiện tại như màn chơi, vị trí khối, trạng
-  thái cầu, số bước đi và trạng thái đang chơi/tạm dừng/thắng/thua. Cung cấp thao
-  tác bắt đầu lại hoặc chuyển trạng thái khi cần.
+- **`game_state.py`**: Lưu trạng thái logic hiện tại như màn chơi, vị trí khối,
+  trạng thái cầu, số bước đi và trạng thái đang chơi/thắng. Tạm dừng là trạng
+  thái giao diện, không làm thay đổi state dùng bởi solver.
 
 ### `entities/` — các vật thể trong game
 
-- **`block_entity.py`**: Đối tượng khối dùng ở tầng hiển thị, kết nối trạng thái
-  logic của khối với hình ảnh/hoạt ảnh.
-- **`tile.py`**: Mô tả ô trên bàn, ví dụ ô thường, ô đích, ô đặc biệt hoặc ô không
-  tồn tại. Loại ô và thuộc tính cần được đọc từ dữ liệu màn chơi.
-- **`switch.py`**: Mô tả công tắc, điều kiện kích hoạt và tác động của nó. Hỗ trợ
-  công tắc cần khối đứng hoặc khối nằm đè lên theo luật đã chọn.
-- **`bridge.py`**: Mô tả cầu có thể bật/tắt, các ô cầu nối và trạng thái hiện tại
-  để luật chơi biết khi nào có thể đi qua.
+- **`block_entity.py`**: Bao bọc `Block`/`Cube` của `core/` cho tầng hiển thị,
+  không tự giữ bản sao vị trí hay luật di chuyển.
+- **`tile.py`**: Mô tả loại ô; `core/board.py` tạo mô tả ô từ dữ liệu màn để
+  renderer vẽ mà không tự suy diễn loại ô.
+- **`switch.py`** và **`bridge.py`**: Khai báo dữ liệu bất biến của các cơ chế.
+  `core/` dùng các entity này để áp dụng luật và trạng thái.
 
 ### `levels/` — dữ liệu màn chơi
 
 - **`level_loader.py`**: Đọc tệp JSON, kiểm tra dữ liệu bắt buộc, kiểu dữ liệu,
   tọa độ, ô đặc biệt và tính nhất quán của màn; báo lỗi rõ ràng nếu dữ liệu sai.
 - **`level_manager.py`**: Quản lý danh sách màn, màn đang chơi và việc chuyển
-  sang màn trước/sau hoặc tải lại màn.
+  sang màn trước/sau. `ui/game_screen.py` dùng manager này để chọn màn; tải lại
+  trạng thái hiện tại được xử lý bằng chức năng restart.
 - **`level_01.json`, ...**: Dữ liệu bàn chơi, không chứa luật xử lý hay mã vẽ.
   Mỗi màn cần khai báo kích thước/lưới, vị trí bắt đầu, ô đích và các ô, công
   tắc, cầu đặc biệt nếu có. Nên thống nhất một định dạng JSON và kiểm tra nó
@@ -147,10 +146,8 @@ Các trường dưới đây mô tả dữ liệu cơ chế; phần code đọc 
   `single_cube_activates` và `single_cube_cannot_activate` liệt kê các loại công
   tắc khối đơn được phép hoặc không được phép kích hoạt.
 
-Trong `level_01.json`, công tắc mềm đảo cầu `north_bridge`; công tắc nặng đặt
-cầu đó mở vĩnh viễn; công tắc tách đưa hai khối đơn tới các tọa độ đã định sẵn.
-Ô `[3, 2]` là ô dễ vỡ. Hai vị trí tách `[1, 5]` và `[3, 5]` đã được khai báo
-trong `tiles` và được đặt cách nhau một ô để không nhập lại ngay sau khi tách.
+Các màn JSON trong `levels/` dùng chung định dạng; mỗi màn chỉ khai báo những
+cơ chế thực sự xuất hiện trên màn đó.
 
 ### `solvers/` — các thuật toán tìm lời giải
 
@@ -159,10 +156,9 @@ Các solver nhận trạng thái hiện tại của Bloxorz, sinh các nước �
 Trạng thái tìm kiếm cần bao gồm vị trí, tư thế của block và trạng thái các cơ chế trên
 bàn (ví dụ trạng thái đóng/mở của bridge), không chỉ riêng tọa độ block.
 
-- **`common.py`**: Chứa các kiểu dữ liệu và hàm dùng chung cho các solver, chẳng hạn
-  biểu diễn trạng thái, sinh successor, kiểm tra trạng thái đích, khôi phục đường đi
-  và thống kê số node đã mở rộng. Các thuật toán khác nhau nên dùng chung phần này
-  để bảo đảm kết quả và cách đo lường nhất quán.
+- **`common.py`**: Chứa giao diện solver, sinh successor qua `core.GameState` và
+  harness đo thời gian/bộ nhớ, tạo kết quả. Khóa trạng thái và kiểm tra goal thuộc
+  `core/`, được các solver dùng chung để thống nhất quá trình tìm kiếm.
 - **`BFS.py`**: Cài đặt Breadth-First Search. Thuật toán duyệt theo từng lớp độ sâu,
   dùng hàng đợi FIFO và tập `visited`. Khi mỗi nước đi có cùng chi phí, BFS tìm được
   lời giải có ít bước nhất; đổi lại có thể dùng nhiều bộ nhớ.
@@ -192,11 +188,11 @@ số node mở rộng và độ dài lời giải để phục vụ phần thự
 
 ### `ui/` — màn hình và thao tác người chơi
 
-- **`menu_screen.py`**: Màn hình bắt đầu, cho phép bắt đầu game và mở các lựa
-  chọn cần thiết.
+- **`menu_screen.py`**: Màn hình bắt đầu với lựa chọn bắt đầu game hoặc thoát.
 - **`game_screen.py`**: Kết hợp hiển thị bàn/khối với HUD (ví dụ số bước và tên
   màn), nhận lệnh điều khiển và chuyển lệnh tới phần logic.
-- **`pause_screen.py`**: Giao diện tạm dừng, tiếp tục chơi hoặc quay lại menu.
+- **`pause_screen.py`**: Giao diện tạm dừng; `Esc` tiếp tục, hoặc chọn tiếp tục /
+  quay lại menu.
 - **`result_screen.py`**: Thông báo thắng/thua và cung cấp lựa chọn chơi lại hoặc
   sang màn tiếp theo.
 - **`button.py`**: Thành phần nút dùng chung, xử lý vẽ, trạng thái hover và nhấn.
@@ -256,11 +252,14 @@ Sau khi đã tạo `requirements.txt` và triển khai các file tương ứng:
 ```powershell
 python -m pip install -r requirements.txt
 python main.py
-python -m pytest
+python main.py --test core
+python main.py --test levels
+python main.py --test gui
+python main.py --test all
 ```
 
-`python main.py` chạy bộ kiểm tra luật dạng độc lập; `python -m pytest` chạy
-toàn bộ kiểm thử tự động.
+`python main.py` mở GUI. Tham số `--test` chọn nhóm kiểm thử; `all` chạy toàn
+bộ suite. Có thể gọi trực tiếp `python -m pytest` để chạy cùng toàn bộ kiểm thử.
 
 Nếu dự án chọn công cụ kiểm thử khác pytest, cập nhật lệnh và khai báo thư viện
 trong `requirements.txt` cho nhất quán.

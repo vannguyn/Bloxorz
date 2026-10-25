@@ -6,6 +6,17 @@ Constants for display dimensions, colors, fonts, and controls.
 WINDOW_WIDTH = 1040
 WINDOW_HEIGHT = 680
 FPS = 60
+WINDOW_TITLE = "Bloxorz"
+CONTROL_KEYS = {
+    "U": ("up", "w"),
+    "D": ("down", "s"),
+    "L": ("left", "a"),
+    "R": ("right", "d"),
+    "SPACE": ("space",),
+}
+RESTART_KEY = "r"
+NEXT_LEVEL_KEY = "n"
+PAUSE_KEY = "escape"
 
 # Layout dimensions
 SIDEBAR_WIDTH = 340
