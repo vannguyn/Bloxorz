@@ -1,0 +1,104 @@
+{
+      "id": "level_02",
+      "name": "Soft Toggle",
+      "difficulty": "basic",
+      "description": "Step on the soft switch to toggle the bridge, then cross it.",
+      "width": 8,
+      "height": 6,
+      "start": {
+        "position": [
+          3,
+          1
+        ],
+        "orientation": "standing"
+      },
+      "goal": [
+        3,
+        7
+      ],
+      "tiles": [
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "fragile_tiles": [],
+      "bridges": [
+        {
+          "id": "bridge_a",
+          "tiles": [
+            [
+              3,
+              5
+            ],
+            [
+              3,
+              6
+            ]
+          ],
+          "initial_state": "closed"
+        }
+      ],
+      "switches": [
+        {
+          "id": "soft_a",
+          "type": "soft",
+          "position": [
+            3,
+            3
+          ],
+          "effect": {
+            "type": "bridge",
+            "bridge_ids": [
+              "bridge_a"
+            ],
+            "mode": "toggle",
+            "trigger": "enter"
+          }
+        }
+      ],
+      "split_rules": {
+        "control_switch_key": "SPACE",
+        "merge_when_adjacent": true,
+        "single_cube_can_win": false,
+        "single_cube_activates": [
+          "soft"
+        ],
+        "single_cube_cannot_activate": [
+          "heavy",
+          "split"
+        ]
+      }
+    }

@@ -1,0 +1,39 @@
+{
+  "id": "level_08",
+  "name": "Split Practice",
+  "difficulty": "advanced",
+  "description": "Split while standing at the center, reposition one cube, and merge before the goal.",
+  "width": 10,
+  "height": 8,
+  "start": {
+    "position": [4, 1],
+    "orientation": "standing"
+  },
+  "goal": [4, 8],
+  "tiles": [
+    [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8],
+    [3, 2], [2, 2], [2, 3], [3, 5], [2, 5], [2, 6],
+    [5, 2], [6, 2], [6, 3], [5, 5], [6, 5], [6, 6]
+  ],
+  "fragile_tiles": [],
+  "bridges": [],
+  "switches": [
+    {
+      "id": "split_a",
+      "type": "split",
+      "position": [4, 4],
+      "effect": {
+        "type": "split",
+        "destinations": [[4, 5], [4, 6]],
+        "trigger": "enter"
+      }
+    }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": ["soft"],
+    "single_cube_cannot_activate": ["heavy", "split"]
+  }
+}

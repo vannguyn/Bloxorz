@@ -1,0 +1,87 @@
+{
+      "id": "level_04",
+      "name": "Careful Footing",
+      "difficulty": "basic",
+      "description": "Avoid standing upright on the fragile tile; pass through it while lying down.",
+      "width": 8,
+      "height": 7,
+      "start": {
+        "position": [
+          3,
+          1
+        ],
+        "orientation": "standing"
+      },
+      "goal": [
+        3,
+        7
+      ],
+      "tiles": [
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "fragile_tiles": [
+        [
+          3,
+          5
+        ],
+        [
+          3,
+          6
+        ]
+      ],
+      "bridges": [],
+      "switches": [],
+      "split_rules": {
+        "control_switch_key": "SPACE",
+        "merge_when_adjacent": true,
+        "single_cube_can_win": false,
+        "single_cube_activates": [],
+        "single_cube_cannot_activate": [
+          "heavy",
+          "split"
+        ]
+      }
+    }
