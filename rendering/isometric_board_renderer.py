@@ -244,35 +244,32 @@ class IsometricBoardRenderer:
         tw = max(1, max_x - min_x)
         th = max(1, max_y - min_y)
 
-        # Alpha surface for translucent amber glass
-        iso_glass = pygame.Surface((tw, th), pygame.SRCALPHA)
+        # Alpha surface for translucent amber glass and pixel-art crack projection
+        iso_crack = pygame.Surface((tw, th), pygame.SRCALPHA)
         local_corners = [(x - min_x, y - min_y) for (x, y) in corners]
-        pygame.draw.polygon(iso_glass, settings.COLOR_GLASS_FILL, local_corners)
+        pygame.draw.polygon(iso_crack, settings.COLOR_GLASS_FILL, local_corners)
 
-        # Radiating white fracture crack line branches
-        p0, p1, p2, p3 = local_corners  # Top, Right, Bottom, Left
-        cx_l = (p0[0] + p2[0]) // 2
-        cy_l = (p3[1] + p1[1]) // 2
+        pw = max(2, round(tw / 32.0))
+        ph = max(1, round(th / 32.0))
 
+        # Under-shadow layer (depth)
+        for gx, gy in settings.FRAGILE_CRACK_SHADOW:
+            u = gx / 32.0
+            v = gy / 32.0
+            px = int(round(tw * 0.5 + (u - v) * (tw * 0.5)))
+            py = int(round((u + v) * (th * 0.5)))
+            pygame.draw.rect(iso_crack, settings.COLOR_GLASS_SHADOW, (px, py, pw, ph))
+
+        # White starburst crack highlight layer
         crack_color = settings.COLOR_GLASS_CRACK[:3]
-        cracks = [
-            ((cx_l, cy_l), (round(cx_l + (p1[0] - cx_l) * 0.5), round(cy_l + (p1[1] - cy_l) * 0.5))),
-            ((round(cx_l + (p1[0] - cx_l) * 0.5), round(cy_l + (p1[1] - cy_l) * 0.5)),
-             (round(cx_l + (p1[0] - cx_l) * 0.85), round(cy_l + (p1[1] - cy_l) * 0.85))),
-            ((round(cx_l + (p1[0] - cx_l) * 0.5), round(cy_l + (p1[1] - cy_l) * 0.5)),
-             (round(cx_l + (p0[0] - cx_l) * 0.6), round(cy_l + (p0[1] - cy_l) * 0.6))),
-            ((cx_l, cy_l), (round(cx_l + (p3[0] - cx_l) * 0.45), round(cy_l + (p3[1] - cy_l) * 0.45))),
-            ((round(cx_l + (p3[0] - cx_l) * 0.45), round(cy_l + (p3[1] - cy_l) * 0.45)),
-             (round(cx_l + (p3[0] - cx_l) * 0.8), round(cy_l + (p3[1] - cy_l) * 0.8))),
-            ((round(cx_l + (p3[0] - cx_l) * 0.45), round(cy_l + (p3[1] - cy_l) * 0.45)),
-             (round(cx_l + (p2[0] - cx_l) * 0.55), round(cy_l + (p2[1] - cy_l) * 0.55))),
-            ((cx_l, cy_l), (round(cx_l + (p0[0] - cx_l) * 0.4), round(cy_l + (p0[0] - cx_l) * 0.4))),
-            ((cx_l, cy_l), (round(cx_l + (p2[0] - cx_l) * 0.45), round(cy_l + (p2[1] - cy_l) * 0.45))),
-        ]
-        for start, end in cracks:
-            pygame.draw.line(iso_glass, crack_color, start, end, 2)
+        for gx, gy in settings.FRAGILE_CRACK_WHITE:
+            u = gx / 32.0
+            v = gy / 32.0
+            px = int(round(tw * 0.5 + (u - v) * (tw * 0.5)))
+            py = int(round((u + v) * (th * 0.5)))
+            pygame.draw.rect(iso_crack, crack_color, (px, py, pw, ph))
 
-        surface.blit(iso_glass, (min_x, min_y))
+        surface.blit(iso_crack, (min_x, min_y))
         pygame.draw.polygon(surface, settings.COLOR_GLASS_BORDER, corners, 1)
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:

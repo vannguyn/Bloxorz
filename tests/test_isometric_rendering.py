@@ -415,11 +415,16 @@ def test_3d_special_cells_visual_redesign():
     surface.fill((0, 0, 0))
     renderer.draw(surface, level, state_closed)
 
+    bridge_corners = renderer.tile_corners(1, 2, 0.0)
+    bridge_mask = pygame.Surface((800, 600), pygame.SRCALPHA)
+    pygame.draw.polygon(bridge_mask, (255, 255, 255, 255), bridge_corners)
+
     bridge_rect = renderer.get_cell_rect(1, 2)
     bridge_pixels = [
         surface.get_at((x, y))[:3]
         for x in range(bridge_rect.left, bridge_rect.right)
         for y in range(bridge_rect.top, bridge_rect.bottom)
+        if bridge_mask.get_at((x, y))[3] > 0
     ]
     red_pixels = [
         p for p in bridge_pixels
@@ -787,6 +792,60 @@ def test_pixel_art_crack_tokens_and_coordinates():
         assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
         gx, gy = coord
         assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
+
+
+def test_3d_pixel_art_fragile_tile_rendering():
+    """Verify 3D isometric fragile tile renders pixel-art crack with rust shadow depth onto top diamond."""
+    renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+    renderer.origin_x = 400
+    renderer.origin_y = 300
+    renderer.tile_size = 64
+
+    # 1. Verify 35% slab depth
+    floor_d = renderer.get_slab_depth(TileType.FLOOR)
+    fragile_d = renderer.get_slab_depth(TileType.FRAGILE)
+    assert fragile_d == max(2, round(floor_d * 0.35)), (
+        f"Fragile slab depth {fragile_d} must be strictly 35% of floor slab depth {floor_d}"
+    )
+
+    surface = pygame.Surface((800, 600))
+    surface.fill((0, 0, 0))
+    corners = renderer.tile_corners(0, 0, 0.0)
+    renderer._draw_fragile_tile(surface, corners, floor_d)
+
+    xs = [p[0] for p in corners]
+    ys = [p[1] for p in corners]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+
+    # Top diamond polygon mask
+    mask_surf = pygame.Surface((800, 600), pygame.SRCALPHA)
+    pygame.draw.polygon(mask_surf, (255, 255, 255, 255), corners)
+
+    diamond_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(min_x, max_x + 1)
+        for y in range(min_y, max_y + 1)
+        if mask_surf.get_at((x, y))[3] > 0
+    ]
+    total_diamond_pixels = len(diamond_pixels)
+    assert total_diamond_pixels > 0, "Top diamond should contain drawn pixels"
+
+    white_crack_pixels = [p for p in diamond_pixels if p[0] > 240 and p[1] > 240 and p[2] > 240]
+    shadow_pixels = [
+        p for p in diamond_pixels
+        if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
+    ]
+    orange_pixels = [p for p in diamond_pixels if p[0] > p[1] > p[2]]
+
+    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 240) on projected diamond surface"
+    assert len(shadow_pixels) > 0, (
+        "Expected shadow pixels (R in [110, 180], G in [30, 90], B < 60) on projected diamond surface"
+    )
+    assert len(orange_pixels) / total_diamond_pixels > 0.60, (
+        f"Orange pixels (R > G > B) must dominate > 60% of diamond surface (got {len(orange_pixels) / total_diamond_pixels:.2%})"
+    )
+
 
 
 
