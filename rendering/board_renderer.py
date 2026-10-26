@@ -84,9 +84,11 @@ class BoardRenderer:
                 self._draw_bridge_tile(surface, cell_rect, is_open)
 
         # 2. Draw switches
+        occupied_cells = set(state.occupied_cells())
         for sw in level.switches:
             cell_rect = self.get_cell_rect(sw.position[0], sw.position[1])
-            self._draw_switch(surface, cell_rect, sw)
+            is_pressed = sw.position in occupied_cells
+            self._draw_switch(surface, cell_rect, sw, is_pressed=is_pressed)
 
     def _draw_floor_tile(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         pygame.draw.rect(surface, settings.COLOR_FLOOR, rect)
@@ -104,13 +106,16 @@ class BoardRenderer:
 
     def _draw_fragile_tile(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect)
-        pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 2)
-        # Draw subtle warning diagonal lines to signify fragile surface
-        gap = max(8, self.tile_size // 4)
-        for offset in range(gap, self.tile_size, gap):
+        # Full-span diagonal hazard warning stripes covering 100% of tile rect using clipline
+        step = max(6, self.tile_size // 6)
+        for offset in range(step, rect.width + rect.height, step):
             p1 = (rect.left + offset, rect.top)
             p2 = (rect.left, rect.top + offset)
-            pygame.draw.line(surface, settings.COLOR_FRAGILE_BORDER, p1, p2, 1)
+            clipped = rect.clipline(p1, p2)
+            if clipped:
+                pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, clipped[0], clipped[1], 2)
+        # Crisp perimeter warning border
+        pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 2)
 
     def _draw_bridge_tile(self, surface: pygame.Surface, rect: pygame.Rect, is_open: bool) -> None:
         if is_open:
@@ -118,39 +123,67 @@ class BoardRenderer:
             pygame.draw.rect(surface, settings.COLOR_BRIDGE_OPEN_BORDER, rect, 2)
             # Subtle cross pattern indicating deployed bridge planks
             center = rect.center
-            pygame.draw.line(surface, settings.COLOR_BRIDGE_OPEN_BORDER, (rect.left + 4, center[1]), (rect.right - 4, center[1]), 1)
+            pygame.draw.line(surface, settings.COLOR_BRIDGE_OPEN_BORDER, (rect.left + 2, center[1]), (rect.right - 2, center[1]), 2)
         else:
-            # Closed bridge: appears like void/transparent with dashed outline
-            pygame.draw.rect(surface, settings.COLOR_BRIDGE_CLOSED, rect)
+            # Closed bridge: dark void abyss, recessed docking rail wireframe, and corner docking pins
+            # (No crimson red-X, which is strictly reserved for Heavy Switch)
+            pygame.draw.rect(surface, (16, 20, 28), rect)
             pygame.draw.rect(surface, settings.COLOR_BRIDGE_CLOSED_BORDER, rect, 1)
-            # Red dotted cross to clearly mark inactive bridge
-            pygame.draw.line(surface, (120, 50, 60), (rect.left + 6, rect.top + 6), (rect.right - 6, rect.bottom - 6), 1)
-            pygame.draw.line(surface, (120, 50, 60), (rect.left + 6, rect.bottom - 6), (rect.right - 6, rect.top + 6), 1)
 
-    def _draw_switch(self, surface: pygame.Surface, rect: pygame.Rect, switch: Switch) -> None:
+            # Recessed docking rail at pit depth
+            inner_rect = rect.inflate(-8, -8)
+            pygame.draw.rect(surface, settings.COLOR_BRIDGE_DOCK_RAIL, inner_rect, 1)
+
+            # 4 corner docking guide pins
+            pin_size = max(2, min(4, self.tile_size // 10))
+            pygame.draw.rect(surface, settings.COLOR_BRIDGE_DOCK_PIN, (rect.left + 2, rect.top + 2, pin_size, pin_size))
+            pygame.draw.rect(surface, settings.COLOR_BRIDGE_DOCK_PIN, (rect.right - 2 - pin_size, rect.top + 2, pin_size, pin_size))
+            pygame.draw.rect(surface, settings.COLOR_BRIDGE_DOCK_PIN, (rect.left + 2, rect.bottom - 2 - pin_size, pin_size, pin_size))
+            pygame.draw.rect(surface, settings.COLOR_BRIDGE_DOCK_PIN, (rect.right - 2 - pin_size, rect.bottom - 2 - pin_size, pin_size, pin_size))
+
+    def _draw_switch(self, surface: pygame.Surface, rect: pygame.Rect, switch: Switch, is_pressed: bool = False) -> None:
         center = rect.center
         rad = max(6, self.tile_size // 3)
 
         if switch.type == "soft":
-            # Octagon/Circle in yellow
-            pygame.draw.circle(surface, settings.COLOR_SWITCH_SOFT, center, rad)
-            pygame.draw.circle(surface, (160, 130, 10), center, rad, 2)
+            # Cylindrical base pedestal shadow ring
+            pygame.draw.circle(surface, settings.COLOR_SWITCH_PEDESTAL, center, rad + 2)
+            # Tactile circular button cap (brightens when pressed)
+            cap_color = (255, 245, 130) if is_pressed else settings.COLOR_SWITCH_SOFT
+            pygame.draw.circle(surface, cap_color, center, rad)
+            rim_color = (200, 175, 30) if is_pressed else (160, 130, 10)
+            pygame.draw.circle(surface, rim_color, center, rad, 1 if is_pressed else 2)
         elif switch.type == "heavy":
-            # Heavy switch: Bold 'X' shape in crimson
-            arm = rad - 2
+            # Cast-metal square subplate base
+            sub_size = max(14, int(self.tile_size * 0.65))
+            sub_rect = pygame.Rect(center[0] - sub_size // 2, center[1] - sub_size // 2, sub_size, sub_size)
+            pygame.draw.rect(surface, settings.COLOR_SWITCH_HEAVY_BASE, sub_rect)
+            pygame.draw.rect(surface, (30, 35, 45), sub_rect, 1)
+
+            # Bold crimson X arms (brightens when pressed)
+            arm = max(4, sub_size // 2 - 2)
             p1 = (center[0] - arm, center[1] - arm)
             p2 = (center[0] + arm, center[1] + arm)
             p3 = (center[0] - arm, center[1] + arm)
             p4 = (center[0] + arm, center[1] - arm)
-            pygame.draw.line(surface, settings.COLOR_SWITCH_HEAVY, p1, p2, 5)
-            pygame.draw.line(surface, settings.COLOR_SWITCH_HEAVY, p3, p4, 5)
+            x_color = (255, 110, 110) if is_pressed else settings.COLOR_SWITCH_HEAVY
+            pygame.draw.line(surface, x_color, p1, p2, 5)
+            pygame.draw.line(surface, x_color, p3, p4, 5)
         elif switch.type == "split":
-            # Split switch: "( )" bracket shape in bright cyan
+            # Split switch: twin curved brackets "( )" and dual cyan gem pips
             bracket_h = rad
             bracket_w = max(4, rad // 2)
-            # Left bracket "("
             l_cx = center[0] - bracket_w
             r_cx = center[0] + bracket_w
-            pygame.draw.arc(surface, settings.COLOR_SWITCH_SPLIT, (l_cx - 4, center[1] - bracket_h, 8, bracket_h * 2), 1.57, 4.71, 3)
-            # Right bracket ")"
-            pygame.draw.arc(surface, settings.COLOR_SWITCH_SPLIT, (r_cx - 4, center[1] - bracket_h, 8, bracket_h * 2), -1.57, 1.57, 3)
+            split_color = (120, 215, 255) if is_pressed else settings.COLOR_SWITCH_SPLIT
+
+            # Twin brackets
+            pygame.draw.arc(surface, split_color, (l_cx - 4, center[1] - bracket_h, 8, bracket_h * 2), 1.57, 4.71, 3)
+            pygame.draw.arc(surface, split_color, (r_cx - 4, center[1] - bracket_h, 8, bracket_h * 2), -1.57, 1.57, 3)
+
+            # Dual cyan gem pips
+            pip_rad = max(2, rad // 4)
+            pip_offset = max(3, rad // 3)
+            pygame.draw.circle(surface, split_color, (center[0] - pip_offset, center[1]), pip_rad)
+            pygame.draw.circle(surface, split_color, (center[0] + pip_offset, center[1]), pip_rad)
+

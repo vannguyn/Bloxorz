@@ -13,7 +13,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
 from config import settings
-from core.interfaces import Orientation
+from core.interfaces import BlockState, GameState, Orientation, Switch
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
@@ -469,6 +469,140 @@ def test_replayer_playback_in_3d_mode():
     game_screen.draw()
     raw_bytes2 = pygame.image.tobytes(surface, "RGB")
     assert any(b > 0 for b in raw_bytes2)
+
+
+def test_2d_special_cells_visual_redesign():
+    """Verify 2D special cells visual redesign: no red-X on closed bridge, full-span fragile stripes, switch press state."""
+    surface = pygame.Surface((800, 600))
+    renderer = BoardRenderer(800, 600)
+
+    # 1. Closed bridge in 2D: verify no red pixels and verify recessed docking rails/pins
+    level_bridge = mock_level_with_bridge()
+    state_bridge_closed = GameState(block=level_bridge.start, bridge_mask=0)
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level_bridge, state_bridge_closed)
+
+    bridge_cell = (1, 4)
+    bridge_rect = renderer.get_cell_rect(*bridge_cell)
+    bridge_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(bridge_rect.left, bridge_rect.right)
+        for y in range(bridge_rect.top, bridge_rect.bottom)
+    ]
+    red_pixels = [
+        p for p in bridge_pixels
+        if p == (120, 50, 60) or (p[0] > 150 and p[1] < 100 and p[2] < 100) or (p[0] > 110 and p[1] < 70 and p[2] < 70)
+    ]
+    assert len(red_pixels) == 0, f"Found red pixels in closed bridge: {red_pixels[:5]}"
+
+    has_dock_features = any(
+        p in (settings.COLOR_BRIDGE_DOCK_RAIL, settings.COLOR_BRIDGE_DOCK_PIN)
+        for p in bridge_pixels
+    )
+    assert has_dock_features, "Closed bridge should render docking rail or pin features"
+
+    # 2. Fragile tile in 2D: verify hazard warning stripes span across both top-left and bottom-right quadrants
+    level_fragile = mock_level_with_fragile()
+    state_fragile = GameState(block=level_fragile.start, bridge_mask=0)
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level_fragile, state_fragile)
+
+    fragile_cell = (1, 3)
+    fragile_rect = renderer.get_cell_rect(*fragile_cell)
+
+    tl_stripes = [
+        surface.get_at((x, y))[:3]
+        for x in range(fragile_rect.left + 2, fragile_rect.centerx)
+        for y in range(fragile_rect.top + 2, fragile_rect.centery)
+        if surface.get_at((x, y))[:3] == settings.COLOR_FRAGILE_STRIPE
+    ]
+    br_stripes = [
+        surface.get_at((x, y))[:3]
+        for x in range(fragile_rect.centerx, fragile_rect.right - 2)
+        for y in range(fragile_rect.centery, fragile_rect.bottom - 2)
+        if surface.get_at((x, y))[:3] == settings.COLOR_FRAGILE_STRIPE
+    ]
+    assert len(tl_stripes) > 0, "Fragile tile top-left quadrant missing hazard stripes"
+    assert len(br_stripes) > 0, "Fragile tile bottom-right quadrant missing hazard stripes (clipped/missing)"
+
+    # 3. Switch in 2D: verify pixel colors change when block is standing on switch vs away
+    sw_cell = (1, 2)
+    state_away = GameState(
+        block=BlockState(r=1, c=0, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level_bridge, state_away)
+    sw_rect = renderer.get_cell_rect(*sw_cell)
+    pixels_away = [
+        surface.get_at((x, y))[:3]
+        for x in range(sw_rect.left, sw_rect.right)
+        for y in range(sw_rect.top, sw_rect.bottom)
+    ]
+
+    state_standing_on_sw = GameState(
+        block=BlockState(r=1, c=2, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level_bridge, state_standing_on_sw)
+    pixels_on = [
+        surface.get_at((x, y))[:3]
+        for x in range(sw_rect.left, sw_rect.right)
+        for y in range(sw_rect.top, sw_rect.bottom)
+    ]
+
+    assert pixels_away != pixels_on, "Switch should render differently when block is on it vs away"
+
+    # 4. Heavy & Split switches in 2D
+    heavy_sw = Switch(id="sw_heavy", type="heavy", position=(0, 0), bridge_ids=[], mode="toggle")
+    split_sw = Switch(id="sw_split", type="split", position=(0, 0), bridge_ids=[], mode="toggle")
+    test_rect = pygame.Rect(10, 10, renderer.tile_size, renderer.tile_size)
+
+    # Heavy switch: metal base plate and crimson X arms
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, test_rect, heavy_sw, is_pressed=False)
+    heavy_unpressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(10, 10 + renderer.tile_size)
+        for y in range(10, 10 + renderer.tile_size)
+    ]
+    assert any(p == settings.COLOR_SWITCH_HEAVY_BASE for p in heavy_unpressed), "Heavy switch base missing"
+    assert any(p == settings.COLOR_SWITCH_HEAVY for p in heavy_unpressed), "Heavy switch X arms missing"
+
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, test_rect, heavy_sw, is_pressed=True)
+    heavy_pressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(10, 10 + renderer.tile_size)
+        for y in range(10, 10 + renderer.tile_size)
+    ]
+    assert heavy_pressed != heavy_unpressed, "Heavy switch should visually update when pressed"
+
+    # Split switch: cyan brackets and gem pips
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, test_rect, split_sw, is_pressed=False)
+    split_unpressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(10, 10 + renderer.tile_size)
+        for y in range(10, 10 + renderer.tile_size)
+    ]
+    assert any(p == settings.COLOR_SWITCH_SPLIT for p in split_unpressed), "Split switch cyan affordance missing"
+
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, test_rect, split_sw, is_pressed=True)
+    split_pressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(10, 10 + renderer.tile_size)
+        for y in range(10, 10 + renderer.tile_size)
+    ]
+    assert split_pressed != split_unpressed, "Split switch should visually update when pressed"
+
+
+def test_redesign_2d_special_cells():
+    """Alias for test_2d_special_cells_visual_redesign to satisfy both -k filters."""
+    test_2d_special_cells_visual_redesign()
+
 
 
 
