@@ -9,7 +9,7 @@ Tài liệu này hướng dẫn cách kết nối hệ thống Lõi trò chơi (
   - Trong `ui/dependencies.py`: Biến `IS_MOCK_CORE = False` đã được kích hoạt. Giao diện trò chơi (`main.py`) và bộ thử nghiệm hiệu năng (`scripts/benchmark.py`) đều chạy trên các màn chơi thật và lõi chuyển trạng thái thật.
 
 - **M2 (UI & Rendering): ĐÃ HOÀN THÀNH.**
-  - Vòng lặp Pygame, renderer 2D, solver bridge đa tiến trình (`multiprocessing.Process`), replay lời giải với tùy chọn tốc độ (`0.5x`, `1.0x`, `2.0x`, `4.0x`) đã hoàn chỉnh.
+  - Vòng lặp Pygame, renderer 2D phẳng, renderer 3D Isometric đẳng cự, solver bridge đa tiến trình (`multiprocessing.Process`), replay lời giải với tùy chọn tốc độ (`0.5x`, `1.0x`, `2.0x`, `4.0x`) đã hoàn chỉnh.
 
 - **M3–M5 (Solvers: BFS, DFS, UCS, A*): SẴN SÀNG ĐỂ TÍCH HỢP.**
   - Hiện tại `IS_MOCK_SOLVERS = True` sử dụng stub solver để kiểm thử luồng UI và benchmark mẫu. Khi cài đặt xong các solver thật, chỉ cần cắm vào điểm kết nối theo hướng dẫn dưới đây.
@@ -89,6 +89,57 @@ Sau khi tích hợp, thực hiện kiểm tra theo các bước sau:
 # -> HUD trên cùng sẽ hiển thị nhãn `[REAL]` khi cả Core và Solvers đều là thật.
 # -> Bạn có thể chọn màn chơi, chuyển thuật toán, bấm "Solve" và xem lời giải tự động phát lại.
 ```
+
+---
+
+## 4. Kiến trúc Hiển thị Kép (Dual Rendering Architecture: 2D & 3D Isometric)
+
+Hệ thống giao diện Bloxorz hỗ trợ cơ chế hiển thị kép linh hoạt giữa chế độ 2D phẳng truyền thống (Top-Down) và chế độ 3D Đẳng cự (Isometric View).
+
+### 4.1. So sánh Chế độ 2D Top-Down và 3D Isometric
+- **2D Top-Down (Mặc định - Default)**:
+  - Góc nhìn trực diện từ trên xuống, giúp người chơi và nhà phát triển dễ dàng quan sát bố cục lưới, tọa độ ma trận hàng-cột `(r, c)` và các ô tính năng (`FRAGILE`, `BRIDGE`, công tắc).
+  - Sử dụng `BoardRenderer` và `BlockRenderer`.
+- **3D Isometric View**:
+  - Tái hiện phong cách không gian 3 chiều nguyên bản của tựa game Bloxorz kinh điển thông qua phép chiếu đẳng cự 2:1 tiêu chuẩn:
+    $$\begin{aligned}
+    x_{\text{iso}} &= (c - r) \cdot \frac{W}{2} + \text{offset}_x \\
+    y_{\text{iso}} &= (c + r) \cdot \frac{H}{2} + \text{offset}_y
+    \end{aligned}$$
+    với tỉ lệ kích thước hình thoi ô sàn là $W : H = 2 : 1$ ($H = W / 2$).
+  - Khối chữ nhật 3D (Extruded Cuboid) được hiển thị với 3 mặt trực quan: Mặt trên (Top), Mặt hông trái (Left flank), Mặt hông phải (Right flank) kết hợp bảng màu đổ bóng (lighting & shading) tinh tế.
+  - Sắp xếp thứ tự vẽ theo chiều sâu tự động (Depth Sorting / Painter's Algorithm) dựa trên tổng chỉ số ma trận $(r + c)$ từ xa đến gần, đảm bảo không có hiện tượng xuyên thấu hình học giữa các ô gạch và khối hộp.
+  - Hiệu ứng nâng nhẹ khi lăn (Lightweight Lift LERP): Khi chuyển động hoặc replay, khối hộp có độ nâng nhẹ theo hàm parabol $z_{\text{lift}} = 4 \cdot h_{\text{lift}} \cdot p \cdot (1 - p)$ tạo cảm giác nhấc bổng mượt mà thay vì trượt bẹt trên mặt sàn.
+  - Khối phân tách (Split Block) trong 3D hiển thị rõ nét 2 khối lập phương $1 \times 1 \times 1$ độc lập, với viền chỉ thị màu vàng kim rực rỡ quanh khối đang được kích hoạt điều khiển.
+
+### 4.2. Cơ chế Điều phối Renderer trong `GameScreen`
+`GameScreen` (`ui/game_screen.py`) đóng vai trò điều phối trung tâm và ủy quyền toàn bộ tác vụ dựng hình tới các renderer chuyên biệt mà **không làm thay đổi logic Core** (`core/` và `levels/`):
+- Khi khởi tạo:
+  ```python
+  self.board_renderer = BoardRenderer(self.board_rect.width, self.board_rect.height)
+  self.block_renderer = BlockRenderer(self.board_renderer)
+  self.iso_board_renderer = IsometricBoardRenderer(self.board_rect.width, self.board_rect.height)
+  self.iso_block_renderer = IsometricBlockRenderer(self.iso_board_renderer)
+  self.view_mode = "2D"  # 2D là mặc định khi khởi động
+  ```
+- Khi thực thi vòng lặp dựng hình `GameScreen.draw()`:
+  ```python
+  if self.view_mode == "3D":
+      self.iso_board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
+      self.iso_block_renderer.draw(self.surface, self.current_state)
+  else:
+      self.board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
+      self.block_renderer.draw(self.surface, self.current_state)
+  ```
+
+### 4.3. Nút Điều khiển UI, Phím tắt và Cơ chế Lưu trạng thái (Persistence)
+- **Nút bấm Sidebar (`btn_view_mode`)**: Nằm tại thanh điều khiển bên phải, hiển thị trực tiếp nhãn `View: 2D` hoặc `View: 3D`. Nhấp chuột trái vào nút để chuyển đổi luân phiên giữa 2 chế độ.
+- **Phím tắt nhanh (`V`)**: Người chơi có thể nhấn phím `V` bất cứ lúc nào trong khi chơi thủ công hoặc trong khi đang xem Replay để chuyển đổi góc nhìn tức thì.
+- **Duy trì trạng thái (State Persistence)**: Chế độ hiển thị `self.view_mode` được duy trì bền vững xuyên suốt vòng đời phiên chơi. Khi người dùng:
+  - Tải màn chơi kế tiếp (`next_level()`) hoặc màn chơi trước (`prev_level()`)
+  - Tải màn chơi bất kỳ (`load_level(idx)`)
+  - Chơi lại màn chơi hiện tại (`restart_level()`)
+  chế độ góc nhìn đã chọn (ví dụ `"3D"`) vẫn được giữ nguyên vẹn mà không bị reset về `"2D"`.
 
 ---
 

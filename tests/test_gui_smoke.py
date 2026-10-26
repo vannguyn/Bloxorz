@@ -372,6 +372,106 @@ def test_view_mode_toggle_and_persistence():
     assert any(b > 0 for b in raw_2d)
 
 
+def test_render_all_mock_levels_in_3d_mode():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.view_mode = "3D"
+
+    # Render each mock level in 3D isometric mode
+    for idx in range(len(game_screen.levels)):
+        game_screen.load_level(idx)
+        assert game_screen.view_mode == "3D"
+        game_screen.update(0.016)
+        game_screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+
+def test_render_all_real_levels_in_3d_mode():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface)
+    assert len(game_screen.levels) == 10
+    game_screen.view_mode = "3D"
+
+    # Render each real level in 3D isometric mode
+    for idx in range(len(game_screen.levels)):
+        game_screen.load_level(idx)
+        assert game_screen.view_mode == "3D"
+        game_screen.update(0.016)
+        game_screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+
+def test_manual_input_in_3d_mode():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.view_mode = "3D"
+    game_screen.load_level(0)
+
+    start_pos = (game_screen.current_state.block.r, game_screen.current_state.block.c)
+    assert game_screen.moves_count == 0
+
+    # Dispatch arrow key event (pygame.K_RIGHT)
+    event_right = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)
+    game_screen.handle_event(event_right)
+    game_screen.update(0.016)
+    game_screen.draw()
+
+    assert game_screen.moves_count == 1
+    assert game_screen.current_state.block.orientation == Orientation.LYING_H
+    assert game_screen.current_state.block.c == start_pos[1] + 1
+    raw_bytes = pygame.image.tobytes(surface, "RGB")
+    assert any(b > 0 for b in raw_bytes)
+
+    # Dispatch WASD key event (pygame.K_d)
+    event_d = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d)
+    game_screen.handle_event(event_d)
+    game_screen.update(0.016)
+    game_screen.draw()
+
+    assert game_screen.moves_count == 2
+    raw_bytes2 = pygame.image.tobytes(surface, "RGB")
+    assert any(b > 0 for b in raw_bytes2)
+
+
+def test_replayer_playback_in_3d_mode():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.view_mode = "3D"
+    game_screen.load_level(0)
+
+    # Trigger replayer on a solution path
+    game_screen.replayer = SolutionReplayer(
+        game_screen.level,
+        game_screen.current_state,
+        ["R", "R", "R", "R"],
+        step_delay=0.4,
+    )
+    assert game_screen.replayer is not None
+    assert game_screen.replayer.total_steps == 4
+
+    # Step forward
+    init_idx = game_screen.replayer.current_index
+    game_screen.replay_next_step()
+    assert game_screen.replayer.current_index == init_idx + 1
+
+    # Update with dt
+    game_screen.update(0.05)
+
+    # Verify draw succeeds with replayer active
+    game_screen.draw()
+    raw_bytes = pygame.image.tobytes(surface, "RGB")
+    assert any(b > 0 for b in raw_bytes)
+
+    # Advance time through replayer and draw
+    game_screen.update(0.5)
+    game_screen.draw()
+    raw_bytes2 = pygame.image.tobytes(surface, "RGB")
+    assert any(b > 0 for b in raw_bytes2)
+
+
+
 
 
 
