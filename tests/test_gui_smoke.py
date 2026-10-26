@@ -887,6 +887,115 @@ def test_2d_pixel_art_fragile_tile_rendering():
     )
 
 
+def test_button_icon_and_selected_state():
+    """Verify Button renders with selected=True using COLOR_BTN_PRIMARY, and draws an icon via icon_drawer."""
+    from ui.icons import draw_play_icon
+
+    surface = pygame.Surface((200, 100))
+    surface.fill((0, 0, 0))
+    font = pygame.font.Font(None, 16)
+
+    # 1. Button with selected=True, icon_drawer, and text
+    btn = Button(
+        (10, 10, 120, 36),
+        "Play",
+        icon_drawer=draw_play_icon,
+        selected=True,
+    )
+    assert btn.selected is True
+    assert btn.icon_drawer is draw_play_icon
+
+    btn.draw(surface, font)
+
+    # Background must contain COLOR_BTN_PRIMARY pixels
+    btn_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(btn.rect.left, btn.rect.right)
+        for y in range(btn.rect.top, btn.rect.bottom)
+    ]
+    assert settings.COLOR_BTN_PRIMARY in btn_pixels, (
+        f"Button with selected=True did not contain COLOR_BTN_PRIMARY {settings.COLOR_BTN_PRIMARY}"
+    )
+
+    # Active border should be COLOR_TEXT_ACCENT
+    assert settings.COLOR_TEXT_ACCENT in btn_pixels, (
+        f"Button with selected=True did not contain active border COLOR_TEXT_ACCENT {settings.COLOR_TEXT_ACCENT}"
+    )
+
+    # 2. Icon-only button (empty text) centers icon
+    surface.fill((0, 0, 0))
+    icon_only_btn = Button(
+        (10, 10, 50, 36),
+        "",
+        icon_drawer=draw_play_icon,
+        selected=False,
+    )
+    icon_only_btn.draw(surface, font)
+    icon_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(icon_only_btn.rect.left, icon_only_btn.rect.right)
+        for y in range(icon_only_btn.rect.top, icon_only_btn.rect.bottom)
+    ]
+    # Check drawn pixels exist (non-black and default button color exists)
+    assert settings.COLOR_BTN_DEFAULT in icon_pixels
+    assert any(p != (0, 0, 0) and p != settings.COLOR_BTN_DEFAULT for p in icon_pixels)
+
+
+def test_legend_bar_rendering():
+    """Verify LegendBar renders a pill bar containing 5 chips (Block, Goal, Fragile Tile, Closed Bridge, Split Switch)."""
+    from ui.legend_bar import LegendBar
+
+    legend = LegendBar()
+    surface = pygame.Surface((700, 680))
+    surface.fill((10, 15, 25))
+    area_rect = pygame.Rect(0, 0, 700, 680)
+    font = pygame.font.Font(None, 16)
+
+    bar_rect = legend.draw(surface, area_rect, font)
+    assert isinstance(bar_rect, pygame.Rect)
+
+    # Bar docked near the bottom of area_rect with height 34-36px
+    assert bar_rect.bottom <= area_rect.bottom
+    assert bar_rect.top >= area_rect.bottom - 50
+    assert 32 <= bar_rect.height <= 38
+
+    # Verify background and border colors in pill bar
+    pill_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(bar_rect.left, bar_rect.right)
+        for y in range(bar_rect.top, bar_rect.bottom)
+    ]
+    assert settings.COLOR_CARD_BG in pill_pixels, "LegendBar container missing COLOR_CARD_BG"
+    assert settings.COLOR_CARD_BORDER in pill_pixels, "LegendBar container missing COLOR_CARD_BORDER"
+
+    # Verify 5 visual chips rendered:
+    # 1. Block: orange rect (245, 130, 45)
+    orange_pixels = [p for p in pill_pixels if p == (245, 130, 45)]
+    assert len(orange_pixels) > 0, "LegendBar missing Block chip orange rect (245, 130, 45)"
+
+    # 2. Goal: gold circle (255, 215, 0)
+    gold_pixels = [p for p in pill_pixels if p == (255, 215, 0)]
+    assert len(gold_pixels) > 0, "LegendBar missing Goal chip gold circle (255, 215, 0)"
+
+    # 3. Fragile Tile: amber rect with white crack
+    white_crack_pixels = [p for p in pill_pixels if p == (255, 255, 255)]
+    assert len(white_crack_pixels) > 0, "LegendBar missing Fragile Tile white crack pixels"
+
+    # 4. Closed Bridge: dark rect with red X (239, 68, 68)
+    red_x_pixels = [p for p in pill_pixels if p == (239, 68, 68)]
+    assert len(red_x_pixels) > 0, "LegendBar missing Closed Bridge red X (239, 68, 68)"
+
+    # 5. Split Switch: cyan arched wings (56, 189, 248)
+    cyan_pixels = [p for p in pill_pixels if p == (56, 189, 248)]
+    assert len(cyan_pixels) > 0, "LegendBar missing Split Switch cyan arched wings (56, 189, 248)"
+
+    # Check chips specification
+    assert hasattr(legend, "CHIPS")
+    chip_labels = [chip[0] for chip in legend.CHIPS]
+    assert chip_labels == ["Block", "Goal", "Fragile Tile", "Closed Bridge", "Split Switch"]
+
+
+
 
 
 
