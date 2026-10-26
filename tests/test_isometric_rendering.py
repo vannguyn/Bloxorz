@@ -676,6 +676,96 @@ def test_patch_3d_amber_glass_and_switch():
     test_3d_amber_glass_and_switch_patch()
 
 
+def test_all_10_stages_visual_patch_regression_3d():
+    """Validates visual patch regression across all 10 real production stages in 3D:
+    1. All 10 stages render cleanly without exceptions in 3D mode with board and block.
+    2. Fragile tiles in stages contain predominantly orange hues (R > G > B) and white crack highlights (R, G, B > 220).
+    3. Heavy switches and Split switches visibly alter pixel representation upon block contact.
+    4. Heavy switches contain COLOR_HEAVY_BASE and COLOR_HEAVY_RED; Split switches contain COLOR_SPLIT_CYAN.
+    """
+    from levels.level_loader import load_all_levels
+
+    all_levels = load_all_levels()
+    assert len(all_levels) == 10
+
+    renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+    block_renderer = IsometricBlockRenderer(renderer)
+
+    for lvl in all_levels:
+        surf = pygame.Surface((800, 600))
+        st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
+        renderer.draw(surf, lvl, st)
+        block_renderer.draw(surf, st)
+        raw = pygame.image.tobytes(surf, "RGB")
+        assert any(b > 0 for b in raw), f"3D rendering for {lvl.id} produced empty surface"
+
+        # Check fragile tiles in this stage
+        for (r, c), tile_type in lvl.tiles.items():
+            if tile_type == TileType.FRAGILE:
+                rect = renderer.get_cell_rect(r, c)
+                pixels = [
+                    surf.get_at((x, y))[:3]
+                    for x in range(rect.left, rect.right)
+                    for y in range(rect.top, rect.bottom)
+                ]
+                orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+                white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
+                assert len(orange_pixels) > 20, (
+                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
+                )
+                assert len(white_crack_pixels) > 0, (
+                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
+                )
+
+        # Check switches in this stage
+        for sw in lvl.switches:
+            if sw.type in ("heavy", "split"):
+                block_away = lvl.start if (lvl.start.r, lvl.start.c) != sw.position else BlockState(
+                    r=(sw.position[0] + 2) % lvl.height,
+                    c=(sw.position[1] + 2) % lvl.width,
+                    orientation=Orientation.STANDING,
+                )
+                st_unpressed = GameState(block=block_away, bridge_mask=lvl.initial_bridge_mask)
+                st_pressed = GameState(
+                    block=BlockState(r=sw.position[0], c=sw.position[1], orientation=Orientation.STANDING),
+                    bridge_mask=lvl.initial_bridge_mask,
+                )
+
+                surf_unpressed = pygame.Surface((800, 600))
+                renderer.draw(surf_unpressed, lvl, st_unpressed)
+                rect = renderer.get_cell_rect(*sw.position)
+                pix_unpressed = [
+                    surf_unpressed.get_at((x, y))[:3]
+                    for x in range(rect.left, rect.right)
+                    for y in range(rect.top, rect.bottom)
+                ]
+
+                surf_pressed = pygame.Surface((800, 600))
+                renderer.draw(surf_pressed, lvl, st_pressed)
+                pix_pressed = [
+                    surf_pressed.get_at((x, y))[:3]
+                    for x in range(rect.left, rect.right)
+                    for y in range(rect.top, rect.bottom)
+                ]
+
+                assert pix_unpressed != pix_pressed, (
+                    f"3D switch {sw.id} ({sw.type}) in {lvl.id} did not alter pixel representation upon contact"
+                )
+
+                if sw.type == "heavy":
+                    assert any(p == settings.COLOR_HEAVY_BASE for p in pix_unpressed), (
+                        f"3D Heavy switch in {lvl.id} missing COLOR_HEAVY_BASE"
+                    )
+                    assert any(p == settings.COLOR_HEAVY_RED for p in pix_unpressed), (
+                        f"3D Heavy switch in {lvl.id} missing COLOR_HEAVY_RED"
+                    )
+                elif sw.type == "split":
+                    assert any(p == settings.COLOR_SPLIT_CYAN for p in pix_unpressed), (
+                        f"3D Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
+                    )
+
+
+
 
 
 
