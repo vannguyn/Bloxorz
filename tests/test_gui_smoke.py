@@ -1134,32 +1134,3 @@ def test_all_10_stages_card_sidebar_and_docked_legend_regression():
     assert game_screen.btn_replay_toggle.enabled is False
     assert game_screen.btn_replay_next.enabled is False
 
-    # Top control button icons: restart has no icon, view mode has eye icon on the right
-    assert game_screen.btn_restart.icon_drawer is None
-    assert game_screen.btn_view_mode.icon_drawer is not None
-    assert game_screen.btn_view_mode.icon_position == "right"
-
-
-def test_button_icon_position_right():
-    """Verify Button with icon_position='right' draws text first, then icon."""
-    drawn_rects: list[pygame.Rect] = []
-
-    def dummy_icon_drawer(surface, rect, color=(255, 255, 255)):
-        drawn_rects.append(rect.copy())
-
-    surface = pygame.Surface((120, 30))
-    font = pygame.font.Font(None, 18)
-    btn = Button(
-        (0, 0, 120, 30),
-        "View: 2D",
-        icon_drawer=dummy_icon_drawer,
-        icon_position="right",
-    )
-    btn.draw(surface, font)
-
-    assert len(drawn_rects) == 1
-    icon_rect = drawn_rects[0]
-    # Icon should be placed to the right of button center
-    assert icon_rect.left > btn.rect.centerx
-
-

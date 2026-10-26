@@ -19,7 +19,6 @@ __all__ = [
     "draw_step_forward_icon",
     "draw_speed_icon",
     "draw_metrics_icon",
-    "draw_eye_icon",
 ]
 
 
@@ -268,43 +267,3 @@ def draw_metrics_icon(
             pygame.Rect(bx, by, bar_w, bar_h),
             border_radius=max(1, bar_w // 4),
         )
-
-
-def draw_eye_icon(
-    surface: pygame.Surface,
-    rect: pygame.Rect,
-    color: tuple[int, int, int] = (255, 255, 255),
-) -> None:
-    """Draw a stylized human eye icon for 2D/3D view mode toggle."""
-    if rect.width <= 0 or rect.height <= 0:
-        return
-
-    cx, cy = rect.centerx, rect.centery
-    w, h = rect.width, rect.height
-    ew = max(6, int(w * 0.85))
-    eh = max(3, int(h * 0.35))
-    lw = max(1, int(min(w, h) * 0.09))
-
-    left = (cx - ew // 2, cy)
-    right = (cx + ew // 2, cy)
-
-    upper_pts = [
-        left,
-        (cx - ew // 3, cy - eh * 3 // 4),
-        (cx, cy - eh),
-        (cx + ew // 3, cy - eh * 3 // 4),
-        right,
-    ]
-    lower_pts = [
-        left,
-        (cx - ew // 3, cy + eh * 3 // 4),
-        (cx, cy + eh),
-        (cx + ew // 3, cy + eh * 3 // 4),
-        right,
-    ]
-    pygame.draw.lines(surface, color, False, upper_pts, lw)
-    pygame.draw.lines(surface, color, False, lower_pts, lw)
-
-    pupil_r = max(2, int(min(w, h) * 0.18))
-    pygame.draw.circle(surface, color, (cx, cy), pupil_r)
-

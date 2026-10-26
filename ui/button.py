@@ -44,7 +44,6 @@ class Button:
         primary: bool = False,
         selected: bool = False,
         icon_drawer: Callable[[pygame.Surface, pygame.Rect, tuple[int, int, int]], None] | None = None,
-        icon_position: str = "left",
         font_size: int = 16,
     ):
         self.rect = pygame.Rect(rect)
@@ -54,7 +53,6 @@ class Button:
         self.primary = primary
         self.selected = selected
         self.icon_drawer = icon_drawer
-        self.icon_position = icon_position
         self.font_size = font_size
 
         self.is_hovered = False
@@ -124,41 +122,22 @@ class Button:
             total_w = icon_size + gap + text_w if text_surf else icon_size
             start_x = self.rect.left + (self.rect.width - total_w) // 2
 
-            if self.icon_position == "right":
-                if text_surf:
-                    text_rect = pygame.Rect(
-                        start_x,
-                        self.rect.top + (self.rect.height - text_h) // 2,
-                        text_w,
-                        text_h,
-                    )
-                    surface.blit(text_surf, text_rect)
+            icon_rect = pygame.Rect(
+                start_x,
+                self.rect.top + (self.rect.height - icon_size) // 2,
+                icon_size,
+                icon_size,
+            )
+            _call_icon_drawer(self.icon_drawer, surface, icon_rect, text_color)
 
-                icon_rect = pygame.Rect(
-                    start_x + text_w + gap,
-                    self.rect.top + (self.rect.height - icon_size) // 2,
-                    icon_size,
-                    icon_size,
+            if text_surf:
+                text_rect = pygame.Rect(
+                    start_x + icon_size + gap,
+                    self.rect.top + (self.rect.height - text_h) // 2,
+                    text_w,
+                    text_h,
                 )
-                _call_icon_drawer(self.icon_drawer, surface, icon_rect, text_color)
-
-            else:
-                icon_rect = pygame.Rect(
-                    start_x,
-                    self.rect.top + (self.rect.height - icon_size) // 2,
-                    icon_size,
-                    icon_size,
-                )
-                _call_icon_drawer(self.icon_drawer, surface, icon_rect, text_color)
-
-                if text_surf:
-                    text_rect = pygame.Rect(
-                        start_x + icon_size + gap,
-                        self.rect.top + (self.rect.height - text_h) // 2,
-                        text_w,
-                        text_h,
-                    )
-                    surface.blit(text_surf, text_rect)
+                surface.blit(text_surf, text_rect)
 
         elif self.icon_drawer is not None and not self.text:
             icon_rect = pygame.Rect(
