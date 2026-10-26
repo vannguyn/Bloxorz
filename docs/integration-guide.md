@@ -109,7 +109,7 @@ Hệ thống giao diện Bloxorz hỗ trợ cơ chế hiển thị kép linh ho�
     với tỉ lệ kích thước hình thoi ô sàn là $W : H = 2 : 1$ ($H = W / 2$).
   - Khối chữ nhật 3D (Extruded Cuboid) được hiển thị với 3 mặt trực quan: Mặt trên (Top), Mặt hông trái (Left flank), Mặt hông phải (Right flank) kết hợp bảng màu đổ bóng (lighting & shading) tinh tế.
   - Sắp xếp thứ tự vẽ theo chiều sâu tự động (Depth Sorting / Painter's Algorithm) dựa trên tổng chỉ số ma trận $(r + c)$ từ xa đến gần, đảm bảo không có hiện tượng xuyên thấu hình học giữa các ô gạch và khối hộp.
-  - Hiệu ứng nâng nhẹ khi lăn (Lightweight Lift LERP): Khi chuyển động hoặc replay, khối hộp có độ nâng nhẹ theo hàm parabol $z_{\text{lift}} = 4 \cdot h_{\text{lift}} \cdot p \cdot (1 - p)$ tạo cảm giác nhấc bổng mượt mà thay vì trượt bẹt trên mặt sàn.
+  - Hiệu ứng nâng nhẹ khi lăn (Lightweight Lift LERP): Khi chuyển động hoặc replay, khối hộp có độ nâng nhẹ theo cung parabol $z_{\text{lift}} = 0.35 \cdot \sin(\pi \cdot t)$ tạo cảm giác nhấc bổng mượt mà thay vì trượt bẹt trên mặt sàn.
   - Khối phân tách (Split Block) trong 3D hiển thị rõ nét 2 khối lập phương $1 \times 1 \times 1$ độc lập, với viền chỉ thị màu vàng kim rực rỡ quanh khối đang được kích hoạt điều khiển.
 
 ### 4.2. Cơ chế Điều phối Renderer trong `GameScreen`
