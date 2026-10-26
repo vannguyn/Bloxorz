@@ -141,6 +141,34 @@ Hệ thống giao diện Bloxorz hỗ trợ cơ chế hiển thị kép linh ho�
   - Chơi lại màn chơi hiện tại (`restart_level()`)
   chế độ góc nhìn đã chọn (ví dụ `"3D"`) vẫn được giữ nguyên vẹn mà không bị reset về `"2D"`.
 
+### 4.4. Tối ưu hóa Nhận diện & Hình ảnh các Ô Đặc biệt (Special Cells Visual Affordance Overhaul)
+Nhằm mang lại trải nghiệm thị giác trực quan, giải quyết triệt để các hạn chế gây nhầm lẫn nhận diện trạng thái và nâng cao tính gợi ý tương tác (visual affordances) cho người chơi, hệ thống dựng hình (cả 2D phẳng và 3D Isometric) đã được nâng cấp toàn diện với 4 cải tiến cốt lõi:
+
+1. **Loại bỏ Xung đột Dấu X Đỏ trên Cầu Đóng (Elimination of Red-X Collision on Closed Bridges)**:
+   - *Vấn đề trước đây*: Cầu ở trạng thái đóng từng sử dụng dấu gạch chéo đỏ (Red-X), dẫn đến hiện tượng xung đột thị giác nghiêm trọng với Công tắc Nặng (`heavy switch`), khiến người chơi dễ nhầm lẫn giữa một cơ quan kích hoạt và một vực thẳm cấm đi.
+   - *Giải pháp thiết kế*:
+     - **Cầu Đóng (`Closed Bridge`)**: Thay thế hoàn toàn dấu X bằng cấu trúc giếng vực cơ khí tụt sâu (`sunken abyss pit`), trang bị hệ thống thanh ray cơ cấu trượt âm (`recessed docking rails`, mã màu `COLOR_BRIDGE_DOCK_RAIL = (35, 60, 80)`) cùng 4 chốt định vị góc dẫn hướng (`corner docking guide pins`, mã màu `COLOR_BRIDGE_DOCK_PIN = (45, 85, 110)`). Cầu đóng được khẳng định hoàn toàn không chứa bất kỳ điểm ảnh đỏ nào ($r > 150, g < 100, b < 100$).
+     - **Công tắc Nặng (`Heavy Switch`)**: Ký hiệu chữ X màu đỏ thẫm (`COLOR_SWITCH_HEAVY = (235, 75, 75)`) được bảo lưu độc quyền duy nhất cho Công tắc Nặng, đặt trên bệ thép bát giác đúc màu xám đậm (`COLOR_SWITCH_HEAVY_BASE = (45, 50, 60)`), tạo điểm nhấn cảnh báo khối phải đứng thẳng mới có đủ trọng lượng kích hoạt.
+
+2. **Vạch Cảnh báo Nguy hiểm Toàn Diện trên Ô Sàn Yếu (Full-Span Fragile Hazard Stripes)**:
+   - *Trong chế độ 2D*: Khắc phục triệt để hiện tượng vạch chéo bị cắt cụt một nửa do bounding box trước đây bằng việc ứng dụng thuật toán xén đoạn thẳng chính xác `pygame.Rect.clipline()`. Các vạch sọc vàng cam cảnh báo nguy hiểm (`COLOR_FRAGILE_STRIPE = (255, 185, 45)`) giờ đây trải dài xuyên suốt từ mép này sang mép kia qua toàn bộ 4 góc phần tư của ô gạch.
+   - *Trong chế độ 3D Isometric*: Chiều dày khối đá hông (slab extrusion depth) của ô sàn yếu được thiết lập mỏng hơn chính xác $50\%$ so với phiến sàn tiêu chuẩn ($d_{\text{fragile}} = \max(2, d // 2)$), kết hợp 4 dải sọc nghiêng $45^\circ$ trên mặt thoi, gợi ý trực quan rõ ràng về kết cấu chịu lực kém bền vững nếu chịu toàn bộ áp lực đứng thẳng của khối đá.
+
+3. **Công tắc 3D Xúc giác với Bệ Nổi và Độ Lún Vật lý (Tactile 3D Switches with Pedestal & Physical Depression)**:
+   - *Bệ đỡ xúc giác*: Các loại công tắc mềm (`soft`), công tắc nặng (`heavy`), và công tắc phân tách (`split`) trong không gian 3D Isometric đều được gắn trên bệ đế đệm nổi (`extruded base pedestal`) với bóng đổ viền đáy dày dặn.
+   - *Độ lún vật lý (Physical Depression)*:
+     - Khi ở trạng thái nghỉ (chưa bị đè), nắp bề mặt công tắc nhô cao độ nâng $-4\text{px}$ (với công tắc tròn) hoặc $-3\text{px}$ (với công tắc nặng và phân tách).
+     - Khi khối Bloxorz đè lên (tiếp xúc trực tiếp), nắp công tắc lún xuống độ cao $-1\text{px}$ sát bệ đệm, cung cấp phản hồi thị giác xúc giác (tactile feedback) tức thì cho người chơi mà không cần đọc nhật ký sự kiện.
+
+4. **Giếng Đích Thăm Thẳm với Chiều Sâu Quang Học (Optical Depth Goal Shaft with Abyss Void Floor)**:
+   - Thay cho vòng tròn đích phẳng đơn điệu, ô đích (`GOAL`) trong không gian 3D Isometric được tái tạo thành một giếng sụt quang học hướng trục sâu xuống đáy không gian.
+   - Cấu trúc bao gồm:
+     - Vành miệng giếng mạ viền vàng kim tinh tế (`(190, 155, 50)`).
+     - Thành giếng góc khuất bên trái đổ bóng tối sâu (`COLOR_GOAL_WALL_LEFT = (18, 22, 32)`).
+     - Thành giếng góc đón sáng bên phải đổ bóng trung tính (`COLOR_GOAL_WALL_RIGHT = (28, 34, 48)`).
+     - Đáy giếng hố đen thăm thẳm vô tận (`COLOR_GOAL_ABYSS = (6, 8, 12)`).
+   - Thiết kế này tạo ra ảo ảnh thị giác chiều sâu mạnh mẽ, kích thích trực giác chiến thắng khi người chơi đưa khối đá rơi thẳng đứng vào miệng hố.
+
 ---
 
 ## Phụ lục: Tóm tắt Kiến trúc & Hợp đồng Dữ liệu

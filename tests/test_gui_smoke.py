@@ -604,6 +604,86 @@ def test_redesign_2d_special_cells():
     test_2d_special_cells_visual_redesign()
 
 
+def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
+    """Assert closed bridge has 0 red pixels (r > 150 and g < 100 and b < 100),
+    while heavy switch has > 10 red pixels in 2D mode.
+    Also verifies all 10 real production levels render cleanly in 2D mode with overhauled visuals.
+    """
+    from levels.level_loader import load_level, load_all_levels
+
+    renderer = BoardRenderer(800, 600)
+    block_renderer = BlockRenderer(renderer)
+
+    # 1. Verify Level 1 closed bridge vs heavy switch red exclusivity
+    lvl1 = load_level("level_01")
+    state_closed = GameState(block=lvl1.start, bridge_mask=0)
+    surface = pygame.Surface((800, 600))
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, lvl1, state_closed)
+
+    # North bridge cells at (4, 1) and (5, 1)
+    for cell in lvl1.bridges["north_bridge"]:
+        rect = renderer.get_cell_rect(*cell)
+        red_pixels = [
+            surface.get_at((x, y))[:3]
+            for x in range(rect.left, rect.right)
+            for y in range(rect.top, rect.bottom)
+            if surface.get_at((x, y))[0] > 150
+            and surface.get_at((x, y))[1] < 100
+            and surface.get_at((x, y))[2] < 100
+        ]
+        assert len(red_pixels) == 0, (
+            f"2D closed bridge cell {cell} contained {len(red_pixels)} red pixels; strictly 0 expected"
+        )
+
+    # Heavy switch at (4, 4)
+    heavy_sw = next(s for s in lvl1.switches if s.type == "heavy")
+    heavy_rect = renderer.get_cell_rect(*heavy_sw.position)
+    heavy_red_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(heavy_rect.left, heavy_rect.right)
+        for y in range(heavy_rect.top, heavy_rect.bottom)
+        if surface.get_at((x, y))[0] > 150
+        and surface.get_at((x, y))[1] < 100
+        and surface.get_at((x, y))[2] < 100
+    ]
+    assert len(heavy_red_pixels) > 10, (
+        f"2D heavy switch at {heavy_sw.position} had {len(heavy_red_pixels)} red pixels; expected > 10"
+    )
+
+    # Switch depression visual differentiation
+    pixels_unpressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(heavy_rect.left, heavy_rect.right)
+        for y in range(heavy_rect.top, heavy_rect.bottom)
+    ]
+    state_pressed = GameState(
+        block=BlockState(r=heavy_sw.position[0], c=heavy_sw.position[1], orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface_pressed = pygame.Surface((800, 600))
+    surface_pressed.fill((0, 0, 0))
+    renderer.draw(surface_pressed, lvl1, state_pressed)
+    pixels_pressed = [
+        surface_pressed.get_at((x, y))[:3]
+        for x in range(heavy_rect.left, heavy_rect.right)
+        for y in range(heavy_rect.top, heavy_rect.bottom)
+    ]
+    assert pixels_unpressed != pixels_pressed, "Heavy switch visual output must change upon depression"
+
+    # 2. Verify all 10 real production levels render cleanly in 2D mode
+    all_levels = load_all_levels()
+    assert len(all_levels) == 10
+    for lvl in all_levels:
+        surf = pygame.Surface((800, 600))
+        st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
+        renderer.draw(surf, lvl, st)
+        block_renderer.draw(surf, st)
+        raw = pygame.image.tobytes(surf, "RGB")
+        assert any(b > 0 for b in raw), f"2D rendering for {lvl.id} produced empty surface"
+
+
+
 
 
 
