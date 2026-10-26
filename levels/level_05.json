@@ -1,0 +1,103 @@
+{
+      "id": "level_05",
+      "name": "Sideways Crossing",
+      "difficulty": "intermediate",
+      "description": "Use a horizontal roll to cross the fragile lane without ending upright on it.",
+      "width": 9,
+      "height": 8,
+      "start": {
+        "position": [
+          4,
+          1
+        ],
+        "orientation": "standing"
+      },
+      "goal": [
+        4,
+        7
+      ],
+      "tiles": [
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          5,
+          7
+        ]
+      ],
+      "fragile_tiles": [
+        [
+          4,
+          5
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "bridges": [],
+      "switches": [],
+      "split_rules": {
+        "control_switch_key": "SPACE",
+        "merge_when_adjacent": true,
+        "single_cube_can_win": false,
+        "single_cube_activates": [],
+        "single_cube_cannot_activate": [
+          "heavy",
+          "split"
+        ]
+      }
+    }

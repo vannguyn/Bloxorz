@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bloxorz: Visual Redesign & Affordance Specification</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter & Fira Code Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            brand: {
+              dark: '#0a0d14',
+              surface: '#121824',
+              card: '#182030',
+              border: '#222f46',
+              accent: '#38bdf8',
+              crimson: '#f43f5e',
+              amber: '#f59e0b',
+              emerald: '#10b981',
+              cyan: '#06b6d4'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0d121c; }
+    ::-webkit-scrollbar-thumb { background: #222f46; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334460; }
+    .canvas-glow {
+      box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.15);
+    }
+    .badge-glow {
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+    }
+  </style>
+</head>
+<body class="bg-[#0a0d14] text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="border-b border-brand-border bg-brand-surface/90 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 py-3.5 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 via-indigo-600 to-rose-500 p-0.5 shadow-lg shadow-sky-500/20 flex items-center justify-center">
+          <div class="w-full h-full bg-[#0d131f] rounded-[10px] flex items-center justify-center">
+            <!-- Bloxorz cube icon -->
+            <svg class="w-6 h-6 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg lg:text-xl tracking-tight text-white flex items-center gap-2">
+              Bloxorz Visual Redesign
+              <span class="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30">v2.4 Spec</span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400">Pygame 2D & 3D Isometric Visual Affordance & Cognition Overhaul</p>
+        </div>
+      </div>
+
+      <!-- Action status & quick stats -->
+      <div class="flex items-center gap-2 text-xs">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Affordance: 100% Resolved
+        </span>
+        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">
+          Collision Fix: Red-X Removed
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="border-b border-brand-border bg-[#0d121c] sticky top-[65px] z-40 px-4 lg:px-8">
+    <div class="max-w-7xl mx-auto flex space-x-1 overflow-x-auto py-2 no-scrollbar" id="tabContainer">
+      <button onclick="switchTab('visualizer')" id="tab-btn-visualizer" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-sky-500/15 text-sky-400 border border-sky-500/30">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Interactive Visualizer
+      </button>
+      <button onclick="switchTab('matrix')" id="tab-btn-matrix" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Design Matrix & Analysis
+      </button>
+      <button onclick="switchTab('code')" id="tab-btn-code" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        Pygame Source Code
+      </button>
+      <button onclick="switchTab('palette')" id="tab-btn-palette" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+        Palette & Design Tokens
+      </button>
+      <button onclick="switchTab('roadmap')" id="tab-btn-roadmap" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        Implementation Roadmap
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN VIEWPORT -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: INTERACTIVE VISUALIZER -->
+    <!-- ========================================== -->
+    <section id="pane-visualizer" class="tab-pane space-y-6">
+      
+      <!-- Top Controls Card -->
+      <div class="bg-brand-surface rounded-2xl border border-brand-border p-4 lg:p-6 shadow-xl">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Dual-Perspective Dynamic Cell Visualizer</span>
+              <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Realtime Canvas</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">
+              Simulate and inspect the exact visual rendering in 2D top-down and 3D Isometric. Compare the current flawed implementation with the redesigned visual affordances.
+            </p>
+          </div>
+
+          <!-- Controls Toolbars -->
+          <div class="flex flex-wrap items-center gap-3">
+            
+            <!-- Perspective Toggle -->
+            <div class="bg-[#0c101a] p-1 rounded-xl border border-brand-border flex items-center text-xs">
+              <button id="view-iso" onclick="setViewMode('iso')" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-sky-500 text-white shadow">
+                3D Isometric
+              </button>
+              <button id="view-2d" onclick="setViewMode('2d')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all">
+                2D Top-Down
+              </button>
+            </div>
+
+            <!-- Comparison Mode Toggle -->
+            <div class="bg-[#0c101a] p-1 rounded-xl border border-brand-border flex items-center text-xs">
+              <button id="mode-after" onclick="setDesignMode('after')" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-emerald-500 text-white shadow flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-200"></span> Proposed (Redesign)
+              </button>
+              <button id="mode-before" onclick="setDesignMode('before')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-rose-400"></span> Current (Flawed)
+              </button>
+            </div>
+
+            <!-- Switch State Toggle -->
+            <button id="press-toggle" onclick="togglePressed()" class="px-3 py-2 rounded-xl text-xs font-medium border border-brand-border bg-slate-800/80 hover:bg-slate-700 text-slate-200 flex items-center gap-2 transition-all">
+              <span id="press-indicator" class="w-2 h-2 rounded-full bg-slate-400"></span>
+              <span id="press-label">Block Overhead: Inactive</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Canvas & Inspection Column -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Canvas Viewer (8 cols) -->
+        <div class="lg:col-span-8 bg-brand-surface rounded-2xl border border-brand-border overflow-hidden flex flex-col relative canvas-glow">
+          <div class="bg-[#0f1422] border-b border-brand-border px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+              <span class="ml-2 font-mono text-xs text-slate-400" id="canvas-badge-info">3D ISOMETRIC // PROPOSED REDESIGN</span>
+            </div>
+            <div class="text-[11px] font-mono text-sky-400">
+              Hover or click cell below to inspect
+            </div>
+          </div>
+
+          <!-- The HTML5 Canvas -->
+          <div class="relative w-full h-[480px] bg-[#080b11] flex items-center justify-center p-2">
+            <canvas id="cellCanvas" class="w-full h-full block cursor-pointer"></canvas>
+            
+            <!-- Quick HUD overlay inside canvas -->
+            <div class="absolute bottom-3 left-3 pointer-events-none bg-black/60 backdrop-blur-md px-3 py-2 rounded-lg border border-white/10 text-xs font-mono text-slate-300">
+              <span class="text-sky-400 font-semibold" id="hud-cell-name">Displaying 8 Core Game Cells</span>
+              <div class="text-[10px] text-slate-400" id="hud-cell-meta">Click any tile in the selector to view isolated focus</div>
+            </div>
+          </div>
+
+          <!-- Bottom Filter / Cell Selection Bar -->
+          <div class="p-3 bg-[#0f1422] border-t border-brand-border overflow-x-auto flex items-center gap-2 no-scrollbar">
+            <button onclick="selectCellFocus('ALL')" id="cell-btn-ALL" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-sky-500/20 text-sky-300 border border-sky-500/40">
+              All 8 Cells Overview
+            </button>
+            <button onclick="selectCellFocus('GOAL')" id="cell-btn-GOAL" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Hole / Goal
+            </button>
+            <button onclick="selectCellFocus('FRAGILE')" id="cell-btn-FRAGILE" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Fragile Tile
+            </button>
+            <button onclick="selectCellFocus('BRIDGE_CLOSED')" id="cell-btn-BRIDGE_CLOSED" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Closed Bridge (Void)
+            </button>
+            <button onclick="selectCellFocus('BRIDGE_OPEN')" id="cell-btn-BRIDGE_OPEN" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Open Bridge
+            </button>
+            <button onclick="selectCellFocus('SOFT')" id="cell-btn-SOFT" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Soft Switch (Round)
+            </button>
+            <button onclick="selectCellFocus('HEAVY')" id="cell-btn-HEAVY" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Heavy Switch (X)
+            </button>
+            <button onclick="selectCellFocus('SPLIT')" id="cell-btn-SPLIT" class="cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700">
+              Split Switch ( )
+            </button>
+          </div>
+        </div>
+
+        <!-- Cell Diagnostics & Affordance Breakdown (4 cols) -->
+        <div class="lg:col-span-4 space-y-4">
+          <div class="bg-brand-surface rounded-2xl border border-brand-border p-5 h-full flex flex-col justify-between">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-brand-border">
+                <span class="text-xs font-mono uppercase tracking-wider text-slate-400">Cell Forensic Diagnostic</span>
+                <span id="diagnostic-tag" class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AFFORDANCE SECURE</span>
+              </div>
+
+              <div>
+                <h3 id="diagnostic-title" class="text-lg font-bold text-white">Closed Bridge vs Heavy Switch</h3>
+                <p id="diagnostic-desc" class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                  In the original flaw, the closed bridge rendered an intense red 'X', directly mirroring the Heavy Switch icon. In the redesign, the red X is entirely removed in favor of a ghosted wireframe boundary on the void abyss floor.
+                </p>
+              </div>
+
+              <!-- Comparative Metric List -->
+              <div class="space-y-2 pt-2">
+                <div class="p-2.5 rounded-xl bg-[#0c101a] border border-brand-border text-xs">
+                  <div class="text-rose-400 font-medium flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <span>Current Flawed Behavior</span>
+                  </div>
+                  <p id="diagnostic-flaw" class="text-slate-400 text-[11px] mt-1">
+                    Players mistake the red X closed bridge as a stepping tile or an interactive trigger button, triggering frustrating fall deaths.
+                  </p>
+                </div>
+
+                <div class="p-2.5 rounded-xl bg-[#0c101a] border border-brand-border text-xs">
+                  <div class="text-emerald-400 font-medium flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Redesigned Affordance</span>
+                  </div>
+                  <p id="diagnostic-fix" class="text-slate-400 text-[11px] mt-1">
+                    Void abyss depth is maintained. Subtle corner brackets / wireframe indicate future bridge docking without false walkable affordance.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Pygame Math Spec -->
+              <div class="p-3 rounded-xl bg-sky-950/20 border border-sky-500/20 text-xs">
+                <span class="font-mono text-sky-400 font-medium block mb-1">Renderer Technical Directive:</span>
+                <p id="diagnostic-tech" class="font-mono text-[11px] text-slate-300">
+                  Draw wireframe polygon at Y + tile_depth with color (40, 80, 110) and alpha=90. Do NOT fill tile top.
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-4 border-t border-brand-border text-[11px] text-slate-400 flex items-center justify-between">
+              <span>Interactive Simulator Engine</span>
+              <span class="font-mono text-sky-400">HTML5 Canvas (60 FPS)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: DESIGN MATRIX & ANALYSIS -->
+    <!-- ========================================== -->
+    <section id="pane-matrix" class="tab-pane hidden space-y-6">
+      <div class="bg-brand-surface rounded-2xl border border-brand-border p-6 shadow-xl">
+        <div class="max-w-3xl">
+          <h2 class="text-xl font-bold text-white tracking-tight">Cognitive Affordance & Design Evaluation Matrix</h2>
+          <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+            The Bloxorz puzzle system relies strictly on clear spatial rules: a single perceptual misinterpretation directly causes instant death or stuck states. Below is the systematic audit of current rendering code vs the engineering redesign.
+          </p>
+        </div>
+
+        <div class="mt-6 overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-brand-border bg-[#0d121c] text-slate-300 font-mono uppercase text-[11px]">
+                <th class="p-3.5">Special Cell Entity</th>
+                <th class="p-3.5">Original Bloxorz Rule</th>
+                <th class="p-3.5 text-rose-400">Current Code Flaw (Audit)</th>
+                <th class="p-3.5 text-emerald-400">Proposed Redesign Solution</th>
+                <th class="p-3.5">Perceptual / UX Rationale</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-brand-border/60 text-slate-300">
+              
+              <!-- Row 1: Closed Bridge -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+                  Closed Bridge (`BRIDGE`)
+                </td>
+                <td class="p-3.5 text-slate-400">Empty void; stepping causes block to plummet into abyss.</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  Draws a dark block with <strong class="text-rose-400">Crimson diagonal 'X'</strong>. In isometric: 2 red lines across diamond corners.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  <strong>Strip the red 'X' completely.</strong> Render pure void with recessed floor wireframe or corner guide brackets in muted cyan.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Completely eliminates cognitive collision with the Heavy Switch ('X'). Tells the brain: <em>"This is empty air, not an active device"</em>.
+                </td>
+              </tr>
+
+              <!-- Row 2: Heavy Switch -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                  Heavy Switch (`X`)
+                </td>
+                <td class="p-3.5 text-slate-400">Only triggers when the block stands upright (<span class="font-mono text-sky-400">1x1</span> footprint).</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  Two 5px red lines. In 3D: flat projected sticker without pedestal or extrusion. Indistinguishable from closed bridge.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  Cast iron base plate + <strong>3D extruded crimson cross (height -4px)</strong> with darker side facets. Shifts downward to -1px when pressed.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Massive industrial plate signals high required weight/pressure. The tactile depression confirms trigger activation.
+                </td>
+              </tr>
+
+              <!-- Row 3: Fragile Tile -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  Fragile Tile (`FRAGILE`)
+                </td>
+                <td class="p-3.5 text-slate-400">Supports rolling sideways; collapses if block stands upright.</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  <strong>2D clipping loop bug:</strong> offset only reaches `tile_size`, leaving bottom-right half unstriped! 3D has only 3 sparse lines.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  In 2D: <code class="text-sky-300 font-mono">pygame.Rect.clipline</code> with range up to <code class="text-sky-300 font-mono">tile_size * 2</code>. In 3D: <strong>50% half-thickness slab</strong> with edge-to-edge warning stripes.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Thin vertical depth inherently signals structural fragility. Full hazard stripes universally denote hazardous structural integrity.
+                </td>
+              </tr>
+
+              <!-- Row 4: Goal Hole -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                  Goal Hole (`GOAL`)
+                </td>
+                <td class="p-3.5 text-slate-400">A square vertical shaft; block must drop vertically into it to win.</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  Concentric golden circles in 2D. In 3D: gold inner perimeter creates an optical illusion of a <strong>raised gold pedestal</strong>.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  <strong>Inner wall abyss projection:</strong> Connect top rim vertices down into inner void depth with gradient dark shaded quadrilaterals.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Establishes an unequivocal optical vortex downward. Prevents the player's brain from perceiving it as an elevated target.
+                </td>
+              </tr>
+
+              <!-- Row 5: Soft Switch -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+                  Soft Switch (`SOFT`)
+                </td>
+                <td class="p-3.5 text-slate-400">Triggers on ANY block contact (horizontal or vertical).</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  Flat 2D yellow circle; in 3D: flat 2:1 yellow ellipse sticker with zero verticality.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  <strong>Extruded domed button:</strong> Bronze cylindrical base with bright amber raised cap (elevation -5px). Depresses upon collision.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Smooth curved geometry implies sensitivity to touch from any angle without requiring concentrated vertical impact.
+                </td>
+              </tr>
+
+              <!-- Row 6: Split Switch -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                  Split Switch (`SPLIT`)
+                </td>
+                <td class="p-3.5 text-slate-400">Splits the 1x2 block into two independent 1x1 teleportable blocks.</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  In 3D: Acute angle brackets <code class="text-rose-400 font-mono">&lt; &gt;</code> resembling conveyor direction arrows or speed pads.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  Curved parenthesis brackets <code class="text-cyan-400 font-mono">( )</code> accompanied by <strong>dual detached diamond energy cores</strong> in center.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Twin dots symbolize the resulting two 1x1 cubes. Eliminates misleading directional arrow interpretation.
+                </td>
+              </tr>
+
+              <!-- Row 7: Bridge Open -->
+              <tr class="hover:bg-slate-800/20 transition-colors">
+                <td class="p-3.5 font-semibold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+                  Open Bridge (`BRIDGE`)
+                </td>
+                <td class="p-3.5 text-slate-400">Walkable pathway connected to switch logic.</td>
+                <td class="p-3.5 text-rose-300/90 bg-rose-500/5">
+                  Monolithic cyan rectangle with a faint center line; looks like an exotic hazard or energy barrier.
+                </td>
+                <td class="p-3.5 text-emerald-300 bg-emerald-500/5 font-medium">
+                  Mechanical lattice with <strong>dual guide rails</strong> and slotted planks. Slightly thinner slab profile than natural stone tiles.
+                </td>
+                <td class="p-3.5 text-slate-400">
+                  Planked structural styling cues players that it is an artificial mechanical construct tied to stage switches.
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: PYGAME SOURCE CODE -->
+    <!-- ========================================== -->
+    <section id="pane-code" class="tab-pane hidden space-y-6">
+      <div class="bg-brand-surface rounded-2xl border border-brand-border p-6 shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-brand-border">
+          <div>
+            <h2 class="text-xl font-bold text-white tracking-tight">Drop-in Pygame Implementation Modules</h2>
+            <p class="text-xs text-slate-400 mt-1">
+              Production-ready Python code fixing the 4 primary rendering deficiencies in <code class="text-sky-300 font-mono">board_renderer.py</code> and <code class="text-sky-300 font-mono">isometric_board_renderer.py</code>.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-slate-400">Target: Pygame 2.x+</span>
+          </div>
+        </div>
+
+        <!-- Code Snippet Accordions / Blocks -->
+        <div class="mt-6 space-y-6">
+          
+          <!-- Snippet 1: Fragile 2D clipline fix -->
+          <div class="rounded-xl border border-brand-border bg-[#090d16] overflow-hidden">
+            <div class="bg-[#101524] px-4 py-2.5 flex items-center justify-between border-b border-brand-border">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <span class="font-mono text-xs font-semibold text-slate-200">1. board_renderer.py &mdash; Full-Coverage Fragile Hazard Stripes</span>
+              </div>
+              <button onclick="copySnippet('code-fragile-2d', this)" class="text-xs font-mono text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded border border-sky-500/30 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                Copy Code
+              </button>
+            </div>
+            <pre class="p-4 text-xs font-mono text-slate-300 overflow-x-auto selection:bg-sky-800"><code id="code-fragile-2d">import pygame
+
+def draw_fragile_cell_2d(surface: pygame.Surface, rect: pygame.Rect, stripe_spacing: int = 8):
+    """
+    Renders 100% full-coverage 45-degree diagonal hazard stripes across the entire
+    fragile tile rect using pygame.Rect.clipline to avoid the half-tile cutoff bug.
+    """
+    # Base orange fill & border
+    COLOR_FRAGILE_BG = (220, 115, 30)
+    COLOR_FRAGILE_STRIPE = (255, 185, 45)
+    COLOR_FRAGILE_BORDER = (160, 75, 15)
+
+    pygame.draw.rect(surface, COLOR_FRAGILE_BG, rect)
+
+    # Offset must span from 0 to width + height so diagonal lines cover all corners
+    max_span = rect.width + rect.height
+    for offset in range(0, max_span, stripe_spacing):
+        start_pt = (rect.left + offset, rect.top)
+        end_pt = (rect.left, rect.top + offset)
+
+        # Clip line to strictly stay within tile bounding rect
+        clipped = rect.clipline(start_pt, end_pt)
+        if clipped:
+            pygame.draw.line(surface, COLOR_FRAGILE_STRIPE, clipped[0], clipped[1], width=2)
+
+    # Crisp perimeter warning border
+    pygame.draw.rect(surface, COLOR_FRAGILE_BORDER, rect, width=2)
+</code></pre>
+          </div>
+
+          <!-- Snippet 2: 3D Switch Extrusions -->
+          <div class="rounded-xl border border-brand-border bg-[#090d16] overflow-hidden">
+            <div class="bg-[#101524] px-4 py-2.5 flex items-center justify-between border-b border-brand-border">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                <span class="font-mono text-xs font-semibold text-slate-200">2. isometric_board_renderer.py &mdash; Extruded Tactile 3D Switches</span>
+              </div>
+              <button onclick="copySnippet('code-switches-3d', this)" class="text-xs font-mono text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded border border-sky-500/30 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                Copy Code
+              </button>
+            </div>
+            <pre class="p-4 text-xs font-mono text-slate-300 overflow-x-auto selection:bg-sky-800"><code id="code-switches-3d">import pygame
+
+def draw_switch_3d(surface: pygame.Surface, center_x: int, center_y: int, 
+                    switch_type: str, is_pressed: bool):
+    """
+    Renders switches with 3D physical height (pedestal + extruded cap)
+    and depresses along the Y-axis when stepped on by the player's block.
+    """
+    # Cap elevation relative to tile face: -5px when relaxed, -1px when pressed
+    lift_y = -1 if is_pressed else -5
+    cap_y = center_y + lift_y
+
+    if switch_type == 'SOFT':  # Circular Amber Button
+        radius_x, radius_y = 12, 6
+        # 1. Base ring / shadow bevel
+        pygame.draw.ellipse(surface, (70, 50, 10), (center_x - radius_x, center_y - radius_y + 2, radius_x*2, radius_y*2))
+        # 2. Cylindrical body skirt
+        if not is_pressed:
+            pygame.draw.rect(surface, (160, 120, 20), (center_x - radius_x, cap_y, radius_x*2, 4))
+        # 3. Elevated top button face
+        top_color = (255, 230, 80) if is_pressed else (240, 190, 30)
+        pygame.draw.ellipse(surface, top_color, (center_x - radius_x, cap_y - radius_y, radius_x*2, radius_y*2))
+        pygame.draw.ellipse(surface, (255, 255, 180), (center_x - radius_x, cap_y - radius_y, radius_x*2, radius_y*2), width=1)
+
+    elif switch_type == 'HEAVY':  # Heavy Industrial Crimson X
+        # 1. Cast metal base frame (Octagon or small sub-plate)
+        base_pts = [
+            (center_x, center_y - 10), (center_x + 16, center_y),
+            (center_x, center_y + 10), (center_x - 16, center_y)
+        ]
+        pygame.draw.polygon(surface, (45, 50, 60), base_pts)
+        pygame.draw.polygon(surface, (75, 85, 100), base_pts, width=1)
+
+        # 2. Extruded 3D 'X' crossbars
+        arm_w = 4
+        # Lower depth shadow for X arms
+        if not is_pressed:
+            pygame.draw.line(surface, (110, 15, 25), (center_x - 10, center_y - 5), (center_x + 10, center_y + 5), width=arm_w + 1)
+            pygame.draw.line(surface, (110, 15, 25), (center_x - 10, center_y + 5), (center_x + 10, center_y - 5), width=arm_w + 1)
+        # Upper face X arms
+        cross_color = (255, 60, 70) if is_pressed else (225, 30, 45)
+        pygame.draw.line(surface, cross_color, (center_x - 10, cap_y - 5), (center_x + 10, cap_y + 5), width=arm_w)
+        pygame.draw.line(surface, cross_color, (center_x - 10, cap_y + 5), (center_x + 10, cap_y - 5), width=arm_w)
+</code></pre>
+          </div>
+
+          <!-- Snippet 3: Goal 3D Abyss -->
+          <div class="rounded-xl border border-brand-border bg-[#090d16] overflow-hidden">
+            <div class="bg-[#101524] px-4 py-2.5 flex items-center justify-between border-b border-brand-border">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                <span class="font-mono text-xs font-semibold text-slate-200">3. isometric_board_renderer.py &mdash; Optical Depth Goal Abyss Shaft</span>
+              </div>
+              <button onclick="copySnippet('code-goal-3d', this)" class="text-xs font-mono text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded border border-sky-500/30 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                Copy Code
+              </button>
+            </div>
+            <pre class="p-4 text-xs font-mono text-slate-300 overflow-x-auto selection:bg-sky-800"><code id="code-goal-3d">import pygame
+
+def draw_goal_abyss_3d(surface: pygame.Surface, top_corners: list[tuple[int, int]], shaft_depth: int = 32):
+    """
+    Renders an authentic deep optical pit into the void. Instead of a raised golden ring,
+    this projects inward walls that converge into pitch-black abyss with interior shading.
+    corners: [Top, Right, Bottom, Left]
+    """
+    T, R, B, L = top_corners
+    center_x = (T[0] + B[0]) // 2
+    center_y = (T[1] + B[1]) // 2
+
+    # Scaled down bottom aperture sunken deep along Y-axis
+    scale = 0.55
+    inner_corners = [
+        (center_x + int((pt[0] - center_x) * scale), center_y + int((pt[1] - center_y) * scale) + shaft_depth)
+        for pt in [T, R, B, L]
+    ]
+    iT, iR, iB, iL = inner_corners
+
+    # 1. Left internal shaft wall (shaded dark)
+    pygame.draw.polygon(surface, (18, 22, 32), [L, B, iB, iL])
+    # 2. Right internal shaft wall (shaded mid-dark)
+    pygame.draw.polygon(surface, (28, 34, 48), [B, R, iR, iB])
+    # 3. Bottom abyss floor (pure space void)
+    pygame.draw.polygon(surface, (6, 8, 12), [iT, iR, iB, iL])
+
+    # 4. Subtle gold chamfer edge on top perimeter to attract the eye
+    pygame.draw.polygon(surface, (190, 155, 50), top_corners, width=2)
+</code></pre>
+          </div>
+
+          <!-- Snippet 4: Closed Bridge Wireframe -->
+          <div class="rounded-xl border border-brand-border bg-[#090d16] overflow-hidden">
+            <div class="bg-[#101524] px-4 py-2.5 flex items-center justify-between border-b border-brand-border">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span class="font-mono text-xs font-semibold text-slate-200">4. isometric_board_renderer.py &mdash; Closed Bridge Ghost Wireframe</span>
+              </div>
+              <button onclick="copySnippet('code-bridge-void', this)" class="text-xs font-mono text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded border border-sky-500/30 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                Copy Code
+              </button>
+            </div>
+            <pre class="p-4 text-xs font-mono text-slate-300 overflow-x-auto selection:bg-sky-800"><code id="code-bridge-void">import pygame
+
+def draw_closed_bridge_isometric(surface: pygame.Surface, top_corners: list[tuple[int, int]], tile_depth: int):
+    """
+    Replaces the misleading Red-X on closed bridges. Renders an empty void space
+    with a faint recessed docking rail at the bottom abyss level (Y + tile_depth).
+    """
+    # Shift corners down to bottom depth level
+    bottom_corners = [(x, y + tile_depth) for (x, y) in top_corners]
+    
+    # 1. Subtle dotted or faint docking outline at pit depth (no solid floor!)
+    dock_wireframe_color = (35, 60, 80)
+    pygame.draw.polygon(surface, dock_wireframe_color, bottom_corners, width=1)
+
+    # 2. Corner docking brackets at normal surface height to show where the bridge lands
+    bracket_color = (45, 85, 110)
+    for (cx, cy) in top_corners:
+        pygame.draw.circle(surface, bracket_color, (cx, cy), radius=2)
+</code></pre>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: PALETTE & DESIGN TOKENS -->
+    <!-- ========================================== -->
+    <section id="pane-palette" class="tab-pane hidden space-y-6">
+      <div class="bg-brand-surface rounded-2xl border border-brand-border p-6 shadow-xl">
+        <div class="max-w-3xl">
+          <h2 class="text-xl font-bold text-white tracking-tight">Perceptual Design Token System & Palette</h2>
+          <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+            Consistent luminance and saturation values guarantee that hazard warnings, interactive mechanisms, and void hazards never collide in the player's peripheral vision. Click any token to copy RGB/Hex tuple.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          
+          <!-- Category: Surface & Void -->
+          <div class="p-4 rounded-xl bg-[#0c101a] border border-brand-border space-y-3">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-sky-400 font-semibold">1. World Geometry & Abyss</h3>
+            <div class="space-y-2">
+              <div onclick="copyToken('COLOR_TILE_TOP', '(215, 222, 235)', '#D7DEEB', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-sky-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #D7DEEB;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-sky-300">COLOR_TILE_TOP</div>
+                    <div class="text-[10px] font-mono text-slate-400">(215, 222, 235) &bull; #D7DEEB</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-sky-400">Copy</span>
+              </div>
+
+              <div onclick="copyToken('COLOR_TILE_SIDE_L', '(140, 150, 170)', '#8C96AA', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-sky-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #8C96AA;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-sky-300">COLOR_TILE_SIDE_L</div>
+                    <div class="text-[10px] font-mono text-slate-400">(140, 150, 170) &bull; #8C96AA</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-sky-400">Copy</span>
+              </div>
+
+              <div onclick="copyToken('COLOR_ABYSS_BG', '(10, 13, 20)', '#0A0D14', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-sky-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow border border-white/10" style="background-color: #0A0D14;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-sky-300">COLOR_ABYSS_VOID</div>
+                    <div class="text-[10px] font-mono text-slate-400">(10, 13, 20) &bull; #0A0D14</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-sky-400">Copy</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category: Fragile & Goal -->
+          <div class="p-4 rounded-xl bg-[#0c101a] border border-brand-border space-y-3">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-amber-400 font-semibold">2. Hazard & Objective</h3>
+            <div class="space-y-2">
+              <div onclick="copyToken('COLOR_FRAGILE_AMBER', '(235, 120, 25)', '#EB7819', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-amber-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #EB7819;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-amber-300">FRAGILE_BODY</div>
+                    <div class="text-[10px] font-mono text-slate-400">(235, 120, 25) &bull; #EB7819</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-amber-400">Copy</span>
+              </div>
+
+              <div onclick="copyToken('COLOR_FRAGILE_STRIPE', '(255, 195, 40)', '#FFC328', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-amber-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #FFC328;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-amber-300">HAZARD_STRIPE</div>
+                    <div class="text-[10px] font-mono text-slate-400">(255, 195, 40) &bull; #FFC328</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-amber-400">Copy</span>
+              </div>
+
+              <div onclick="copyToken('COLOR_GOAL_GOLD', '(218, 165, 32)', '#DAA520', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-amber-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #DAA520;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-amber-300">GOAL_CHAMFER_GOLD</div>
+                    <div class="text-[10px] font-mono text-slate-400">(218, 165, 32) &bull; #DAA520</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-amber-400">Copy</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category: Mechanical & Switches -->
+          <div class="p-4 rounded-xl bg-[#0c101a] border border-brand-border space-y-3">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-rose-400 font-semibold">3. Interactive Mechanism</h3>
+            <div class="space-y-2">
+              <div onclick="copyToken('COLOR_HEAVY_RED', '(235, 35, 55)', '#EB2337', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-rose-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #EB2337;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-rose-300">HEAVY_SWITCH_RED</div>
+                    <div class="text-[10px] font-mono text-slate-400">(235, 35, 55) &bull; #EB2337</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-rose-400">Copy</span>
+              </div>
+
+              <div onclick="copyToken('COLOR_SOFT_YELLOW', '(250, 204, 21)', '#FACC15', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-yellow-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #FACC15;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-yellow-300">SOFT_SWITCH_AMBER</div>
+                    <div class="text-[10px] font-mono text-slate-400">(250, 204, 21) &bull; #FACC15</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-yellow-400">Copy</span>
+              </div>
+
+              <div onclick="copyToken('COLOR_SPLIT_CYAN', '(6, 182, 212)', '#06B6D4', this)" class="p-2.5 rounded-lg bg-[#141b2a] border border-slate-800 flex items-center justify-between cursor-pointer hover:border-cyan-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-md shadow" style="background-color: #06B6D4;"></div>
+                  <div>
+                    <div class="text-xs font-medium text-white group-hover:text-cyan-300">SPLIT_SWITCH_CYAN</div>
+                    <div class="text-[10px] font-mono text-slate-400">(6, 182, 212) &bull; #06B6D4</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-cyan-400">Copy</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: IMPLEMENTATION ROADMAP -->
+    <!-- ========================================== -->
+    <section id="pane-roadmap" class="tab-pane hidden space-y-6">
+      <div class="bg-brand-surface rounded-2xl border border-brand-border p-6 shadow-xl">
+        <div class="max-w-3xl">
+          <h2 class="text-xl font-bold text-white tracking-tight">Iterative Engineering Action Roadmap</h2>
+          <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+            Prioritized rollout timeline to implement visual fixes into your existing repository without risking regressions in collision or physics systems.
+          </p>
+        </div>
+
+        <div class="mt-8 space-y-6">
+          
+          <!-- Phase 1: Critical Hotfixes -->
+          <div class="relative pl-8 border-l-2 border-rose-500/60 pb-2">
+            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#0a0d14] border-2 border-rose-500 flex items-center justify-center">
+              <div class="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">PHASE 1 &bull; IMMEDIATE</span>
+              <h3 class="text-base font-semibold text-white">Critical Perceptual Bugfixes (Zero Mechanics Risk)</h3>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Eliminate game-breaking confusion causing unfair player deaths.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div class="p-3 rounded-xl bg-[#0c101a] border border-brand-border space-y-1">
+                <span class="font-medium text-slate-200">1. Remove Red-X from Closed Bridges</span>
+                <p class="text-[11px] text-slate-400">Replace with deep-abyss wireframe polygon. Guarantees Heavy Switch icon is 100% unique in game universe.</p>
+              </div>
+              <div class="p-3 rounded-xl bg-[#0c101a] border border-brand-border space-y-1">
+                <span class="font-medium text-slate-200">2. Patch 2D Fragile Tile Stripe Loop</span>
+                <p class="text-[11px] text-slate-400">Change loop range to <code class="font-mono text-sky-300">tile_size * 2</code> using <code class="font-mono text-sky-300">rect.clipline()</code> to restore full coverage.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Phase 2: Isometric Depth -->
+          <div class="relative pl-8 border-l-2 border-sky-500/60 pb-2">
+            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#0a0d14] border-2 border-sky-500 flex items-center justify-center">
+              <div class="w-1.5 h-1.5 rounded-full bg-sky-400"></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">PHASE 2 &bull; HIGH VALUE</span>
+              <h3 class="text-base font-semibold text-white">3D Extrusion & Optical Depth Illusion</h3>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Introduce tactile depth to the isometric projection.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div class="p-3 rounded-xl bg-[#0c101a] border border-brand-border space-y-1">
+                <span class="font-medium text-slate-200">1. Switch Pedestals & Y-Offset Caps</span>
+                <p class="text-[11px] text-slate-400">Extrude soft, heavy, and split switch geometry by 4px on Y-axis. Connect to block overhead detection for tactile depression.</p>
+              </div>
+              <div class="p-3 rounded-xl bg-[#0c101a] border border-brand-border space-y-1">
+                <span class="font-medium text-slate-200">2. True Goal Void Funnel</span>
+                <p class="text-[11px] text-slate-400">Render inner polygon shaft walls converging to black abyss to reverse the false raised-pedestal illusion.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Phase 3: Structural Differentiation -->
+          <div class="relative pl-8 border-l-2 border-emerald-500/60">
+            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#0a0d14] border-2 border-emerald-500 flex items-center justify-center">
+              <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PHASE 3 &bull; POLISH</span>
+              <h3 class="text-base font-semibold text-white">Structural Thickness & Mechanical Association</h3>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">Subconscious cues of structural load-bearing capacity.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div class="p-3 rounded-xl bg-[#0c101a] border border-brand-border space-y-1">
+                <span class="font-medium text-slate-200">1. Reduced Slab Thickness for Fragile Tiles</span>
+                <p class="text-[11px] text-slate-400">Render fragile tiles with 50% isometric side depth (<code class="font-mono text-sky-300">tile_depth // 2</code>). Visually screams that it cannot hold standing vertical load.</p>
+              </div>
+              <div class="p-3 rounded-xl bg-[#0c101a] border border-brand-border space-y-1">
+                <span class="font-medium text-slate-200">2. Switch-to-Bridge Color-Coded Accent Pips</span>
+                <p class="text-[11px] text-slate-400">For complex multi-switch stages, render a matching 2px color dot on both switch center and bridge rail bracket.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 border border-sky-500/40 text-white px-4 py-2.5 rounded-xl text-xs font-mono shadow-2xl flex items-center gap-2 pointer-events-none opacity-0 transition-opacity duration-300 z-50">
+    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toast-msg">Copied snippet to clipboard</span>
+  </div>
+
+  <!-- JAVASCRIPT SIMULATOR & INTERACTION SCRIPT -->
+  <script>
+    // System State
+    const state = {
+      activeTab: 'visualizer',
+      viewMode: 'iso',        // 'iso' | '2d'
+      designMode: 'after',    // 'after' | 'before'
+      isPressed: false,       // block standing overhead
+      cellFocus: 'ALL',       // 'ALL' | 'GOAL' | 'FRAGILE' | 'BRIDGE_CLOSED' | 'BRIDGE_OPEN' | 'SOFT' | 'HEAVY' | 'SPLIT'
+      animFrame: 0
+    };
+
+    // Diagnostics content database
+    const cellData = {
+      ALL: {
+        title: "All 8 Core Game Entities Overview",
+        tag: "SYSTEM OVERVIEW",
+        tagClass: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+        desc: "Viewing the full suite of Bloxorz tiles. Switch between 2D/3D and Before/After to observe holistic visual harmony and the eradication of visual ambiguities.",
+        flaw: "Conflicting symbols (Red-X on both closed bridge & heavy switch), flat 3D decals, unclosed 2D striping, and ambiguous goal depth.",
+        fix: "Unified visual grammar: unique geometry per interaction, proper 3D extrusion, correct 2D line clipping, and deep abyss shading.",
+        tech: "Canvas renders 8 cells concurrently using modular draw routines mirroring Pygame functions."
+      },
+      BRIDGE_CLOSED: {
+        title: "Closed Bridge (Void) vs Heavy Switch X",
+        tag: "CRITICAL FIX #1",
+        tagClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        desc: "The original code drew a prominent red 'X' over closed bridges. Players consistently confused this with the Heavy Switch, assuming it was an interactive button to step on.",
+        flaw: "Red 'X' decal directly duplicates the Heavy Switch icon. False affordance lures player into death falls.",
+        fix: "Red 'X' eliminated entirely. Renders true void space with a subtle deep-floor wireframe indicating future bridge docking.",
+        tech: "Draw wireframe polygon at Y + tile_depth with color (40, 75, 105). Zero top face polygon."
+      },
+      FRAGILE: {
+        title: "Fragile Sinking Tile (Striping & Thickness)",
+        tag: "CRITICAL FIX #2",
+        tagClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+        desc: "In 2D, the stripe loop capped at tile_size, causing half of the tile to remain completely unstriped. In 3D, full block height made it look identical to sturdy rock.",
+        flaw: "Loop cutoff left bottom-right plain orange. Full block depth falsely implied heavy structural capacity.",
+        fix: "clipline spanning (width + height) creates 100% edge-to-edge hazard stripes. 3D slab thickness reduced by 50%.",
+        tech: "pygame.Rect.clipline(start, end) where offset in range(0, w + h, 8). 3D height = tile_depth / 2."
+      },
+      GOAL: {
+        title: "Goal Portal (Abyss Funnel vs Protruding Ring)",
+        tag: "OPTICAL FIX #3",
+        tagClass: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+        desc: "Golden rings on the Goal tile created an accidental optical illusion of a raised golden plinth/pillar rather than a deep vertical hollow shaft.",
+        flaw: "Bright center rings make the eye perceive a raised convex cap instead of a concave pit.",
+        fix: "Render inner descending shaft walls with gradient shading into pure pitch-black abyss.",
+        tech: "Draw left wall (18, 22, 32), right wall (28, 34, 48), and inner bottom face (6, 8, 12)."
+      },
+      SOFT: {
+        title: "Soft Switch (Tactile Extrusion & Depress)",
+        tag: "TACTILE FEEL",
+        tagClass: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+        desc: "Soft switches accept any contact (horizontal or vertical). Previously painted as a flat 2D decal onto the tile, giving zero sensation of a physical button.",
+        flaw: "Flat 2:1 sticker without depth looks like painted floor graffiti, not a dynamic mechanism.",
+        fix: "Extruded cylinder with bronze pedestal base and lifted amber dome (-5px Y-offset) that presses downward on contact.",
+        tech: "Draw base ellipse, skirt quad, and elevated top ellipse at Y + (is_pressed ? -1 : -5)."
+      },
+      HEAVY: {
+        title: "Heavy Switch (Cast Metal & 3D Extruded Cross)",
+        tag: "WEIGHT AFFORDANCE",
+        tagClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        desc: "Heavy switches require intense vertical force (block standing on end). Redesigned with heavy industrial base and thick 3D red cross.",
+        flaw: "Thin 5px flat line cross easily confused with previous closed bridge graphic.",
+        fix: "Industrial steel octagon sub-plate + thick extruded crimson cross with shaded vertical extrusion facets.",
+        tech: "Base polygon with metallic border; 3D dual-line stroke offset on Y axis with shadow skirt."
+      },
+      SPLIT: {
+        title: "Split Switch (Gem Pair vs Ambiguous Arrows)",
+        tag: "SYMBOL CLARITY",
+        tagClass: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+        desc: "In 3D, acute brackets < > looked like directional conveyor arrows. Redesigned as curved brackets encompassing two distinct splitting energy prisms.",
+        flaw: "< > points outward like acceleration arrows or conveyor belts.",
+        fix: "Curved parentheses with twin 1x1 glowing cyan diamond nodes representing the twin split cubes.",
+        tech: "Draw curved arcs / 3-point smooth lines with two centered isometric diamond gems."
+      },
+      BRIDGE_OPEN: {
+        title: "Open Bridge (Mechanical Planks & Dual Guide Rails)",
+        tag: "STRUCTURAL LOGIC",
+        tagClass: "bg-teal-500/10 text-teal-400 border-teal-500/20",
+        desc: "Rather than a solid cyan flat monolith, the open bridge now displays mechanical side rails and interlocking slotted planks.",
+        flaw: "Solid cyan looked like an electric laser hazard or impassable barrier.",
+        fix: "Slotted plank lines and twin metallic edge rails reinforce its mechanical deployable nature.",
+        tech: "Top diamond subdivided by 2 transverse lines creating 3 bridge deck planks + edge rail strokes."
+      }
+    };
+
+    // Canvas Setup
+    const canvas = document.getElementById('cellCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      renderScene();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Tab Switching
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('bg-sky-500/15', 'text-sky-400', 'border-sky-500/30');
+        btn.classList.add('text-slate-400');
+      });
+
+      const pane = document.getElementById(`pane-${tabId}`);
+      if (pane) pane.classList.remove('hidden');
+
+      const btn = document.getElementById(`tab-btn-${tabId}`);
+      if (btn) {
+        btn.classList.add('bg-sky-500/15', 'text-sky-400', 'border-sky-500/30');
+        btn.classList.remove('text-slate-400');
+      }
+
+      if (tabId === 'visualizer') {
+        setTimeout(resizeCanvas, 50);
+      }
+    }
+
+    // View & Design Controls
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      document.getElementById('view-iso').className = mode === 'iso' 
+        ? "px-3 py-1.5 rounded-lg font-medium transition-all bg-sky-500 text-white shadow"
+        : "px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all";
+      document.getElementById('view-2d').className = mode === '2d'
+        ? "px-3 py-1.5 rounded-lg font-medium transition-all bg-sky-500 text-white shadow"
+        : "px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all";
+      updateBadge();
+      renderScene();
+    }
+
+    function setDesignMode(mode) {
+      state.designMode = mode;
+      document.getElementById('mode-after').className = mode === 'after'
+        ? "px-3 py-1.5 rounded-lg font-medium transition-all bg-emerald-500 text-white shadow flex items-center gap-1.5"
+        : "px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
+      document.getElementById('mode-before').className = mode === 'before'
+        ? "px-3 py-1.5 rounded-lg font-medium transition-all bg-rose-500 text-white shadow flex items-center gap-1.5"
+        : "px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
+      updateBadge();
+      renderScene();
+    }
+
+    function togglePressed() {
+      state.isPressed = !state.isPressed;
+      const indicator = document.getElementById('press-indicator');
+      const label = document.getElementById('press-label');
+      if (state.isPressed) {
+        indicator.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+        label.innerText = "Block Overhead: PRESSED";
+        label.classList.add('text-emerald-300');
+      } else {
+        indicator.className = "w-2 h-2 rounded-full bg-slate-400";
+        label.innerText = "Block Overhead: Inactive";
+        label.classList.remove('text-emerald-300');
+      }
+      renderScene();
+    }
+
+    function updateBadge() {
+      const badge = document.getElementById('canvas-badge-info');
+      const v = state.viewMode === 'iso' ? '3D ISOMETRIC' : '2D TOP-DOWN';
+      const m = state.designMode === 'after' ? 'PROPOSED REDESIGN' : 'CURRENT FLAWED';
+      badge.innerText = `${v} // ${m}`;
+    }
+
+    function selectCellFocus(cellKey) {
+      state.cellFocus = cellKey;
+      document.querySelectorAll('.cell-filter-btn').forEach(b => {
+        b.className = "cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700";
+      });
+      const activeBtn = document.getElementById(`cell-btn-${cellKey}`);
+      if (activeBtn) {
+        activeBtn.className = "cell-filter-btn px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap bg-sky-500/20 text-sky-300 border border-sky-500/40";
+      }
+
+      // Update diagnostic sidebar
+      const data = cellData[cellKey] || cellData.ALL;
+      document.getElementById('diagnostic-title').innerText = data.title;
+      document.getElementById('diagnostic-tag').innerText = data.tag;
+      document.getElementById('diagnostic-tag').className = `text-xs font-mono px-2 py-0.5 rounded border ${data.tagClass}`;
+      document.getElementById('diagnostic-desc').innerText = data.desc;
+      document.getElementById('diagnostic-flaw').innerText = data.flaw;
+      document.getElementById('diagnostic-fix').innerText = data.fix;
+      document.getElementById('diagnostic-tech').innerText = data.tech;
+
+      document.getElementById('hud-cell-name').innerText = cellKey === 'ALL' ? 'Displaying 8 Core Game Cells' : `Focus: ${cellKey}`;
+      document.getElementById('hud-cell-meta').innerText = cellKey === 'ALL' ? 'Click any tile in the selector to view isolated focus' : 'High-magnification single tile view';
+
+      renderScene();
+    }
+
+    // ==========================================
+    // CANVAS RENDERING ENGINE
+    // ==========================================
+    function renderScene() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Background subtle grid lines
+      drawCanvasBackground(w, h);
+
+      if (state.cellFocus === 'ALL') {
+        renderAllCellsGrid(w, h);
+      } else {
+        renderSingleCellFocus(w, h, state.cellFocus);
+      }
+    }
+
+    function drawCanvasBackground(w, h) {
+      ctx.save();
+      ctx.strokeStyle = '#141c2c';
+      ctx.lineWidth = 1;
+      const step = 32;
+      for (let x = 0; x < w; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // List of cells for ALL mode
+    const allCellsList = [
+      { key: 'GOAL', label: 'Goal Portal' },
+      { key: 'FRAGILE', label: 'Fragile Tile' },
+      { key: 'BRIDGE_CLOSED', label: 'Closed Bridge' },
+      { key: 'BRIDGE_OPEN', label: 'Open Bridge' },
+      { key: 'SOFT', label: 'Soft Switch' },
+      { key: 'HEAVY', label: 'Heavy Switch' },
+      { key: 'SPLIT', label: 'Split Switch' },
+      { key: 'STANDARD', label: 'Standard Tile' }
+    ];
+
+    function renderAllCellsGrid(w, h) {
+      // 4 columns, 2 rows
+      const cols = 4;
+      const rows = 2;
+      const colW = w / cols;
+      const rowH = h / rows;
+
+      allCellsList.forEach((cell, idx) => {
+        const col = idx % cols;
+        const row = Math.floor(idx / cols);
+        const cx = col * colW + colW / 2;
+        const cy = row * rowH + rowH / 2 - 4;
+
+        if (state.viewMode === 'iso') {
+          drawCellIsometric(cx, cy, 38, 19, 18, cell.key, state.designMode, state.isPressed);
+        } else {
+          drawCell2D(cx, cy, 54, cell.key, state.designMode, state.isPressed);
+        }
+
+        // Cell Label
+        ctx.save();
+        ctx.font = '11px Fira Code, monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.fillText(cell.label, cx, row * rowH + rowH - 12);
+        ctx.restore();
+      });
+    }
+
+    function renderSingleCellFocus(w, h, cellKey) {
+      const cx = w / 2;
+      const cy = h / 2 - 10;
+
+      if (state.viewMode === 'iso') {
+        drawCellIsometric(cx, cy, 110, 55, 45, cellKey, state.designMode, state.isPressed);
+      } else {
+        drawCell2D(cx, cy, 150, cellKey, state.designMode, state.isPressed);
+      }
+    }
+
+    // ------------------------------------------
+    // 2D CELL RENDERING
+    // ------------------------------------------
+    function drawCell2D(cx, cy, size, type, mode, pressed) {
+      const half = size / 2;
+      const left = cx - half;
+      const top = cy - half;
+
+      ctx.save();
+
+      // Base Standard Tile
+      if (type === 'STANDARD') {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(left, top, size, size);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(left, top, size, size);
+      }
+
+      // GOAL CELL
+      else if (type === 'GOAL') {
+        if (mode === 'before') {
+          // Flawed: Black square with golden concentric rings (looks like elevated button)
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(left, top, size, size);
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(left, top, size, size);
+          ctx.beginPath();
+          ctx.arc(cx, cy, half * 0.5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cx, cy, half * 0.25, 0, Math.PI * 2);
+          ctx.fillStyle = '#eab308';
+          ctx.fill();
+        } else {
+          // Redesign: Optical deep funnel into void
+          ctx.fillStyle = '#06080e';
+          ctx.fillRect(left, top, size, size);
+          
+          // Concentric descending depth squares
+          const steps = 4;
+          for (let i = 0; i < steps; i++) {
+            const inset = (half / steps) * i;
+            const alpha = 0.15 + (i * 0.25);
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.fillRect(left + inset, top + inset, size - inset * 2, size - inset * 2);
+            ctx.strokeStyle = `rgba(218, 165, 32, ${0.8 - i * 0.2})`;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(left + inset, top + inset, size - inset * 2, size - inset * 2);
+          }
+          // Center void abyss
+          ctx.fillStyle = '#020305';
+          ctx.fillRect(left + half * 0.5, top + half * 0.5, half, half);
+        }
+      }
+
+      // FRAGILE TILE
+      else if (type === 'FRAGILE') {
+        ctx.fillStyle = '#ea580c';
+        ctx.fillRect(left, top, size, size);
+
+        if (mode === 'before') {
+          // Flawed: Loop stops at size, only top-left triangle has stripes!
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(left, top, size, size);
+          ctx.clip();
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = Math.max(2, size / 20);
+          for (let offset = 0; offset <= size; offset += size / 6) {
+            ctx.beginPath();
+            ctx.moveTo(left + offset, top);
+            ctx.lineTo(left, top + offset);
+            ctx.stroke();
+          }
+          ctx.restore();
+          ctx.strokeStyle = '#9a3412';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(left, top, size, size);
+        } else {
+          // Redesign: Complete 100% full coverage hazard stripes
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(left, top, size, size);
+          ctx.clip();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = Math.max(3, size / 16);
+          const maxSpan = size * 2;
+          for (let offset = 0; offset <= maxSpan; offset += size / 6) {
+            ctx.beginPath();
+            ctx.moveTo(left + offset, top);
+            ctx.lineTo(left, top + offset);
+            ctx.stroke();
+          }
+          ctx.restore();
+          ctx.strokeStyle = '#7c2d12';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(left, top, size, size);
+        }
+      }
+
+      // CLOSED BRIDGE
+      else if (type === 'BRIDGE_CLOSED') {
+        if (mode === 'before') {
+          // Flawed: Dark rect with bright RED 'X' (Identical to Heavy Switch!)
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(left, top, size, size);
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = Math.max(3, size / 12);
+          ctx.beginPath();
+          ctx.moveTo(left + 6, top + 6);
+          ctx.lineTo(left + size - 6, top + size - 6);
+          ctx.moveTo(left + size - 6, top + 6);
+          ctx.lineTo(left + 6, top + size - 6);
+          ctx.stroke();
+        } else {
+          // Redesign: Void abyss with ghosted corner brackets
+          ctx.fillStyle = '#070a10';
+          ctx.fillRect(left, top, size, size);
+
+          // Subtle corner brackets
+          ctx.strokeStyle = '#0284c7';
+          ctx.lineWidth = 2;
+          const bLen = size * 0.22;
+          // TL
+          ctx.beginPath(); ctx.moveTo(left, top + bLen); ctx.lineTo(left, top); ctx.lineTo(left + bLen, top); ctx.stroke();
+          // TR
+          ctx.beginPath(); ctx.moveTo(left + size - bLen, top); ctx.lineTo(left + size, top); ctx.lineTo(left + size, top + bLen); ctx.stroke();
+          // BL
+          ctx.beginPath(); ctx.moveTo(left, top + size - bLen); ctx.lineTo(left, top + size); ctx.lineTo(left + bLen, top + size); ctx.stroke();
+          // BR
+          ctx.beginPath(); ctx.moveTo(left + size - bLen, top + size); ctx.lineTo(left + size, top + size); ctx.lineTo(left + size, top + size - bLen); ctx.stroke();
+
+          // Recessed docking outline
+          ctx.strokeStyle = 'rgba(2, 132, 199, 0.2)';
+          ctx.setLineDash([3, 3]);
+          ctx.strokeRect(left + 4, top + 4, size - 8, size - 8);
+          ctx.setLineDash([]);
+        }
+      }
+
+      // OPEN BRIDGE
+      else if (type === 'BRIDGE_OPEN') {
+        if (mode === 'before') {
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(left, top, size, size);
+          ctx.strokeStyle = '#0891b2';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(left, top, size, size);
+          // Single line in center
+          ctx.beginPath();
+          ctx.moveTo(left, cy);
+          ctx.lineTo(left + size, cy);
+          ctx.stroke();
+        } else {
+          // Redesign: Slotted planks & side guide rails
+          ctx.fillStyle = '#0e7490';
+          ctx.fillRect(left, top, size, size);
+
+          // Wood/metal planks
+          const plankCount = 3;
+          ctx.strokeStyle = '#155e75';
+          ctx.lineWidth = 2;
+          for (let i = 1; i < plankCount; i++) {
+            const py = top + (size / plankCount) * i;
+            ctx.beginPath();
+            ctx.moveTo(left + 4, py);
+            ctx.lineTo(left + size - 4, py);
+            ctx.stroke();
+          }
+
+          // Guide rails (top and bottom)
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(left, top, size, 3);
+          ctx.fillRect(left, top + size - 3, size, 3);
+        }
+      }
+
+      // SOFT SWITCH
+      else if (type === 'SOFT') {
+        // Base tile
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(left, top, size, size);
+        ctx.strokeStyle = '#64748b';
+        ctx.strokeRect(left, top, size, size);
+
+        const r = half * 0.55;
+        if (mode === 'before') {
+          // Flawed: Flat yellow sticker
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ca8a04';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          // Redesign: Tactile button with drop shadow & depress
+          const offsetY = pressed ? 1 : -3;
+          // Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.beginPath();
+          ctx.arc(cx, cy + 3, r, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Base Bezel
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Button Cap
+          ctx.fillStyle = pressed ? '#fde047' : '#eab308';
+          ctx.beginPath();
+          ctx.arc(cx, cy + offsetY, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+
+      // HEAVY SWITCH
+      else if (type === 'HEAVY') {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(left, top, size, size);
+        ctx.strokeStyle = '#64748b';
+        ctx.strokeRect(left, top, size, size);
+
+        if (mode === 'before') {
+          // Flawed: Simple 5px red lines directly on stone
+          ctx.strokeStyle = '#dc2626';
+          ctx.lineWidth = Math.max(3, size / 10);
+          ctx.beginPath();
+          ctx.moveTo(cx - half * 0.5, cy - half * 0.5);
+          ctx.lineTo(cx + half * 0.5, cy + half * 0.5);
+          ctx.moveTo(cx + half * 0.5, cy - half * 0.5);
+          ctx.lineTo(cx - half * 0.5, cy + half * 0.5);
+          ctx.stroke();
+        } else {
+          // Redesign: Cast metal plate + extruded heavy crimson cross
+          const plateHalf = half * 0.65;
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(cx - plateHalf, cy - plateHalf, plateHalf * 2, plateHalf * 2);
+          ctx.strokeStyle = '#64748b';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(cx - plateHalf, cy - plateHalf, plateHalf * 2, plateHalf * 2);
+
+          const offsetY = pressed ? 1 : -2;
+          const armLen = half * 0.45;
+          const armW = Math.max(3, size / 9);
+
+          // Shadow / depth skirt
+          if (!pressed) {
+            ctx.strokeStyle = '#881337';
+            ctx.lineWidth = armW;
+            ctx.beginPath();
+            ctx.moveTo(cx - armLen, cy - armLen + 2);
+            ctx.lineTo(cx + armLen, cy + armLen + 2);
+            ctx.moveTo(cx + armLen, cy - armLen + 2);
+            ctx.lineTo(cx - armLen, cy + armLen + 2);
+            ctx.stroke();
+          }
+
+          // Top Cross
+          ctx.strokeStyle = pressed ? '#f43f5e' : '#e11d48';
+          ctx.lineWidth = armW;
+          ctx.beginPath();
+          ctx.moveTo(cx - armLen, cy - armLen + offsetY);
+          ctx.lineTo(cx + armLen, cy + armLen + offsetY);
+          ctx.moveTo(cx + armLen, cy - armLen + offsetY);
+          ctx.lineTo(cx - armLen, cy + armLen + offsetY);
+          ctx.stroke();
+        }
+      }
+
+      // SPLIT SWITCH
+      else if (type === 'SPLIT') {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(left, top, size, size);
+        ctx.strokeStyle = '#64748b';
+        ctx.strokeRect(left, top, size, size);
+
+        if (mode === 'before') {
+          // Flawed: Raw cyan arcs
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx - half * 0.3, cy, half * 0.4, 0.5 * Math.PI, 1.5 * Math.PI);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cx + half * 0.3, cy, half * 0.4, 1.5 * Math.PI, 0.5 * Math.PI);
+          ctx.stroke();
+        } else {
+          // Redesign: Distinct brackets + twin 1x1 splitting gem nodes
+          ctx.strokeStyle = pressed ? '#67e8f9' : '#06b6d4';
+          ctx.lineWidth = Math.max(2, size / 16);
+          // Left bracket
+          ctx.beginPath();
+          ctx.arc(cx - half * 0.35, cy, half * 0.4, 0.6 * Math.PI, 1.4 * Math.PI);
+          ctx.stroke();
+          // Right bracket
+          ctx.beginPath();
+          ctx.arc(cx + half * 0.35, cy, half * 0.4, 1.6 * Math.PI, 0.4 * Math.PI);
+          ctx.stroke();
+
+          // Two distinct split cubes (dots)
+          const dotR = Math.max(2.5, size / 20);
+          ctx.fillStyle = '#22d3ee';
+          ctx.beginPath();
+          ctx.arc(cx - half * 0.15, cy, dotR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(cx + half * 0.15, cy, dotR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // ------------------------------------------
+    // 3D ISOMETRIC CELL RENDERING
+    // ------------------------------------------
+    function drawCellIsometric(cx, cy, tileW, tileH, depth, type, mode, pressed) {
+      ctx.save();
+
+      // Diamond Top corners
+      const T = { x: cx, y: cy - tileH };
+      const R = { x: cx + tileW, y: cy };
+      const B = { x: cx, y: cy + tileH };
+      const L = { x: cx - tileW, y: cy };
+
+      // CLOSED BRIDGE IN 3D
+      if (type === 'BRIDGE_CLOSED') {
+        if (mode === 'before') {
+          // Flawed: Flat sunken dark diamond with RED 'X' connecting opposite corners
+          ctx.fillStyle = '#1e293b';
+          drawPoly([T, R, B, L], '#1e293b', '#334155');
+
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = Math.max(2, tileW / 14);
+          ctx.beginPath();
+          ctx.moveTo(T.x, T.y);
+          ctx.lineTo(B.x, B.y);
+          ctx.moveTo(L.x, L.y);
+          ctx.lineTo(R.x, R.y);
+          ctx.stroke();
+        } else {
+          // Redesign: Void abyss with recessed docking wireframe outline at bottom floor
+          const bT = { x: T.x, y: T.y + depth };
+          const bR = { x: R.x, y: R.y + depth };
+          const bB = { x: B.x, y: B.y + depth };
+          const bL = { x: L.x, y: L.y + depth };
+
+          // Recessed wireframe
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+          ctx.lineWidth = 1;
+          drawPoly([bT, bR, bB, bL], 'rgba(8, 14, 24, 0.8)', 'rgba(56, 189, 248, 0.35)');
+
+          // Surface docking bracket pips
+          [T, R, B, L].forEach(pt => {
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+        ctx.restore();
+        return;
+      }
+
+      // GOAL CELL IN 3D
+      if (type === 'GOAL') {
+        if (mode === 'before') {
+          // Flawed: Gold rim and inner gold dot (looks convex/pedestal)
+          drawIsometricSlab(T, R, B, L, depth, '#0f172a', '#020617', '#090d16');
+          const innerScale = 0.55;
+          const iT = { x: cx, y: cy - tileH * innerScale };
+          const iR = { x: cx + tileW * innerScale, y: cy };
+          const iB = { x: cx, y: cy + tileH * innerScale };
+          const iL = { x: cx - tileW * innerScale, y: cy };
+          drawPoly([iT, iR, iB, iL], '#05070a', '#eab308');
+
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Redesign: True optical funnel descending into pitch abyss
+          // Top stone rim
+          drawIsometricSlab(T, R, B, L, depth, '#1e293b', '#0f172a', '#182234');
+
+          // Sunken inner aperture
+          const scale = 0.6;
+          const drop = depth * 0.85;
+          const iT = { x: cx, y: cy - tileH * scale + drop };
+          const iR = { x: cx + tileW * scale, y: cy + drop };
+          const iB = { x: cx, y: cy + tileH * scale + drop };
+          const iL = { x: cx - tileW * scale, y: cy + drop };
+
+          // Left shaft wall (deep dark)
+          drawPoly([L, B, iB, iL], '#0f172a', '#020617');
+          // Right shaft wall (mid shade)
+          drawPoly([B, R, iR, iB], '#182030', '#0a0d14');
+          // Bottom abyss floor
+          drawPoly([iT, iR, iB, iL], '#020305', '#020305');
+
+          // Top rim subtle gold chamfer
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+        ctx.restore();
+        return;
+      }
+
+      // Effective depth for standard vs fragile
+      let actualDepth = depth;
+      if (type === 'FRAGILE' && mode === 'after') {
+        actualDepth = depth * 0.45; // Half thickness conveys fragility!
+      }
+
+      // Base slab coloring
+      let topColor = '#cbd5e1';
+      let sideLColor = '#64748b';
+      let sideRColor = '#475569';
+
+      if (type === 'FRAGILE') {
+        topColor = '#ea580c';
+        sideLColor = '#c2410c';
+        sideRColor = '#9a3412';
+      } else if (type === 'BRIDGE_OPEN') {
+        topColor = '#0891b2';
+        sideLColor = '#0e7490';
+        sideRColor = '#155e75';
+      }
+
+      // Draw base slab
+      drawIsometricSlab(T, R, B, L, actualDepth, topColor, sideLColor, sideRColor);
+
+      // FRAGILE OVERLAYS (3D)
+      if (type === 'FRAGILE') {
+        ctx.save();
+        clipDiamond(T, R, B, L);
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = Math.max(2, tileW / 18);
+
+        if (mode === 'before') {
+          // Sparse 3 diagonal stripes
+          for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx + i * (tileW * 0.5), cy - tileH);
+            ctx.lineTo(cx + i * (tileW * 0.5) - tileW, cy + tileH);
+            ctx.stroke();
+          }
+        } else {
+          // Rich cross-hazard stripes
+          for (let i = -4; i <= 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx + i * (tileW * 0.35) - tileW * 0.5, cy - tileH);
+            ctx.lineTo(cx + i * (tileW * 0.35) + tileW * 0.5, cy + tileH);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      // OPEN BRIDGE OVERLAYS (3D)
+      else if (type === 'BRIDGE_OPEN') {
+        if (mode === 'after') {
+          // 2 transverse lines creating 3 planks
+          ctx.strokeStyle = '#155e75';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          // Plank 1
+          ctx.moveTo(lerp(L.x, T.x, 0.33), lerp(L.y, T.y, 0.33));
+          ctx.lineTo(lerp(B.x, R.x, 0.33), lerp(B.y, R.y, 0.33));
+          // Plank 2
+          ctx.moveTo(lerp(L.x, T.x, 0.66), lerp(L.y, T.y, 0.66));
+          ctx.lineTo(lerp(B.x, R.x, 0.66), lerp(B.y, R.y, 0.66));
+          ctx.stroke();
+
+          // Guide rail lines
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(L.x, L.y); ctx.lineTo(T.x, T.y);
+          ctx.moveTo(B.x, B.y); ctx.lineTo(R.x, R.y);
+          ctx.stroke();
+        }
+      }
+
+      // SOFT SWITCH (3D)
+      else if (type === 'SOFT') {
+        const rx = tileW * 0.32;
+        const ry = tileH * 0.32;
+
+        if (mode === 'before') {
+          // Flat decal
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Extruded cylinder with dynamic press
+          const capLift = pressed ? -1 : -5;
+          const capY = cy + capLift;
+
+          // Shadow/Pedestal base
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy + 2, rx, ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Skirt
+          if (!pressed) {
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(cx - rx, capY, rx * 2, cy - capY);
+          }
+
+          // Top Button Face
+          ctx.fillStyle = pressed ? '#fde047' : '#facc15';
+          ctx.beginPath();
+          ctx.ellipse(cx, capY, rx, ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      // HEAVY SWITCH (3D)
+      else if (type === 'HEAVY') {
+        if (mode === 'before') {
+          // Flat projected red X lines
+          ctx.strokeStyle = '#dc2626';
+          ctx.lineWidth = Math.max(3, tileW / 12);
+          ctx.beginPath();
+          ctx.moveTo(cx - tileW * 0.3, cy - tileH * 0.3);
+          ctx.lineTo(cx + tileW * 0.3, cy + tileH * 0.3);
+          ctx.moveTo(cx + tileW * 0.3, cy - tileH * 0.3);
+          ctx.lineTo(cx - tileW * 0.3, cy + tileH * 0.3);
+          ctx.stroke();
+        } else {
+          // Cast metal base plate
+          const subW = tileW * 0.55;
+          const subH = tileH * 0.55;
+          const pT = { x: cx, y: cy - subH };
+          const pR = { x: cx + subW, y: cy };
+          const pB = { x: cx, y: cy + subH };
+          const pL = { x: cx - subW, y: cy };
+          drawPoly([pT, pR, pB, pL], '#334155', '#475569');
+
+          // 3D Extruded Cross
+          const capLift = pressed ? -1 : -4;
+          const capY = cy + capLift;
+          const armW = Math.max(3, tileW / 11);
+          const spanX = tileW * 0.3;
+          const spanY = tileH * 0.3;
+
+          // Shadow depth skirt
+          if (!pressed) {
+            ctx.strokeStyle = '#881337';
+            ctx.lineWidth = armW + 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - spanX, cy - spanY); ctx.lineTo(cx + spanX, cy + spanY);
+            ctx.moveTo(cx + spanX, cy - spanY); ctx.lineTo(cx - spanX, cy + spanY);
+            ctx.stroke();
+          }
+
+          // Top Cross
+          ctx.strokeStyle = pressed ? '#f43f5e' : '#e11d48';
+          ctx.lineWidth = armW;
+          ctx.beginPath();
+          ctx.moveTo(cx - spanX, capY - spanY); ctx.lineTo(cx + spanX, capY + spanY);
+          ctx.moveTo(cx + spanX, capY - spanY); ctx.lineTo(cx - spanX, capY + spanY);
+          ctx.stroke();
+        }
+      }
+
+      // SPLIT SWITCH (3D)
+      else if (type === 'SPLIT') {
+        if (mode === 'before') {
+          // Misleading < > acute lines
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 2.5;
+          // <
+          ctx.beginPath();
+          ctx.moveTo(cx - tileW * 0.15, cy - tileH * 0.25);
+          ctx.lineTo(cx - tileW * 0.35, cy);
+          ctx.lineTo(cx - tileW * 0.15, cy + tileH * 0.25);
+          ctx.stroke();
+          // >
+          ctx.beginPath();
+          ctx.moveTo(cx + tileW * 0.15, cy - tileH * 0.25);
+          ctx.lineTo(cx + tileW * 0.35, cy);
+          ctx.lineTo(cx + tileW * 0.15, cy + tileH * 0.25);
+          ctx.stroke();
+        } else {
+          // Curved brackets + twin 3D glowing split gem diamonds
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 2;
+          // Left curve
+          ctx.beginPath();
+          ctx.ellipse(cx - tileW * 0.25, cy, tileW * 0.12, tileH * 0.35, 0, 0.4 * Math.PI, 1.6 * Math.PI, false);
+          ctx.stroke();
+          // Right curve
+          ctx.beginPath();
+          ctx.ellipse(cx + tileW * 0.25, cy, tileW * 0.12, tileH * 0.35, 0, 1.4 * Math.PI, 0.6 * Math.PI, false);
+          ctx.stroke();
+
+          // Dual diamond gem nodes
+          const gSize = tileW * 0.08;
+          drawPoly([
+            { x: cx - tileW * 0.1, y: cy - gSize * 0.6 },
+            { x: cx - tileW * 0.1 + gSize, y: cy },
+            { x: cx - tileW * 0.1, y: cy + gSize * 0.6 },
+            { x: cx - tileW * 0.1 - gSize, y: cy }
+          ], '#22d3ee', '#67e8f9');
+
+          drawPoly([
+            { x: cx + tileW * 0.1, y: cy - gSize * 0.6 },
+            { x: cx + tileW * 0.1 + gSize, y: cy },
+            { x: cx + tileW * 0.1, y: cy + gSize * 0.6 },
+            { x: cx + tileW * 0.1 - gSize, y: cy }
+          ], '#22d3ee', '#67e8f9');
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // Isometric Drawing Helpers
+    function drawIsometricSlab(T, R, B, L, depth, topCol, leftCol, rightCol) {
+      // Left vertical face
+      drawPoly([
+        L, B, 
+        { x: B.x, y: B.y + depth }, 
+        { x: L.x, y: L.y + depth }
+      ], leftCol, leftCol);
+
+      // Right vertical face
+      drawPoly([
+        B, R, 
+        { x: R.x, y: R.y + depth }, 
+        { x: B.x, y: B.y + depth }
+      ], rightCol, rightCol);
+
+      // Top diamond face
+      drawPoly([T, R, B, L], topCol, '#334155');
+    }
+
+    function drawPoly(pts, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+    }
+
+    function clipDiamond(T, R, B, L) {
+      ctx.beginPath();
+      ctx.moveTo(T.x, T.y);
+      ctx.lineTo(R.x, R.y);
+      ctx.lineTo(B.x, B.y);
+      ctx.lineTo(L.x, L.y);
+      ctx.closePath();
+      ctx.clip();
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    // ==========================================
+    // UTILITY: CLIPBOARD & TOAST
+    // ==========================================
+    function copySnippet(elementId, btn) {
+      const codeEl = document.getElementById(elementId);
+      if (!codeEl) return;
+      copyTextToClipboard(codeEl.innerText, "Pygame snippet copied to clipboard");
+    }
+
+    function copyToken(name, rgb, hex, element) {
+      copyTextToClipboard(`${name} = ${rgb}  # ${hex}`, `Token ${name} copied`);
+    }
+
+    function copyTextToClipboard(text, msg) {
+      // Per system mandate: use document.execCommand('copy') for iFrame resilience
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast(msg);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+      document.body.removeChild(textArea);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      toastMsg.innerText = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2400);
+    }
+
+    // Initialize when DOM ready
+    window.onload = function() {
+      resizeCanvas();
+      selectCellFocus('ALL');
+    };
+  </script>
+</body>
+</html>
