@@ -765,6 +765,31 @@ def test_all_10_stages_visual_patch_regression_3d():
                     )
 
 
+def test_pixel_art_crack_tokens_and_coordinates():
+    """Validates pixel-art crack color tokens and canonical coordinate sets in settings."""
+    assert hasattr(settings, "COLOR_GLASS_SHADOW"), "settings missing COLOR_GLASS_SHADOW"
+    assert settings.COLOR_GLASS_SHADOW == (140, 50, 10, 220)
+
+    assert hasattr(settings, "FRAGILE_CRACK_WHITE"), "settings missing FRAGILE_CRACK_WHITE"
+    white_coords = settings.FRAGILE_CRACK_WHITE
+    assert isinstance(white_coords, tuple)
+    assert len(white_coords) >= 80, f"Expected at least 80 white crack coordinates, got {len(white_coords)}"
+    for coord in white_coords:
+        assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
+        gx, gy = coord
+        assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
+
+    assert hasattr(settings, "FRAGILE_CRACK_SHADOW"), "settings missing FRAGILE_CRACK_SHADOW"
+    shadow_coords = settings.FRAGILE_CRACK_SHADOW
+    assert isinstance(shadow_coords, tuple)
+    assert len(shadow_coords) >= 50, f"Expected at least 50 shadow crack coordinates, got {len(shadow_coords)}"
+    for coord in shadow_coords:
+        assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
+        gx, gy = coord
+        assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
+
+
+
 
 
 
