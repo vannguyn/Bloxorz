@@ -488,7 +488,7 @@ class GameScreen:
         pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, card1_rect, 1, border_radius=8)
 
         draw_network_icon(self.surface, pygame.Rect(card_x + 12, 154, 14, 14), settings.COLOR_CARD_HEADER)
-        c1_title = self.font_section.render("ALGORITHM", True, settings.COLOR_CARD_HEADER)
+        c1_title = self.font_section.render("Algorithm", True, settings.COLOR_CARD_HEADER)
         self.surface.blit(c1_title, (card_x + 32, 153))
 
         # --- Card 2: Playback Controls Container ---
@@ -497,7 +497,7 @@ class GameScreen:
         pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, card2_rect, 1, border_radius=8)
 
         draw_play_icon(self.surface, pygame.Rect(card_x + 12, 268, 14, 14), settings.COLOR_CARD_HEADER)
-        c2_title = self.font_section.render("PLAYBACK", True, settings.COLOR_CARD_HEADER)
+        c2_title = self.font_section.render("Playback", True, settings.COLOR_CARD_HEADER)
         self.surface.blit(c2_title, (card_x + 32, 267))
 
         if self.replayer:
@@ -518,7 +518,7 @@ class GameScreen:
         pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, card3_rect, 1, border_radius=8)
 
         draw_metrics_icon(self.surface, pygame.Rect(card_x + 12, 418, 14, 14), settings.COLOR_CARD_HEADER)
-        c3_title = self.font_section.render("SOLUTION METRICS", True, settings.COLOR_CARD_HEADER)
+        c3_title = self.font_section.render("Solution Metrics", True, settings.COLOR_CARD_HEADER)
         self.surface.blit(c3_title, (card_x + 32, 417))
 
         if self.latest_result:

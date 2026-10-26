@@ -122,7 +122,7 @@ class LegendBar:
         chips_data = []
         total_chips_content_w = 0
         for label, drawer in self.CHIPS:
-            text_surf = font.render(label, True, text_color)
+            text_surf = font.render(f"= {label}", True, text_color)
             w = icon_size + icon_text_gap + text_surf.get_width()
             total_chips_content_w += w
             chips_data.append((label, drawer, text_surf, w))

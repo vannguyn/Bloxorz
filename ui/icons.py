@@ -291,16 +291,16 @@ def draw_eye_icon(
 
     upper_pts = [
         left,
-        (cx - ew // 4, cy - eh),
+        (cx - ew // 3, cy - eh * 3 // 4),
         (cx, cy - eh),
-        (cx + ew // 4, cy - eh),
+        (cx + ew // 3, cy - eh * 3 // 4),
         right,
     ]
     lower_pts = [
         left,
-        (cx - ew // 4, cy + eh),
+        (cx - ew // 3, cy + eh * 3 // 4),
         (cx, cy + eh),
-        (cx + ew // 4, cy + eh),
+        (cx + ew // 3, cy + eh * 3 // 4),
         right,
     ]
     pygame.draw.lines(surface, color, False, upper_pts, lw)
