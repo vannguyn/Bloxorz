@@ -32,6 +32,9 @@ COLOR_GOAL_ABYSS = (6, 8, 12)            # Deep optical abyss void floor
 COLOR_FRAGILE = (245, 130, 45)
 COLOR_FRAGILE_BORDER = (195, 80, 20)
 COLOR_FRAGILE_STRIPE = (255, 185, 45)    # High-contrast 45-degree hazard warning stripe
+COLOR_GLASS_FILL = (245, 130, 45, 185)   # Amber-orange translucent glass fill with alpha
+COLOR_GLASS_CRACK = (255, 255, 255, 230) # Radiating fracture cracks with alpha
+COLOR_GLASS_BORDER = (255, 160, 60)      # Glass tile perimeter border
 
 COLOR_BRIDGE_CLOSED = (40, 45, 60)
 COLOR_BRIDGE_CLOSED_BORDER = (75, 80, 95)
@@ -46,6 +49,13 @@ COLOR_SWITCH_PEDESTAL = (70, 50, 10)     # Cylindrical base ring / bevel shadow 
 COLOR_SWITCH_HEAVY = (235, 75, 75)
 COLOR_SWITCH_HEAVY_BASE = (45, 50, 60)   # Cast metal octagonal sub-plate base
 COLOR_SWITCH_SPLIT = (65, 175, 245)
+
+# Visual Patch Design Tokens (Amber Glass & Heavy Steel Patch)
+COLOR_SPLIT_CYAN = (56, 189, 248)        # Split switch energy wing border
+COLOR_SPLIT_DARK = (2, 132, 199)         # Split switch button body
+COLOR_HEAVY_RED = (239, 68, 68)          # Heavy switch embossed steel cross surface
+COLOR_HEAVY_DARKRED = (153, 27, 27)      # Heavy switch 3D extrusion shadow
+COLOR_HEAVY_BASE = (71, 85, 105)         # Heavy switch industrial cast-metal base plate
 
 # Block
 COLOR_BLOCK = (205, 85, 35)

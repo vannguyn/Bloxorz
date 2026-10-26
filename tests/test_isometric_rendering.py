@@ -372,6 +372,30 @@ def test_visual_redesign_tokens_defined_and_valid():
         assert val == expected_val, f"{name} has unexpected value {val}, expected {expected_val}"
 
 
+def test_visual_patch_tokens_defined_and_valid():
+    """Verify patch visual tokens are defined, have correct tuple length (3 or 4),
+    elements are ints in [0, 255], and match expected color values.
+    """
+    expected_tokens = {
+        "COLOR_GLASS_FILL": (245, 130, 45, 185),
+        "COLOR_GLASS_CRACK": (255, 255, 255, 230),
+        "COLOR_GLASS_BORDER": (255, 160, 60),
+        "COLOR_SPLIT_CYAN": (56, 189, 248),
+        "COLOR_SPLIT_DARK": (2, 132, 199),
+        "COLOR_HEAVY_RED": (239, 68, 68),
+        "COLOR_HEAVY_DARKRED": (153, 27, 27),
+        "COLOR_HEAVY_BASE": (71, 85, 105),
+    }
+    for name, expected_val in expected_tokens.items():
+        assert hasattr(settings, name), f"Missing patch token {name} in config.settings"
+        val = getattr(settings, name)
+        assert isinstance(val, tuple), f"{name} must be a tuple"
+        assert len(val) in (3, 4), f"{name} must have 3 (RGB) or 4 (RGBA) elements"
+        assert len(val) == len(expected_val), f"{name} length mismatch: got {len(val)}, expected {len(expected_val)}"
+        assert all(isinstance(c, int) and 0 <= c <= 255 for c in val), f"{name} components must be ints in [0, 255]"
+        assert val == expected_val, f"{name} has unexpected value {val}, expected {expected_val}"
+
+
 def test_3d_special_cells_visual_redesign():
     """Verify 3D isometric special cells redesign:
     1. Closed bridge: 0 red pixels, sunken docking rails and guide pins rendered.
