@@ -995,6 +995,91 @@ def test_legend_bar_rendering():
     assert chip_labels == ["Block", "Goal", "Fragile Tile", "Closed Bridge", "Split Switch"]
 
 
+def test_game_screen_card_layout_and_algorithm_selection():
+    """Verify card-based sidebar layout, interactive algorithm radio selection, telemetry keys, and docked LegendBar."""
+    from core.interfaces import SolverResult
+
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface)
+
+    # 1. screen.selected_algo defaults to "BFS"
+    assert hasattr(screen, "selected_algo"), "GameScreen missing selected_algo attribute"
+    assert screen.selected_algo == "BFS"
+
+    # Verify algorithm buttons exist and BFS is initially selected
+    assert hasattr(screen, "btn_algo_bfs")
+    assert hasattr(screen, "btn_algo_dfs")
+    assert hasattr(screen, "btn_solve_action")
+    assert screen.btn_algo_bfs.selected is True
+    assert screen.btn_algo_dfs.selected is False
+    assert "Solve (BFS)" in screen.btn_solve_action.text
+
+    # 2. Clicking DFS button switches screen.selected_algo to "DFS", highlights DFS, un-highlights BFS
+    dfs_click_event = pygame.event.Event(
+        pygame.MOUSEBUTTONUP,
+        button=1,
+        pos=screen.btn_algo_dfs.rect.center,
+    )
+    screen.btn_algo_dfs.is_pressed = True
+    screen.btn_algo_dfs.handle_event(dfs_click_event)
+
+    assert screen.selected_algo == "DFS"
+    assert screen.btn_algo_dfs.selected is True
+    assert screen.btn_algo_bfs.selected is False
+
+    # 3. Primary solve button label reflects "Solve (DFS)"
+    assert "Solve (DFS)" in screen.btn_solve_action.text
+
+    # 4. Verifies solution metrics card renders telemetry keys: Time:, Memory:, Expanded:, Length:, Cost:
+    rendered_texts: list[str] = []
+    real_font_mono = screen.font_mono
+
+    class FontSpy:
+        def __init__(self, font):
+            self._font = font
+
+        def render(self, text, antialias, color, background=None):
+            rendered_texts.append(str(text))
+            return self._font.render(text, antialias, color, background)
+
+        def __getattr__(self, name):
+            return getattr(self._font, name)
+
+    screen.font_mono = FontSpy(real_font_mono)
+
+    # Render without solver result (initial state)
+    screen.draw()
+    for key in ["Time:", "Memory:", "Expanded:", "Length:", "Cost:"]:
+        assert any(key in t for t in rendered_texts), (
+            f"Telemetry key '{key}' not found in rendered texts without result: {rendered_texts}"
+        )
+
+    # Render with an active solver result
+    rendered_texts.clear()
+    screen.latest_result = SolverResult(
+        path=["R", "R", "U"],
+        expanded_nodes=128,
+        search_time_ms=45.67,
+        peak_memory_kb=1024,
+        solution_length=3,
+        cost=3.0,
+        success=True,
+    )
+    screen.draw()
+    for key in ["Time:", "Memory:", "Expanded:", "Length:", "Cost:"]:
+        assert any(key in t for t in rendered_texts), (
+            f"Telemetry key '{key}' not found in rendered texts with result: {rendered_texts}"
+        )
+
+    # 5. Verifies LegendBar is rendered on the screen docked at bottom of board_rect
+    assert hasattr(screen, "legend_bar"), "GameScreen missing legend_bar attribute"
+    assert screen.legend_bar.last_rect is not None, "LegendBar was not drawn"
+    assert screen.board_rect.contains(screen.legend_bar.last_rect), (
+        f"LegendBar rect {screen.legend_bar.last_rect} is not contained within board_rect {screen.board_rect}"
+    )
+
+
+
 
 
 
