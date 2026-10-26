@@ -10,29 +10,25 @@ import pygame
 from config import settings
 
 
-def _call_icon_drawer(
-    drawer: Callable[..., None],
-    surface: pygame.Surface,
-    rect: pygame.Rect,
-    color: tuple[int, int, int],
-) -> None:
-    """Invokes icon_drawer supporting both (surface, rect, color) and (surface, rect)."""
-    try:
-        sig = inspect.signature(drawer)
-        params = list(sig.parameters.values())
-        if len(params) >= 3 or any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params):
-            drawer(surface, rect, color)
-        else:
-            drawer(surface, rect)
-    except (ValueError, TypeError):
-        try:
-            drawer(surface, rect, color)
-        except TypeError:
-            drawer(surface, rect)
-
-
 class Button:
     """A styled clickable button for the Pygame UI."""
+
+    def _invoke_icon_drawer(
+        self,
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        color: tuple[int, int, int],
+    ) -> None:
+        """Invokes cached icon_drawer efficiently."""
+        if not self.icon_drawer:
+            return
+        if self._icon_takes_color:
+            try:
+                self.icon_drawer(surface, rect, color)
+            except TypeError:
+                self.icon_drawer(surface, rect)
+        else:
+            self.icon_drawer(surface, rect)
 
     def __init__(
         self,
@@ -54,6 +50,17 @@ class Button:
         self.selected = selected
         self.icon_drawer = icon_drawer
         self.font_size = font_size
+
+        self._icon_takes_color = True
+        if icon_drawer is not None:
+            try:
+                sig = inspect.signature(icon_drawer)
+                params = list(sig.parameters.values())
+                self._icon_takes_color = len(params) >= 3 or any(
+                    p.kind == inspect.Parameter.VAR_POSITIONAL for p in params
+                )
+            except (ValueError, TypeError):
+                self._icon_takes_color = True
 
         self.is_hovered = False
         self.is_pressed = False
@@ -128,7 +135,7 @@ class Button:
                 icon_size,
                 icon_size,
             )
-            _call_icon_drawer(self.icon_drawer, surface, icon_rect, text_color)
+            self._invoke_icon_drawer(surface, icon_rect, text_color)
 
             if text_surf:
                 text_rect = pygame.Rect(
@@ -146,7 +153,7 @@ class Button:
                 icon_size,
                 icon_size,
             )
-            _call_icon_drawer(self.icon_drawer, surface, icon_rect, text_color)
+            self._invoke_icon_drawer(surface, icon_rect, text_color)
 
         elif font and self.text:
             text_surf = font.render(self.text, True, text_color)
