@@ -501,7 +501,7 @@ def test_2d_special_cells_visual_redesign():
     )
     assert has_dock_features, "Closed bridge should render docking rail or pin features"
 
-    # 2. Fragile tile in 2D: verify hazard warning stripes span across both top-left and bottom-right quadrants
+    # 2. Fragile tile in 2D: verify amber glass base and white fracture crack lines
     level_fragile = mock_level_with_fragile()
     state_fragile = GameState(block=level_fragile.start, bridge_mask=0)
     surface.fill((0, 0, 0))
@@ -510,20 +510,21 @@ def test_2d_special_cells_visual_redesign():
     fragile_cell = (1, 3)
     fragile_rect = renderer.get_cell_rect(*fragile_cell)
 
-    tl_stripes = [
+    fragile_pixels = [
         surface.get_at((x, y))[:3]
-        for x in range(fragile_rect.left + 2, fragile_rect.centerx)
-        for y in range(fragile_rect.top + 2, fragile_rect.centery)
-        if surface.get_at((x, y))[:3] == settings.COLOR_FRAGILE_STRIPE
+        for x in range(fragile_rect.left, fragile_rect.right)
+        for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    br_stripes = [
-        surface.get_at((x, y))[:3]
-        for x in range(fragile_rect.centerx, fragile_rect.right - 2)
-        for y in range(fragile_rect.centery, fragile_rect.bottom - 2)
-        if surface.get_at((x, y))[:3] == settings.COLOR_FRAGILE_STRIPE
+    amber_pixels = [
+        p for p in fragile_pixels
+        if p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80
     ]
-    assert len(tl_stripes) > 0, "Fragile tile top-left quadrant missing hazard stripes"
-    assert len(br_stripes) > 0, "Fragile tile bottom-right quadrant missing hazard stripes (clipped/missing)"
+    crack_pixels = [
+        p for p in fragile_pixels
+        if p[0] > 240 and p[1] > 240 and p[2] > 240
+    ]
+    assert len(amber_pixels) > 50, "Fragile tile amber base missing"
+    assert len(crack_pixels) > 0, "Fragile tile radiating white crack lines missing"
 
     # 3. Switch in 2D: verify pixel colors change when block is standing on switch vs away
     sw_cell = (1, 2)
@@ -567,8 +568,8 @@ def test_2d_special_cells_visual_redesign():
         for x in range(10, 10 + renderer.tile_size)
         for y in range(10, 10 + renderer.tile_size)
     ]
-    assert any(p == settings.COLOR_SWITCH_HEAVY_BASE for p in heavy_unpressed), "Heavy switch base missing"
-    assert any(p == settings.COLOR_SWITCH_HEAVY for p in heavy_unpressed), "Heavy switch X arms missing"
+    assert any(p == settings.COLOR_HEAVY_BASE for p in heavy_unpressed), "Heavy switch base missing"
+    assert any(p == settings.COLOR_HEAVY_RED for p in heavy_unpressed), "Heavy switch X arms missing"
 
     surface.fill((0, 0, 0))
     renderer._draw_switch(surface, test_rect, heavy_sw, is_pressed=True)
@@ -579,7 +580,7 @@ def test_2d_special_cells_visual_redesign():
     ]
     assert heavy_pressed != heavy_unpressed, "Heavy switch should visually update when pressed"
 
-    # Split switch: cyan brackets and gem pips
+    # Split switch: cyan brackets and wings
     surface.fill((0, 0, 0))
     renderer._draw_switch(surface, test_rect, split_sw, is_pressed=False)
     split_unpressed = [
@@ -587,7 +588,7 @@ def test_2d_special_cells_visual_redesign():
         for x in range(10, 10 + renderer.tile_size)
         for y in range(10, 10 + renderer.tile_size)
     ]
-    assert any(p == settings.COLOR_SWITCH_SPLIT for p in split_unpressed), "Split switch cyan affordance missing"
+    assert any(p == settings.COLOR_SPLIT_CYAN for p in split_unpressed), "Split switch cyan affordance missing"
 
     surface.fill((0, 0, 0))
     renderer._draw_switch(surface, test_rect, split_sw, is_pressed=True)
@@ -681,6 +682,84 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
         block_renderer.draw(surf, st)
         raw = pygame.image.tobytes(surf, "RGB")
         assert any(b > 0 for b in raw), f"2D rendering for {lvl.id} produced empty surface"
+
+
+def test_2d_amber_glass_and_switch_patch():
+    """Assert 2D fragile tile renders amber base with white radiating crack lines,
+    heavy switch renders 12-point embossed steel X on base plate with rivets,
+    and split switch compresses wing gap from 6px to 2px when pressed.
+    """
+    renderer = BoardRenderer(800, 600)
+    tile_rect = pygame.Rect(10, 10, renderer.tile_size, renderer.tile_size)
+    surface = pygame.Surface((800, 600))
+
+    # 1. Fragile tile in 2D
+    surface.fill((0, 0, 0))
+    renderer._draw_fragile_tile(surface, tile_rect)
+    fragile_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(tile_rect.left, tile_rect.right)
+        for y in range(tile_rect.top, tile_rect.bottom)
+    ]
+    amber_base_pixels = [
+        p for p in fragile_pixels
+        if p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80
+    ]
+    white_crack_pixels = [
+        p for p in fragile_pixels
+        if p[0] > 240 and p[1] > 240 and p[2] > 240
+    ]
+    assert len(amber_base_pixels) > 50, (
+        f"2D fragile tile amber base pixels count={len(amber_base_pixels)}; expected > 50"
+    )
+    assert len(white_crack_pixels) > 5, (
+        f"2D fragile tile white crack pixels count={len(white_crack_pixels)}; expected > 5"
+    )
+
+    # 2. Heavy switch in 2D: base plate COLOR_HEAVY_BASE and 12-point cross COLOR_HEAVY_RED
+    heavy_sw = Switch(id="sw_heavy", type="heavy", position=(0, 0), bridge_ids=[], mode="toggle")
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, tile_rect, heavy_sw, is_pressed=False)
+    heavy_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(tile_rect.left, tile_rect.right)
+        for y in range(tile_rect.top, tile_rect.bottom)
+    ]
+    assert any(p == settings.COLOR_HEAVY_BASE for p in heavy_pixels), (
+        "Heavy switch metal base plate (COLOR_HEAVY_BASE) missing in 2D"
+    )
+    assert any(p == settings.COLOR_HEAVY_RED for p in heavy_pixels), (
+        "Heavy switch 12-point cross (COLOR_HEAVY_RED) missing in 2D"
+    )
+
+    # 3. Split switch in 2D: wing gap compression between pressed vs unpressed
+    split_sw = Switch(id="sw_split", type="split", position=(0, 0), bridge_ids=[], mode="toggle")
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, tile_rect, split_sw, is_pressed=False)
+    split_unpressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(tile_rect.left, tile_rect.right)
+        for y in range(tile_rect.top, tile_rect.bottom)
+    ]
+    surface.fill((0, 0, 0))
+    renderer._draw_switch(surface, tile_rect, split_sw, is_pressed=True)
+    split_pressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(tile_rect.left, tile_rect.right)
+        for y in range(tile_rect.top, tile_rect.bottom)
+    ]
+    assert any(p == settings.COLOR_SPLIT_CYAN for p in split_unpressed), (
+        "Split switch wing (COLOR_SPLIT_CYAN) missing in 2D"
+    )
+    assert split_pressed != split_unpressed, (
+        "Split switch pixel output must differ when is_pressed=True due to gap compression"
+    )
+
+
+def test_patch_2d_amber_glass_and_switch():
+    """Alias for -k patch_2d filter compatibility."""
+    test_2d_amber_glass_and_switch_patch()
+
 
 
 

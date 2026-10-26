@@ -105,17 +105,31 @@ class BoardRenderer:
         pygame.draw.circle(surface, settings.COLOR_GOAL_RING, center, radius, 2)
 
     def _draw_fragile_tile(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
+        # Amber-orange substrate backing
         pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect)
-        # Full-span diagonal hazard warning stripes covering 100% of tile rect using clipline
-        step = max(6, self.tile_size // 6)
-        for offset in range(step, rect.width + rect.height, step):
-            p1 = (rect.left + offset, rect.top)
-            p2 = (rect.left, rect.top + offset)
-            clipped = rect.clipline(p1, p2)
-            if clipped:
-                pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, clipped[0], clipped[1], 2)
-        # Crisp perimeter warning border
-        pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 2)
+
+        # Translucent amber glass fill with radiating white fracture crack lines
+        glass_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        glass_surf.fill(settings.COLOR_GLASS_FILL)
+
+        # Radiating white fracture lines
+        sx = rect.width / 52.0
+        sy = rect.height / 52.0
+        cracks = [
+            ((int(4 * sx), int(4 * sy)), (int(16 * sx), int(14 * sy))),
+            ((int(16 * sx), int(14 * sy)), (int(28 * sx), int(18 * sy))),
+            ((int(16 * sx), int(14 * sy)), (int(18 * sx), int(28 * sy))),
+            ((int(28 * sx), int(18 * sy)), (rect.width - max(4, int(6 * sx)), int(24 * sy))),
+            ((int(18 * sx), int(28 * sy)), (rect.width // 2, rect.height - max(4, int(6 * sy)))),
+        ]
+        crack_color = settings.COLOR_GLASS_CRACK[:3]
+        for start, end in cracks:
+            pygame.draw.line(glass_surf, crack_color, start, end, 2)
+
+        surface.blit(glass_surf, rect.topleft)
+
+        # Crisp perimeter amber glass warning border
+        pygame.draw.rect(surface, settings.COLOR_GLASS_BORDER, rect, 2)
 
     def _draw_bridge_tile(self, surface: pygame.Surface, rect: pygame.Rect, is_open: bool) -> None:
         if is_open:
@@ -142,10 +156,9 @@ class BoardRenderer:
             pygame.draw.rect(surface, settings.COLOR_BRIDGE_DOCK_PIN, (rect.right - 2 - pin_size, rect.bottom - 2 - pin_size, pin_size, pin_size))
 
     def _draw_switch(self, surface: pygame.Surface, rect: pygame.Rect, switch: Switch, is_pressed: bool = False) -> None:
-        center = rect.center
-        rad = max(6, self.tile_size // 3)
-
         if switch.type == "soft":
+            center = rect.center
+            rad = max(6, self.tile_size // 3)
             # Cylindrical base pedestal shadow ring
             pygame.draw.circle(surface, settings.COLOR_SWITCH_PEDESTAL, center, rad + 2)
             # Tactile circular button cap (brightens when pressed)
@@ -154,36 +167,59 @@ class BoardRenderer:
             rim_color = (200, 175, 30) if is_pressed else (160, 130, 10)
             pygame.draw.circle(surface, rim_color, center, rad, 1 if is_pressed else 2)
         elif switch.type == "heavy":
-            # Cast-metal square subplate base
-            sub_size = max(14, int(self.tile_size * 0.65))
-            sub_rect = pygame.Rect(center[0] - sub_size // 2, center[1] - sub_size // 2, sub_size, sub_size)
-            pygame.draw.rect(surface, settings.COLOR_SWITCH_HEAVY_BASE, sub_rect)
-            pygame.draw.rect(surface, (30, 35, 45), sub_rect, 1)
+            # Industrial cast-metal base plate with rounded corners
+            sub_rect = rect.inflate(-10, -10)
+            pygame.draw.rect(surface, settings.COLOR_HEAVY_BASE, sub_rect, border_radius=4)
+            pygame.draw.rect(surface, (148, 163, 184), sub_rect, 1, border_radius=4)
 
-            # Bold crimson X arms (brightens when pressed)
-            arm = max(4, sub_size // 2 - 2)
-            p1 = (center[0] - arm, center[1] - arm)
-            p2 = (center[0] + arm, center[1] + arm)
-            p3 = (center[0] - arm, center[1] + arm)
-            p4 = (center[0] + arm, center[1] - arm)
-            x_color = (255, 110, 110) if is_pressed else settings.COLOR_SWITCH_HEAVY
-            pygame.draw.line(surface, x_color, p1, p2, 5)
-            pygame.draw.line(surface, x_color, p3, p4, 5)
+            # 4 corner rivets
+            rivet_offset = 3
+            rivets = [
+                (sub_rect.left + rivet_offset, sub_rect.top + rivet_offset),
+                (sub_rect.right - rivet_offset, sub_rect.top + rivet_offset),
+                (sub_rect.left + rivet_offset, sub_rect.bottom - rivet_offset),
+                (sub_rect.right - rivet_offset, sub_rect.bottom - rivet_offset),
+            ]
+            for rx, ry in rivets:
+                pygame.draw.circle(surface, (148, 163, 184), (rx, ry), 2)
+
+            # 12-point closed polygon cross
+            cx, cy = rect.centerx, rect.centery
+            s = max(7, min(14, self.tile_size // 4))
+            w = max(2, s // 3)
+            points = [
+                (cx - s, cy - s + w), (cx - s + w, cy - s), (cx, cy - w),
+                (cx + s - w, cy - s), (cx + s, cy - s + w), (cx + w, cy),
+                (cx + s, cy + s - w), (cx + s - w, cy + s), (cx, cy + w),
+                (cx - s + w, cy + s), (cx - s, cy + s - w), (cx - w, cy),
+            ]
+            color = (255, 120, 120) if is_pressed else settings.COLOR_HEAVY_RED
+            pygame.draw.polygon(surface, color, points)
+            pygame.draw.polygon(surface, settings.COLOR_HEAVY_DARKRED, points, 1)
         elif switch.type == "split":
-            # Split switch: twin curved brackets "( )" and dual cyan gem pips
-            bracket_h = rad
-            bracket_w = max(4, rad // 2)
-            l_cx = center[0] - bracket_w
-            r_cx = center[0] + bracket_w
-            split_color = (120, 215, 255) if is_pressed else settings.COLOR_SWITCH_SPLIT
+            # Split switch: dual arched wings with dynamic gap compression
+            cx, cy = rect.centerx, rect.centery
+            gap = 2 if is_pressed else 6
+            sw_w = max(8, self.tile_size // 4)
+            sw_h = max(10, self.tile_size // 3)
 
-            # Twin brackets
-            pygame.draw.arc(surface, split_color, (l_cx - 4, center[1] - bracket_h, 8, bracket_h * 2), 1.57, 4.71, 3)
-            pygame.draw.arc(surface, split_color, (r_cx - 4, center[1] - bracket_h, 8, bracket_h * 2), -1.57, 1.57, 3)
+            left_wing = [
+                (cx - gap - sw_w, cy - sw_h), (cx - gap - sw_w // 3, cy - sw_h),
+                (cx - gap - sw_w // 3, cy - sw_h // 3), (cx - gap, cy),
+                (cx - gap - sw_w // 3, cy + sw_h // 3), (cx - gap - sw_w // 3, cy + sw_h),
+                (cx - gap - sw_w, cy + sw_h), (cx - gap - sw_w * 2 // 3, cy),
+            ]
+            right_wing = [
+                (cx + gap + sw_w, cy - sw_h), (cx + gap + sw_w // 3, cy - sw_h),
+                (cx + gap + sw_w // 3, cy - sw_h // 3), (cx + gap, cy),
+                (cx + gap + sw_w // 3, cy + sw_h // 3), (cx + gap + sw_w // 3, cy + sw_h),
+                (cx + gap + sw_w, cy + sw_h), (cx + gap + sw_w * 2 // 3, cy),
+            ]
+            color = (200, 240, 255) if is_pressed else settings.COLOR_SPLIT_CYAN
 
-            # Dual cyan gem pips
-            pip_rad = max(2, rad // 4)
-            pip_offset = max(3, rad // 3)
-            pygame.draw.circle(surface, split_color, (center[0] - pip_offset, center[1]), pip_rad)
-            pygame.draw.circle(surface, split_color, (center[0] + pip_offset, center[1]), pip_rad)
+            pygame.draw.polygon(surface, color, left_wing)
+            pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, left_wing, 1)
+            pygame.draw.polygon(surface, color, right_wing)
+            pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, right_wing, 1)
+            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 2), (cx, cy + sw_h + 2), 2)
 
