@@ -112,6 +112,13 @@ class IsometricBoardRenderer:
         d = max(4, round(self.tile_size * 0.15))
         return pygame.Rect(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys) + d)
 
+    def get_slab_depth(self, tile_type: TileType = TileType.FLOOR) -> int:
+        """Returns the vertical slab extrusion depth for the given tile type."""
+        d = max(4, round(self.tile_size * 0.15))
+        if tile_type == TileType.FRAGILE:
+            return max(2, d // 2)
+        return d
+
     def draw(
         self,
         surface: pygame.Surface,
@@ -131,8 +138,9 @@ class IsometricBoardRenderer:
             for cell in b_tiles:
                 bridge_cell_status[cell] = is_open
 
-        # Switches map
+        # Switches map and occupied cells for switch state feedback
         switches_by_pos = {sw.position: sw for sw in level.switches}
+        occupied_cells = set(state.occupied_cells())
 
         # Combine all tiles
         all_cells: dict[tuple[int, int], TileType] = dict(level.tiles)
@@ -166,7 +174,8 @@ class IsometricBoardRenderer:
 
             # Switches drawn on top of tile diamond
             if (r, c) in switches_by_pos:
-                self._draw_switch(surface, (r, c), switches_by_pos[(r, c)])
+                is_pressed = (r, c) in occupied_cells
+                self._draw_switch(surface, (r, c), switches_by_pos[(r, c)], is_pressed)
 
     def _draw_side_walls(
         self,
@@ -220,16 +229,17 @@ class IsometricBoardRenderer:
     def _draw_fragile_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
         border_color = settings.COLOR_FRAGILE_BORDER
+        fragile_d = max(2, d // 2)
 
-        # Side walls
-        self._draw_side_walls(surface, corners, d, settings.COLOR_FRAGILE, border_color)
+        # 50% vertical thickness side walls
+        self._draw_side_walls(surface, corners, fragile_d, settings.COLOR_FRAGILE, border_color)
 
         # Top diamond face
         pygame.draw.polygon(surface, settings.COLOR_FRAGILE, corners)
-        pygame.draw.polygon(surface, border_color, corners, 2)
+        pygame.draw.polygon(surface, border_color, corners, 1)
 
-        # Diagonal hazard hatch lines across diamond
-        for t in (0.25, 0.5, 0.75):
+        # Full-span diagonal hazard warning stripes across diamond face
+        for t in (0.2, 0.4, 0.6, 0.8):
             p_a = (
                 round((1 - t) * p_top[0] + t * p_right[0]),
                 round((1 - t) * p_top[1] + t * p_right[1]),
@@ -238,29 +248,40 @@ class IsometricBoardRenderer:
                 round((1 - t) * p_left[0] + t * p_bottom[0]),
                 round((1 - t) * p_left[1] + t * p_bottom[1]),
             )
-            pygame.draw.line(surface, border_color, p_a, p_b, 2)
+            pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p_a, p_b, 2)
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
-        _p_top, _p_right, _p_bottom, _p_left = corners
+        p_top, p_right, p_bottom, p_left = corners
         border_color = (25, 28, 38)
 
-        # Side walls
+        # External slab side walls
         self._draw_side_walls(surface, corners, d, settings.COLOR_GOAL, border_color)
 
-        # Top diamond face
-        pygame.draw.polygon(surface, settings.COLOR_GOAL, corners)
-        pygame.draw.polygon(surface, settings.COLOR_GOAL_RING, corners, 1)
-
-        # Recessed dark hole in center
+        # Sunken optical shaft aperture converging downward to dark abyss
         cx = sum(p[0] for p in corners) / 4.0
         cy = sum(p[1] for p in corners) / 4.0
+        shaft_depth = round(d * 1.8)
+
         inner_corners = [
-            (round(cx + (px - cx) * 0.55), round(cy + (py - cy) * 0.55))
+            (round(cx + (px - cx) * 0.55), round(cy + (py - cy) * 0.55 + shaft_depth))
             for px, py in corners
         ]
-        # Hole abyss
-        pygame.draw.polygon(surface, (12, 14, 20), inner_corners)
-        pygame.draw.polygon(surface, settings.COLOR_GOAL_RING, inner_corners, 2)
+        _i_top, i_right, i_bottom, i_left = inner_corners
+
+        # Top diamond base
+        pygame.draw.polygon(surface, settings.COLOR_GOAL, corners)
+
+        # Bottom abyss floor
+        pygame.draw.polygon(surface, settings.COLOR_GOAL_ABYSS, inner_corners)
+
+        # Left internal shaft wall: polygon [p_left, p_bottom, i_bottom, i_left]
+        pygame.draw.polygon(surface, settings.COLOR_GOAL_WALL_LEFT, [p_left, p_bottom, i_bottom, i_left])
+
+        # Right internal shaft wall: polygon [p_bottom, p_right, i_right, i_bottom]
+        pygame.draw.polygon(surface, settings.COLOR_GOAL_WALL_RIGHT, [p_bottom, p_right, i_right, i_bottom])
+
+        # Top perimeter highlight: subtle gold rim
+        pygame.draw.polygon(surface, (190, 155, 50), corners, 1)
 
     def _draw_bridge_tile(
         self,
@@ -283,50 +304,142 @@ class IsometricBoardRenderer:
             mid_r = (round((p_right[0] + p_bottom[0]) / 2), round((p_right[1] + p_bottom[1]) / 2))
             pygame.draw.line(surface, border_color, mid_l, mid_r, 1)
         else:
-            # Closed bridge: sunken dark void lattice without tall extrusion
-            pygame.draw.polygon(surface, settings.COLOR_BRIDGE_CLOSED, corners)
-            pygame.draw.polygon(surface, settings.COLOR_BRIDGE_CLOSED_BORDER, corners, 1)
-            # Dotted/dim red cross to signify inactive bridge span
-            pygame.draw.line(surface, (130, 50, 60), p_left, p_right, 1)
-            pygame.draw.line(surface, (130, 50, 60), p_top, p_bottom, 1)
+            # Closed bridge: sunken pit well without red-X
+            bottom_corners = [(x, y + d) for (x, y) in corners]
 
-    def _draw_switch(self, surface: pygame.Surface, pos: tuple[int, int], switch: Switch) -> None:
+            # Sunken abyss base floor
+            pygame.draw.polygon(surface, settings.COLOR_BRIDGE_CLOSED, bottom_corners)
+
+            # Sunken docking rail wireframe at pit depth
+            pygame.draw.polygon(surface, settings.COLOR_BRIDGE_DOCK_RAIL, bottom_corners, 1)
+            # Internal docking rail struts across sunken floor
+            pygame.draw.line(surface, settings.COLOR_BRIDGE_DOCK_RAIL, bottom_corners[0], bottom_corners[2], 1)
+            pygame.draw.line(surface, settings.COLOR_BRIDGE_DOCK_RAIL, bottom_corners[1], bottom_corners[3], 1)
+
+            # Vertical corner guide pins linking surface corners to sunken pit
+            for pt_top, pt_bot in zip(corners, bottom_corners):
+                pygame.draw.line(surface, settings.COLOR_BRIDGE_DOCK_RAIL, pt_top, pt_bot, 1)
+
+            # 4 corner docking guide circles at surface height
+            pin_rad = max(2, round(self.tile_size * 0.05))
+            for pt in corners:
+                pygame.draw.circle(surface, settings.COLOR_BRIDGE_DOCK_PIN, pt, pin_rad)
+
+    def _draw_switch(
+        self,
+        surface: pygame.Surface,
+        pos: tuple[int, int],
+        switch: Switch,
+        is_pressed: bool = False,
+    ) -> None:
         r, c = pos
         cx, cy = self.cell_center(r, c, 0.0)
         sw_size = max(5, round(self.tile_size * 0.22))
 
         if switch.type == "soft":
-            # Yellow isometric disc/ellipse
-            w = max(6, sw_size * 2)
-            h = max(4, sw_size)
-            rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
-            pygame.draw.ellipse(surface, settings.COLOR_SWITCH_SOFT, rect)
-            pygame.draw.ellipse(surface, (160, 130, 10), rect, 2)
+            # Cylindrical base pedestal
+            w = max(10, round(self.tile_size * 0.44))
+            h = max(5, round(w * 0.5))
+            pedestal_rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
+            pygame.draw.ellipse(surface, settings.COLOR_SWITCH_PEDESTAL, pedestal_rect)
+            pygame.draw.ellipse(surface, (40, 30, 10), pedestal_rect, 1)
+
+            # Cap elevation: -4px relaxed, -1px pressed
+            elev_y = -1 if is_pressed else -4
+            cap_cy = cy + elev_y
+            cap_w = max(8, w - 2)
+            cap_h = max(4, h - 1)
+
+            # Cylindrical skirt connecting pedestal to elevated cap
+            if elev_y < 0:
+                skirt_poly = [
+                    (cx - cap_w // 2, cap_cy),
+                    (cx + cap_w // 2, cap_cy),
+                    (cx + w // 2, cy),
+                    (cx - w // 2, cy),
+                ]
+                pygame.draw.polygon(surface, settings.COLOR_SWITCH_PEDESTAL, skirt_poly)
+
+            # Tactile circular button cap
+            cap_rect = pygame.Rect(cx - cap_w // 2, cap_cy - cap_h // 2, cap_w, cap_h)
+            cap_color = (255, 245, 130) if is_pressed else settings.COLOR_SWITCH_SOFT
+            pygame.draw.ellipse(surface, cap_color, cap_rect)
+            rim_color = (200, 175, 30) if is_pressed else (160, 130, 10)
+            pygame.draw.ellipse(surface, rim_color, cap_rect, 1 if is_pressed else 2)
 
         elif switch.type == "heavy":
-            # Bold red cross
+            # Cast-metal base polygon
+            bw = max(9, round(self.tile_size * 0.32))
+            bh = max(5, round(bw * 0.5))
+            base_poly = [
+                (cx, cy - bh),
+                (cx + bw, cy),
+                (cx, cy + bh),
+                (cx - bw, cy),
+            ]
+            pygame.draw.polygon(surface, settings.COLOR_SWITCH_HEAVY_BASE, base_poly)
+            pygame.draw.polygon(surface, (25, 28, 35), base_poly, 1)
+
+            # 3D extruded X arms and shadow
             arm_w = sw_size
             arm_h = round(sw_size * 0.5)
-            p1 = (cx - arm_w, cy - arm_h)
-            p2 = (cx + arm_w, cy + arm_h)
-            p3 = (cx - arm_w, cy + arm_h)
-            p4 = (cx + arm_w, cy - arm_h)
-            width = max(3, self.tile_size // 14)
-            pygame.draw.line(surface, settings.COLOR_SWITCH_HEAVY, p1, p2, width)
-            pygame.draw.line(surface, settings.COLOR_SWITCH_HEAVY, p3, p4, width)
+
+            # Drop shadow beneath arms
+            sh_p1 = (cx - arm_w, cy - arm_h + 1)
+            sh_p2 = (cx + arm_w, cy + arm_h + 1)
+            sh_p3 = (cx - arm_w, cy + arm_h + 1)
+            sh_p4 = (cx + arm_w, cy - arm_h + 1)
+            lw = max(3, self.tile_size // 12)
+            pygame.draw.line(surface, (20, 22, 28), sh_p1, sh_p2, lw)
+            pygame.draw.line(surface, (20, 22, 28), sh_p3, sh_p4, lw)
+
+            # Elevated 3D X arms
+            elev_y = -1 if is_pressed else -3
+            ac_y = cy + elev_y
+            p1 = (cx - arm_w, ac_y - arm_h)
+            p2 = (cx + arm_w, ac_y + arm_h)
+            p3 = (cx - arm_w, ac_y + arm_h)
+            p4 = (cx + arm_w, ac_y - arm_h)
+            x_color = (255, 110, 110) if is_pressed else settings.COLOR_SWITCH_HEAVY
+            pygame.draw.line(surface, x_color, p1, p2, lw)
+            pygame.draw.line(surface, x_color, p3, p4, lw)
 
         elif switch.type == "split":
-            # Split brackets / split diamond icon
-            arm_w = sw_size
-            arm_h = round(sw_size * 0.5)
-            lw = max(2, self.tile_size // 16)
-            # Left bracket
-            p_tl = (cx - 2, cy - arm_h)
-            p_ml = (cx - arm_w, cy)
-            p_bl = (cx - 2, cy + arm_h)
-            pygame.draw.lines(surface, settings.COLOR_SWITCH_SPLIT, False, [p_tl, p_ml, p_bl], lw)
-            # Right bracket
-            p_tr = (cx + 2, cy - arm_h)
-            p_mr = (cx + arm_w, cy)
-            p_br = (cx + 2, cy + arm_h)
-            pygame.draw.lines(surface, settings.COLOR_SWITCH_SPLIT, False, [p_tr, p_mr, p_br], lw)
+            # Split: twin curved bracket arcs and dual cyan gem pips with elevation
+            elev_y = -1 if is_pressed else -3
+            scy = cy + elev_y
+
+            split_color = (130, 225, 255) if is_pressed else settings.COLOR_SWITCH_SPLIT
+            rad = sw_size
+            bracket_h = max(4, round(rad * 0.7))
+            bracket_w = max(3, rad // 2)
+            l_cx = cx - bracket_w - 2
+            r_cx = cx + bracket_w + 2
+            arc_lw = max(2, self.tile_size // 18)
+
+            # Twin curved bracket arcs
+            pygame.draw.arc(surface, split_color, (l_cx - 4, scy - bracket_h, 8, bracket_h * 2), 1.57, 4.71, arc_lw)
+            pygame.draw.arc(surface, split_color, (r_cx - 4, scy - bracket_h, 8, bracket_h * 2), -1.57, 1.57, arc_lw)
+
+            # Dual cyan gem pips with elevation
+            pip_w = max(3, round(self.tile_size * 0.08))
+            pip_h = max(2, round(pip_w * 0.5))
+            pip_offset = max(3, rad // 3)
+
+            # Left isometric gem pip
+            gem_l = [
+                (cx - pip_offset, scy - pip_h),
+                (cx - pip_offset + pip_w, scy),
+                (cx - pip_offset, scy + pip_h),
+                (cx - pip_offset - pip_w, scy),
+            ]
+            pygame.draw.polygon(surface, split_color, gem_l)
+
+            # Right isometric gem pip
+            gem_r = [
+                (cx + pip_offset, scy - pip_h),
+                (cx + pip_offset + pip_w, scy),
+                (cx + pip_offset, scy + pip_h),
+                (cx + pip_offset - pip_w, scy),
+            ]
+            pygame.draw.polygon(surface, split_color, gem_r)

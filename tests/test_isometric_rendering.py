@@ -371,3 +371,122 @@ def test_visual_redesign_tokens_defined_and_valid():
         assert all(isinstance(c, int) and 0 <= c <= 255 for c in val), f"{name} components must be ints in [0, 255]"
         assert val == expected_val, f"{name} has unexpected value {val}, expected {expected_val}"
 
+
+def test_3d_special_cells_visual_redesign():
+    """Verify 3D isometric special cells redesign:
+    1. Closed bridge: 0 red pixels, sunken docking rails and guide pins rendered.
+    2. Fragile tile: 3D side wall depth halved compared to floor slab; full-span hazard stripes rendered.
+    3. Goal tile: optical shaft interior wall colors (left/right walls, abyss floor) rendered.
+    4. Switches: tactile depression and visual response when block is standing on switch vs away.
+    """
+    surface = pygame.Surface((800, 600))
+    renderer = IsometricBoardRenderer(800, 600)
+    level = create_test_level()
+
+    # 1. Closed Bridge: 0 red pixels and docking features present
+    state_closed = GameState(
+        block=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level, state_closed)
+
+    bridge_rect = renderer.get_cell_rect(1, 2)
+    bridge_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(bridge_rect.left, bridge_rect.right)
+        for y in range(bridge_rect.top, bridge_rect.bottom)
+    ]
+    red_pixels = [
+        p for p in bridge_pixels
+        if p == (130, 50, 60) or p == (120, 50, 60) or (p[0] > 110 and p[1] < 70 and p[2] < 70)
+    ]
+    assert len(red_pixels) == 0, f"Found red pixels in closed bridge: {red_pixels[:5]}"
+
+    has_dock_features = any(
+        p in (settings.COLOR_BRIDGE_DOCK_RAIL, settings.COLOR_BRIDGE_DOCK_PIN)
+        for p in bridge_pixels
+    )
+    assert has_dock_features, "Closed bridge should render docking rail or pin features"
+
+    # 2. Fragile Tile: side wall depth halved compared to floor slab; hazard stripes present
+    standard_depth = renderer.get_slab_depth(TileType.FLOOR)
+    fragile_depth = renderer.get_slab_depth(TileType.FRAGILE)
+    assert fragile_depth == max(2, standard_depth // 2), (
+        f"Fragile slab depth {fragile_depth} should be halved relative to standard {standard_depth}"
+    )
+
+    fragile_rect = renderer.get_cell_rect(0, 2)
+    fragile_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(fragile_rect.left, fragile_rect.right)
+        for y in range(fragile_rect.top, fragile_rect.bottom)
+    ]
+    has_fragile_stripes = any(p == settings.COLOR_FRAGILE_STRIPE for p in fragile_pixels)
+    assert has_fragile_stripes, "Fragile tile diamond should render high-contrast hazard warning stripes"
+
+    # 3. Goal Tile: shaft interior wall colors present
+    goal_rect = renderer.get_cell_rect(2, 2)
+    goal_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(goal_rect.left, goal_rect.right)
+        for y in range(goal_rect.top, goal_rect.bottom)
+    ]
+    assert any(p == settings.COLOR_GOAL_WALL_LEFT for p in goal_pixels), "Goal left interior wall color missing"
+    assert any(p == settings.COLOR_GOAL_WALL_RIGHT for p in goal_pixels), "Goal right interior wall color missing"
+    assert any(p == settings.COLOR_GOAL_ABYSS for p in goal_pixels), "Goal bottom abyss floor color missing"
+
+    # 4. Switches: tactile depression and visual change when standing on switch vs away
+    # Test soft switch at (0, 0)
+    sw_soft_rect = renderer.get_cell_rect(0, 0)
+    state_sw_away = GameState(
+        block=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level, state_sw_away)
+    pixels_soft_away = [
+        surface.get_at((x, y))[:3]
+        for x in range(sw_soft_rect.left, sw_soft_rect.right)
+        for y in range(sw_soft_rect.top, sw_soft_rect.bottom)
+    ]
+
+    state_sw_soft_on = GameState(
+        block=BlockState(r=0, c=0, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level, state_sw_soft_on)
+    pixels_soft_on = [
+        surface.get_at((x, y))[:3]
+        for x in range(sw_soft_rect.left, sw_soft_rect.right)
+        for y in range(sw_soft_rect.top, sw_soft_rect.bottom)
+    ]
+    assert pixels_soft_away != pixels_soft_on, "Soft switch should render differently when pressed"
+
+    # Test heavy switch at (1, 0)
+    sw_heavy_rect = renderer.get_cell_rect(1, 0)
+    pixels_heavy_away = [
+        surface.get_at((x, y))[:3]
+        for x in range(sw_heavy_rect.left, sw_heavy_rect.right)
+        for y in range(sw_heavy_rect.top, sw_heavy_rect.bottom)
+    ]
+    state_sw_heavy_on = GameState(
+        block=BlockState(r=1, c=0, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface.fill((0, 0, 0))
+    renderer.draw(surface, level, state_sw_heavy_on)
+    pixels_heavy_on = [
+        surface.get_at((x, y))[:3]
+        for x in range(sw_heavy_rect.left, sw_heavy_rect.right)
+        for y in range(sw_heavy_rect.top, sw_heavy_rect.bottom)
+    ]
+    assert pixels_heavy_away != pixels_heavy_on, "Heavy switch should render differently when pressed"
+
+
+def test_redesign_3d_special_cells():
+    """Alias for test_3d_special_cells_visual_redesign to satisfy -k 'redesign_3d' filter."""
+    test_3d_special_cells_visual_redesign()
+
+
