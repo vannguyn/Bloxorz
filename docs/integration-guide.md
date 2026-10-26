@@ -150,9 +150,16 @@ Nhằm mang lại trải nghiệm thị giác trực quan, giải quyết triệ
      - **Cầu Đóng (`Closed Bridge`)**: Thay thế hoàn toàn dấu X bằng cấu trúc giếng vực cơ khí tụt sâu (`sunken abyss pit`), trang bị hệ thống thanh ray cơ cấu trượt âm (`recessed docking rails`, mã màu `COLOR_BRIDGE_DOCK_RAIL = (35, 60, 80)`) cùng 4 chốt định vị góc dẫn hướng (`corner docking guide pins`, mã màu `COLOR_BRIDGE_DOCK_PIN = (45, 85, 110)`). Cầu đóng được khẳng định hoàn toàn không chứa bất kỳ điểm ảnh đỏ nào ($r > 150, g < 100, b < 100$).
      - **Công tắc Nặng (`Heavy Switch`)**: Ký hiệu chữ X màu đỏ công nghiệp dập nổi được bảo lưu độc quyền duy nhất cho Công tắc Nặng.
 
-2. **Tấm Kính Cường lực Nứt Màu Hổ Phách & Chiều Sâu Phiến Đá 35% (Amber-Orange Cracked Tempered Glass & 35% Slab Depth)**:
-   - *Bản sắc màu cam chuẩn Rubric (`AI - Project 1.pdf`)*: Ô gạch yếu (`FRAGILE`) bắt buộc phải nhận diện rõ ràng bằng sắc cam theo mô tả đề bài. Hệ thống sử dụng lớp nền kính cường lực màu hổ phách bán trong suốt (`COLOR_GLASS_FILL = (245, 130, 45, 185)`) cùng đường viền hổ phách sắc nét (`COLOR_GLASS_BORDER = (255, 160, 60)`), bảo toàn vẹn toàn quy tắc màu cam chủ đạo ($R > G > B$).
-   - *Họa tiết rạn nứt thủy tinh phản quang (Radiating Fracture Cracks)*: Bề mặt ô kính được khắc họa hệ thống 4 đường vân nứt rạn tỏa nhánh màu trắng sáng (`COLOR_GLASS_CRACK = (255, 255, 255, 230)`, với $R, G, B > 220$), mô phỏng trực quan tấm kính cường lực rạn vỡ nguy hiểm.
+2. **Tấm Kính Cường lực Nứt Pixel-Art Retro & Chiều Sâu Phiến Đá 35% (Pixel-Art Amber-Orange Cracked Glass with Rust Depth & 35% Slab Depth)**:
+   - *Bản sắc màu cam chuẩn Rubric (`AI - Project 1.pdf`)*: Ô gạch yếu (`FRAGILE`) bắt buộc phải nhận diện rõ ràng bằng sắc cam theo mô tả đề bài. Hệ thống sử dụng lớp nền kính cường lực màu hổ phách bán trong suốt (`COLOR_GLASS_FILL = (245, 130, 45, 185)`) cùng đường viền hổ phách sắc nét (`COLOR_GLASS_BORDER = (255, 160, 60)`), bảo toàn nghiêm ngặt quy tắc màu cam chủ đạo ($R > G > B$, chiếm $> 60\%$ diện tích bề mặt ô gạch).
+   - *Hệ thống rạn nứt Pixel-Art 16-bit chuẩn quy chiếu (Canonical $32 \times 32$ Raster Crack Network)*: Thay vì các đường vector hình học trơn đơn điệu, bề mặt ô kính được tái hiện chân thực theo phong cách retro 16-bit (dựa trên bản mẫu quy chiếu `fragile_ref.png`) thông qua ma trận điểm ảnh chuẩn hóa $32 \times 32$:
+     - **Vết nứt phản quang chính (`COLOR_GLASS_CRACK = (255, 255, 255, 230)`)**: Tập hợp hơn 85 tọa độ chuẩn (`FRAGILE_CRACK_WHITE` trong `config/settings.py`) khắc họa khe nứt chính chéo từ tây bắc sang đông nam với các đường gấp khúc zig-zag micro-fractures, phân nhánh lên mép trên $(10, 0)$ và mép dưới $(20, 31)$, đảm bảo điểm ảnh trắng sáng phản quang ($R, G, B > 220$).
+     - **Bóng đổ chiều sâu khe nứt màu rỉ sét (`COLOR_GLASS_SHADOW = (140, 50, 10, 220)`)**: Hơn 50 tọa độ chuẩn (`FRAGILE_CRACK_SHADOW` trong `config/settings.py`) được dịch chuyển chính xác $+1\text{px}$ về phía đông nam (South-East offset) bám sát các đoạn nứt chính, mô phỏng chiều sâu vực rạn nứt thủy tinh 3D mà không làm tối hoặc biến chất lớp nền cam ($R \in [110, 180], G \in [30, 90], B < 60$).
+   - *Quy trình dựng hình đa độ phân giải 2D & Chiếu phối cảnh 3D Isometric*:
+     - **2D Board Renderer**: Dựng hình trực tiếp ma trận nứt lên bề mặt $32 \times 32\text{px}$ cục bộ và co giãn nội suy gần nhất (`pygame.transform.scale`) theo kích thước ô lưới thực tế (`tile_size`), duy trì độ sắc nét pixel-art tuyệt đối không bị mờ nhòe.
+     - **3D Isometric Dimetric Projection**: Chuyển đổi tọa độ chuẩn hóa $(u, v) = (g_x / 32.0, g_y / 32.0)$ trực tiếp lên mặt thoi đỉnh (top diamond polygon) theo phép biến đổi affine thuận:
+       $$\vec{P}(u, v) = \vec{C}_{\text{top}} + u \cdot (\vec{C}_{\text{right}} - \vec{C}_{\text{top}}) + v \cdot (\vec{C}_{\text{left}} - \vec{C}_{\text{top}})$$
+       Mỗi điểm ảnh vết nứt được chiếu thành vi thoi góc nghiêng 2:1 đồng bộ hoàn hảo với góc nhìn isometric của toàn bàn cờ.
    - *Độ dày phiến đá 35% trong 3D Isometric*: Chiều dày khối đá hông (slab extrusion depth) của ô sàn yếu được tinh chỉnh thanh mảnh chính xác $35\%$ so với phiến sàn tiêu chuẩn ($d_{\text{fragile}} = \max(2, \text{round}(d \times 0.35))$), tạo cảm giác phiến kính mỏng manh, không chịu nổi trọng lực khi khối đá Bloxorz dựng đứng (chỉ chịu tải an toàn khi khối đá nằm ngang).
 
 3. **Công tắc Nặng Chữ X Thép Công nghiệp Dập nổi 12 Điểm (12-Point Embossed Industrial Steel X Heavy Switch)**:
@@ -175,11 +182,11 @@ Nhằm mang lại trải nghiệm thị giác trực quan, giải quyết triệ
 
 6. **Cam kết Tuân thủ Tuyệt đối Bảng Tiêu chí Đánh giá Môn học (Course Rubric Alignment - `AI - Project 1.pdf`)**:
    - Tất cả các nâng cấp thị giác đều tuân thủ chặt chẽ 100% rubric của môn học:
-     - Ô sàn yếu (Fragile Tile) bảo lưu trọn vẹn sắc cam đặc trưng ($R > G > B$) theo định nghĩa đề bài, kết hợp hoa văn nứt kính để chống nhầm lẫn hoàn toàn.
+     - Ô sàn yếu (Fragile Tile) bảo lưu trọn vẹn sắc cam đặc trưng ($R > G > B$) theo định nghĩa đề bài, kết hợp hệ thống nứt pixel-art 16-bit 2 tầng màu (trắng phản quang và bóng đổ rỉ sét) để chống nhầm lẫn hoàn toàn.
      - Cầu đóng (Closed Bridge) triệt tiêu hoàn toàn dấu X đỏ, loại bỏ 100% xung đột thị giác với Công tắc Nặng.
      - Công tắc Nặng (Heavy Switch) chuẩn hình tượng chữ X đỏ dập nổi trên bệ thép.
      - Công tắc Phân tách (Split Switch) chuẩn hình tượng 2 dấu ngoặc/cánh phân tách màu xanh cyan.
-     - 100% đồ họa vector thủ công (Pygame procedural rendering), hoàn toàn không phụ thuộc bất kỳ file tài nguyên bitmap bên ngoài nào, bảo đảm tính độc lập, độ tin cậy và tốc độ khung hình mượt mà ($< 2.0\text{s}$ toàn bộ 104+ unit tests).
+     - 100% đồ họa vector và raster thủ công (Pygame procedural rendering), hoàn toàn không phụ thuộc bất kỳ file tài nguyên bitmap bên ngoài nào, bảo đảm tính độc lập, độ tin cậy và tốc độ khung hình mượt mà ($< 2.0\text{s}$ toàn bộ 107 unit tests).
 
 ---
 

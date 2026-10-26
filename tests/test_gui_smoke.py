@@ -764,7 +764,7 @@ def test_patch_2d_amber_glass_and_switch():
 def test_all_10_stages_visual_patch_regression_2d():
     """Validates visual patch regression across all 10 real production stages in 2D:
     1. All 10 stages render cleanly without exceptions in 2D mode with board and block.
-    2. Fragile tiles in stages contain predominantly orange hues (R > G > B) and white crack highlights (R, G, B > 220).
+    2. Fragile tiles in stages contain predominantly orange hues (R > G > B), white crack highlights (R, G, B > 220), and rust under-shadow pixels (110 <= R <= 180, 30 <= G <= 90, B < 60).
     3. Heavy switches and Split switches visibly alter pixel representation upon block contact.
     4. Heavy switches contain COLOR_HEAVY_BASE and COLOR_HEAVY_RED; Split switches contain COLOR_SPLIT_CYAN.
     """
@@ -776,6 +776,7 @@ def test_all_10_stages_visual_patch_regression_2d():
 
     renderer = BoardRenderer(800, 600)
     block_renderer = BlockRenderer(renderer)
+    fragile_tiles_checked = 0
 
     for lvl in all_levels:
         surf = pygame.Surface((800, 600))
@@ -788,6 +789,7 @@ def test_all_10_stages_visual_patch_regression_2d():
         # Check fragile tiles in this stage
         for (r, c), tile_type in lvl.tiles.items():
             if tile_type == TileType.FRAGILE:
+                fragile_tiles_checked += 1
                 rect = renderer.get_cell_rect(r, c)
                 pixels = [
                     surf.get_at((x, y))[:3]
@@ -796,11 +798,18 @@ def test_all_10_stages_visual_patch_regression_2d():
                 ]
                 orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
                 white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
+                rust_shadow_pixels = [
+                    p for p in pixels
+                    if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
+                ]
                 assert len(orange_pixels) > 50, (
                     f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
                 )
                 assert len(white_crack_pixels) > 0, (
                     f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
+                )
+                assert len(rust_shadow_pixels) > 0, (
+                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking rust under-shadow pixels"
                 )
 
         # Check switches in this stage
@@ -849,6 +858,8 @@ def test_all_10_stages_visual_patch_regression_2d():
                     assert any(p == settings.COLOR_SPLIT_CYAN for p in pix_unpressed), (
                         f"Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
                     )
+
+    assert fragile_tiles_checked == 7, f"Expected 7 fragile tiles across all stages, got {fragile_tiles_checked}"
 
 
 def test_2d_pixel_art_fragile_tile_rendering():
