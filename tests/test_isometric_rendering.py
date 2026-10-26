@@ -433,11 +433,11 @@ def test_3d_special_cells_visual_redesign():
     )
     assert has_dock_features, "Closed bridge should render docking rail or pin features"
 
-    # 2. Fragile Tile: side wall depth halved compared to floor slab; hazard stripes present
+    # 2. Fragile Tile: side wall depth strictly 35% of floor slab; amber glass and white fracture cracks present
     standard_depth = renderer.get_slab_depth(TileType.FLOOR)
     fragile_depth = renderer.get_slab_depth(TileType.FRAGILE)
-    assert fragile_depth == max(2, standard_depth // 2), (
-        f"Fragile slab depth {fragile_depth} should be halved relative to standard {standard_depth}"
+    assert fragile_depth == max(2, round(standard_depth * 0.35)), (
+        f"Fragile slab depth {fragile_depth} should be strictly 35% relative to standard {standard_depth}"
     )
 
     fragile_rect = renderer.get_cell_rect(0, 2)
@@ -446,8 +446,10 @@ def test_3d_special_cells_visual_redesign():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    has_fragile_stripes = any(p == settings.COLOR_FRAGILE_STRIPE for p in fragile_pixels)
-    assert has_fragile_stripes, "Fragile tile diamond should render high-contrast hazard warning stripes"
+    has_cracks = any(p[0] > 240 and p[1] > 240 and p[2] > 240 for p in fragile_pixels)
+    assert has_cracks, "Fragile tile diamond should render white fracture crack lines"
+    has_amber = any(p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80 for p in fragile_pixels)
+    assert has_amber, "Fragile tile diamond should render amber glass fill"
 
     # 3. Goal Tile: shaft interior wall colors present
     goal_rect = renderer.get_cell_rect(2, 2)
@@ -591,6 +593,89 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_3d():
         block_renderer.draw(surf, st)
         raw = pygame.image.tobytes(surf, "RGB")
         assert any(b > 0 for b in raw), f"3D rendering for {lvl.id} produced empty surface"
+
+
+def test_3d_amber_glass_and_switch_patch():
+    """Validates Task 3 3D Isometric visual patch:
+    1. get_slab_depth(TileType.FRAGILE) == max(2, round(d * 0.35)).
+    2. Fragile tile renders amber glass and white fracture crack lines.
+    3. Heavy switch in 3D uses COLOR_HEAVY_BASE and COLOR_HEAVY_RED.
+    4. Split switch in 3D renders arched wings with COLOR_SPLIT_CYAN and center void groove,
+       and visually depresses/compresses when pressed.
+    """
+    renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
+    d = renderer.get_slab_depth(TileType.FLOOR)
+    expected_fragile_d = max(2, round(d * 0.35))
+    assert renderer.get_slab_depth(TileType.FRAGILE) == expected_fragile_d
+
+    surface = pygame.Surface((800, 600))
+    surface.fill((0, 0, 0))
+    level = create_test_level()
+    state = GameState(
+        block=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    renderer.draw(surface, level, state)
+
+    # 1. Fragile tile: white cracks and amber tones
+    fragile_rect = renderer.get_cell_rect(0, 2)
+    fragile_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(fragile_rect.left, fragile_rect.right)
+        for y in range(fragile_rect.top, fragile_rect.bottom)
+    ]
+    white_cracks = [
+        p for p in fragile_pixels
+        if p[0] > 240 and p[1] > 240 and p[2] > 240
+    ]
+    assert len(white_cracks) > 0, "Fragile top diamond should contain white fracture crack pixels"
+
+    amber_pixels = [
+        p for p in fragile_pixels
+        if p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80
+    ]
+    assert len(amber_pixels) > 0, "Fragile top diamond should contain amber glass pixels"
+
+    # 2. Heavy switch in 3D: COLOR_HEAVY_BASE and COLOR_HEAVY_RED
+    heavy_rect = renderer.get_cell_rect(1, 0)
+    heavy_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(heavy_rect.left, heavy_rect.right)
+        for y in range(heavy_rect.top, heavy_rect.bottom)
+    ]
+    assert settings.COLOR_HEAVY_BASE in heavy_pixels, "Heavy switch base should contain COLOR_HEAVY_BASE"
+    assert settings.COLOR_HEAVY_RED in heavy_pixels, "Heavy switch arms should contain COLOR_HEAVY_RED"
+
+    # 3. Split switch in 3D: COLOR_SPLIT_CYAN, void groove, and tactile/compression response
+    split_rect = renderer.get_cell_rect(2, 0)
+    pixels_split_unpressed = [
+        surface.get_at((x, y))[:3]
+        for x in range(split_rect.left, split_rect.right)
+        for y in range(split_rect.top, split_rect.bottom)
+    ]
+    assert settings.COLOR_SPLIT_CYAN in pixels_split_unpressed, "Split switch should contain COLOR_SPLIT_CYAN"
+    assert (15, 23, 42) in pixels_split_unpressed, "Split switch should contain center void groove (15, 23, 42)"
+
+    state_split_pressed = GameState(
+        block=BlockState(r=2, c=0, orientation=Orientation.STANDING),
+        bridge_mask=0,
+    )
+    surface_split_pressed = pygame.Surface((800, 600))
+    surface_split_pressed.fill((0, 0, 0))
+    renderer.draw(surface_split_pressed, level, state_split_pressed)
+    pixels_split_pressed = [
+        surface_split_pressed.get_at((x, y))[:3]
+        for x in range(split_rect.left, split_rect.right)
+        for y in range(split_rect.top, split_rect.bottom)
+    ]
+    assert pixels_split_unpressed != pixels_split_pressed, "Split switch should render differently when pressed"
+
+
+def test_patch_3d_amber_glass_and_switch():
+    """Alias for -k patch_3d filter compatibility."""
+    test_3d_amber_glass_and_switch_patch()
+
+
 
 
 

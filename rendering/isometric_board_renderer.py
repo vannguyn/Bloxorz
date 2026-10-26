@@ -116,7 +116,7 @@ class IsometricBoardRenderer:
         """Returns the vertical slab extrusion depth for the given tile type."""
         d = max(4, round(self.tile_size * 0.15))
         if tile_type == TileType.FRAGILE:
-            return max(2, d // 2)
+            return max(2, round(d * 0.35))
         return d
 
     def draw(
@@ -228,27 +228,52 @@ class IsometricBoardRenderer:
 
     def _draw_fragile_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
-        border_color = settings.COLOR_FRAGILE_BORDER
-        fragile_d = max(2, d // 2)
+        glass_depth = max(2, round(d * 0.35))
 
-        # 50% vertical thickness side walls
-        self._draw_side_walls(surface, corners, fragile_d, settings.COLOR_FRAGILE, border_color)
+        # Side walls with shaded amber tones and glass border
+        self._draw_side_walls(surface, corners, glass_depth, settings.COLOR_FRAGILE, settings.COLOR_GLASS_BORDER)
 
-        # Top diamond face
+        # Base fill
         pygame.draw.polygon(surface, settings.COLOR_FRAGILE, corners)
-        pygame.draw.polygon(surface, border_color, corners, 1)
 
-        # Full-span diagonal hazard warning stripes across diamond face
-        for t in (0.2, 0.4, 0.6, 0.8):
-            p_a = (
-                round((1 - t) * p_top[0] + t * p_right[0]),
-                round((1 - t) * p_top[1] + t * p_right[1]),
-            )
-            p_b = (
-                round((1 - t) * p_left[0] + t * p_bottom[0]),
-                round((1 - t) * p_left[1] + t * p_bottom[1]),
-            )
-            pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p_a, p_b, 2)
+        # Bounding box of top diamond
+        xs = [p[0] for p in corners]
+        ys = [p[1] for p in corners]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        tw = max(1, max_x - min_x)
+        th = max(1, max_y - min_y)
+
+        # Alpha surface for translucent amber glass
+        iso_glass = pygame.Surface((tw, th), pygame.SRCALPHA)
+        local_corners = [(x - min_x, y - min_y) for (x, y) in corners]
+        pygame.draw.polygon(iso_glass, settings.COLOR_GLASS_FILL, local_corners)
+
+        # Radiating white fracture crack line branches
+        p0, p1, p2, p3 = local_corners  # Top, Right, Bottom, Left
+        cx_l = (p0[0] + p2[0]) // 2
+        cy_l = (p3[1] + p1[1]) // 2
+
+        crack_color = settings.COLOR_GLASS_CRACK[:3]
+        cracks = [
+            ((cx_l, cy_l), (round(cx_l + (p1[0] - cx_l) * 0.5), round(cy_l + (p1[1] - cy_l) * 0.5))),
+            ((round(cx_l + (p1[0] - cx_l) * 0.5), round(cy_l + (p1[1] - cy_l) * 0.5)),
+             (round(cx_l + (p1[0] - cx_l) * 0.85), round(cy_l + (p1[1] - cy_l) * 0.85))),
+            ((round(cx_l + (p1[0] - cx_l) * 0.5), round(cy_l + (p1[1] - cy_l) * 0.5)),
+             (round(cx_l + (p0[0] - cx_l) * 0.6), round(cy_l + (p0[1] - cy_l) * 0.6))),
+            ((cx_l, cy_l), (round(cx_l + (p3[0] - cx_l) * 0.45), round(cy_l + (p3[1] - cy_l) * 0.45))),
+            ((round(cx_l + (p3[0] - cx_l) * 0.45), round(cy_l + (p3[1] - cy_l) * 0.45)),
+             (round(cx_l + (p3[0] - cx_l) * 0.8), round(cy_l + (p3[1] - cy_l) * 0.8))),
+            ((round(cx_l + (p3[0] - cx_l) * 0.45), round(cy_l + (p3[1] - cy_l) * 0.45)),
+             (round(cx_l + (p2[0] - cx_l) * 0.55), round(cy_l + (p2[1] - cy_l) * 0.55))),
+            ((cx_l, cy_l), (round(cx_l + (p0[0] - cx_l) * 0.4), round(cy_l + (p0[0] - cx_l) * 0.4))),
+            ((cx_l, cy_l), (round(cx_l + (p2[0] - cx_l) * 0.45), round(cy_l + (p2[1] - cy_l) * 0.45))),
+        ]
+        for start, end in cracks:
+            pygame.draw.line(iso_glass, crack_color, start, end, 2)
+
+        surface.blit(iso_glass, (min_x, min_y))
+        pygame.draw.polygon(surface, settings.COLOR_GLASS_BORDER, corners, 1)
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
@@ -368,78 +393,110 @@ class IsometricBoardRenderer:
             pygame.draw.ellipse(surface, rim_color, cap_rect, 1 if is_pressed else 2)
 
         elif switch.type == "heavy":
-            # Cast-metal base polygon
-            bw = max(9, round(self.tile_size * 0.32))
+            # Base metal octagon plate
+            bw = max(10, round(self.tile_size * 0.35))
             bh = max(5, round(bw * 0.5))
-            base_poly = [
-                (cx, cy - bh),
-                (cx + bw, cy),
-                (cx, cy + bh),
-                (cx - bw, cy),
+            c1 = max(2, round(bw * 0.3))
+            c2 = max(1, round(bh * 0.3))
+            octagon_base = [
+                (cx - c1, cy - bh + c2), (cx + c1, cy - bh + c2),
+                (cx + bw - c1, cy - c2), (cx + bw - c1, cy + c2),
+                (cx + c1, cy + bh - c2), (cx - c1, cy + bh - c2),
+                (cx - bw + c1, cy + c2), (cx - bw + c1, cy - c2),
             ]
-            pygame.draw.polygon(surface, settings.COLOR_SWITCH_HEAVY_BASE, base_poly)
-            pygame.draw.polygon(surface, (25, 28, 35), base_poly, 1)
+            pygame.draw.polygon(surface, settings.COLOR_HEAVY_BASE, octagon_base)
+            pygame.draw.polygon(surface, (148, 163, 184), octagon_base, 1)
 
-            # 3D extruded X arms and shadow
-            arm_w = sw_size
-            arm_h = round(sw_size * 0.5)
+            # 4 corner rivets
+            rivets = [
+                (cx, cy - bh + c2 + 1),
+                (cx + bw - c1 - 1, cy),
+                (cx, cy + bh - c2 - 1),
+                (cx - bw + c1 + 1, cy),
+            ]
+            for rx, ry in rivets:
+                pygame.draw.circle(surface, (148, 163, 184), (rx, ry), 1)
 
-            # Drop shadow beneath arms
-            sh_p1 = (cx - arm_w, cy - arm_h + 1)
-            sh_p2 = (cx + arm_w, cy + arm_h + 1)
-            sh_p3 = (cx - arm_w, cy + arm_h + 1)
-            sh_p4 = (cx + arm_w, cy - arm_h + 1)
-            lw = max(3, self.tile_size // 12)
-            pygame.draw.line(surface, (20, 22, 28), sh_p1, sh_p2, lw)
-            pygame.draw.line(surface, (20, 22, 28), sh_p3, sh_p4, lw)
+            # 3D Extruded cross arms
+            elev_y = -1 if is_pressed else -4
+            arm_w = max(6, round(self.tile_size * 0.22))
+            arm_h = max(3, round(arm_w * 0.5))
+            lw = max(3, round(self.tile_size / 10))
 
-            # Elevated 3D X arms
-            elev_y = -1 if is_pressed else -3
+            if not is_pressed:
+                # Lower shadow base and vertical extrusion when not pressed
+                sh_p1 = (cx - arm_w, cy - arm_h)
+                sh_p2 = (cx + arm_w, cy + arm_h)
+                sh_p3 = (cx - arm_w, cy + arm_h)
+                sh_p4 = (cx + arm_w, cy - arm_h)
+                pygame.draw.line(surface, settings.COLOR_HEAVY_DARKRED, sh_p1, sh_p2, lw)
+                pygame.draw.line(surface, settings.COLOR_HEAVY_DARKRED, sh_p3, sh_p4, lw)
+                for dy in range(elev_y, 0):
+                    pygame.draw.line(surface, settings.COLOR_HEAVY_DARKRED, (cx - arm_w, cy + dy - arm_h), (cx + arm_w, cy + dy + arm_h), lw)
+                    pygame.draw.line(surface, settings.COLOR_HEAVY_DARKRED, (cx - arm_w, cy + dy + arm_h), (cx + arm_w, cy + dy - arm_h), lw)
+
+            # Upper cross arms
             ac_y = cy + elev_y
             p1 = (cx - arm_w, ac_y - arm_h)
             p2 = (cx + arm_w, ac_y + arm_h)
             p3 = (cx - arm_w, ac_y + arm_h)
             p4 = (cx + arm_w, ac_y - arm_h)
-            x_color = (255, 110, 110) if is_pressed else settings.COLOR_SWITCH_HEAVY
+            x_color = (255, 120, 120) if is_pressed else settings.COLOR_HEAVY_RED
             pygame.draw.line(surface, x_color, p1, p2, lw)
             pygame.draw.line(surface, x_color, p3, p4, lw)
 
         elif switch.type == "split":
-            # Split: twin curved bracket arcs and dual cyan gem pips with elevation
-            elev_y = -1 if is_pressed else -3
-            scy = cy + elev_y
+            # 3D Split switch: symmetrical arched bracket wings with dynamic gap compression
+            lift = -1 if is_pressed else -4
+            gap = 2 if is_pressed else 5
+            scy = cy + lift
 
-            split_color = (130, 225, 255) if is_pressed else settings.COLOR_SWITCH_SPLIT
-            rad = sw_size
-            bracket_h = max(4, round(rad * 0.7))
-            bracket_w = max(3, rad // 2)
-            l_cx = cx - bracket_w - 2
-            r_cx = cx + bracket_w + 2
-            arc_lw = max(2, self.tile_size // 18)
+            sw_w = max(6, round(self.tile_size * 0.16))
+            sw_h = max(7, round(self.tile_size * 0.22))
 
-            # Twin curved bracket arcs
-            pygame.draw.arc(surface, split_color, (l_cx - 4, scy - bracket_h, 8, bracket_h * 2), 1.57, 4.71, arc_lw)
-            pygame.draw.arc(surface, split_color, (r_cx - 4, scy - bracket_h, 8, bracket_h * 2), -1.57, 1.57, arc_lw)
-
-            # Dual cyan gem pips with elevation
-            pip_w = max(3, round(self.tile_size * 0.08))
-            pip_h = max(2, round(pip_w * 0.5))
-            pip_offset = max(3, rad // 3)
-
-            # Left isometric gem pip
-            gem_l = [
-                (cx - pip_offset, scy - pip_h),
-                (cx - pip_offset + pip_w, scy),
-                (cx - pip_offset, scy + pip_h),
-                (cx - pip_offset - pip_w, scy),
+            # Arched left and right bracket wings
+            lw_top = [
+                (cx - gap - sw_w, scy - sw_h),
+                (cx - gap - max(2, sw_w // 3), scy - sw_h),
+                (cx - gap - max(2, sw_w // 3), scy - max(2, sw_h // 3)),
+                (cx - gap, scy),
+                (cx - gap - max(2, sw_w // 3), scy + max(2, sw_h // 3)),
+                (cx - gap - max(2, sw_w // 3), scy + sw_h),
+                (cx - gap - sw_w, scy + sw_h),
+                (cx - gap - max(3, sw_w * 2 // 3), scy),
             ]
-            pygame.draw.polygon(surface, split_color, gem_l)
-
-            # Right isometric gem pip
-            gem_r = [
-                (cx + pip_offset, scy - pip_h),
-                (cx + pip_offset + pip_w, scy),
-                (cx + pip_offset, scy + pip_h),
-                (cx + pip_offset - pip_w, scy),
+            rw_top = [
+                (cx + gap + sw_w, scy - sw_h),
+                (cx + gap + max(2, sw_w // 3), scy - sw_h),
+                (cx + gap + max(2, sw_w // 3), scy - max(2, sw_h // 3)),
+                (cx + gap, scy),
+                (cx + gap + max(2, sw_w // 3), scy + max(2, sw_h // 3)),
+                (cx + gap + max(2, sw_w // 3), scy + sw_h),
+                (cx + gap + sw_w, scy + sw_h),
+                (cx + gap + max(3, sw_w * 2 // 3), scy),
             ]
-            pygame.draw.polygon(surface, split_color, gem_r)
+
+            # Lower shadow skirts (10, 60, 100)
+            drop = -lift
+            lw_shadow = [(x, y + drop) for (x, y) in lw_top]
+            rw_shadow = [(x, y + drop) for (x, y) in rw_top]
+            pygame.draw.polygon(surface, (10, 60, 100), lw_shadow)
+            pygame.draw.polygon(surface, (10, 60, 100), rw_shadow)
+
+            # Extrusion skirt between top and shadow
+            for i in range(len(lw_top)):
+                ni = (i + 1) % len(lw_top)
+                if lw_top[i][1] >= scy or lw_top[ni][1] >= scy:
+                    pygame.draw.polygon(surface, (10, 60, 100), [lw_top[i], lw_top[ni], lw_shadow[ni], lw_shadow[i]])
+                if rw_top[i][1] >= scy or rw_top[ni][1] >= scy:
+                    pygame.draw.polygon(surface, (10, 60, 100), [rw_top[i], rw_top[ni], rw_shadow[ni], rw_shadow[i]])
+
+            # Top polygons
+            color = (200, 240, 255) if is_pressed else settings.COLOR_SPLIT_CYAN
+            pygame.draw.polygon(surface, color, lw_top)
+            pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, lw_top, 1)
+            pygame.draw.polygon(surface, color, rw_top)
+            pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, rw_top, 1)
+
+            # Center void groove (15, 23, 42)
+            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 2), (cx, cy + sw_h + 2), 2)
