@@ -25,7 +25,6 @@ from ui.icons import (
     draw_speed_icon,
     draw_metrics_icon,
     draw_eye_icon,
-    draw_reset_icon,
 )
 from ui.legend_bar import LegendBar
 from ui.result_screen import ResultOverlay
@@ -103,17 +102,13 @@ class GameScreen:
         self.btn_prev_lvl = Button((card_x, 78, top_btn_w, 28), "< Prev Level", self.prev_level)
         self.btn_next_lvl = Button((card_x + top_btn_w + 8, 78, top_btn_w, 28), "Next Level >", self.next_level)
 
-        self.btn_restart = Button(
-            (card_x, 110, top_btn_w, 28),
-            "Restart (R)",
-            self.restart_level,
-            icon_drawer=draw_reset_icon,
-        )
+        self.btn_restart = Button((card_x, 110, top_btn_w, 28), "Restart (R)", self.restart_level)
         self.btn_view_mode = Button(
             (card_x + top_btn_w + 8, 110, top_btn_w, 28),
             f"View: {self.view_mode}",
             self.cycle_view_mode,
             icon_drawer=draw_eye_icon,
+            icon_position="right",
         )
 
         # --- Card 1: Algorithm (2x2 grid) ---
