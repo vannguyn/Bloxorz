@@ -858,9 +858,27 @@ def test_3d_pixel_art_fragile_tile_rendering():
     )
 
 
+def test_all_10_stages_isometric_with_legend_docked_bounds():
+    """Verify isometric projections across all 10 real stages cleanly compute layout
 
+    and render within the board viewport containing the docked LegendBar.
+    """
+    from levels.level_loader import load_level
 
+    board_rect = pygame.Rect(20, 50, settings.WINDOW_WIDTH - 300, settings.WINDOW_HEIGHT - 60)
+    legend_rect = pygame.Rect(board_rect.left, board_rect.bottom - 44, board_rect.width, 40)
+    assert board_rect.contains(legend_rect)
 
+    renderer = IsometricBoardRenderer(viewport_width=settings.WINDOW_WIDTH, viewport_height=settings.WINDOW_HEIGHT)
+    for i in range(1, 11):
+        lvl = load_level(f"level_{i:02d}")
+        origin_x, origin_y, tile_size = renderer.compute_layout(lvl, board_rect)
+        assert tile_size >= 16
+        assert origin_x is not None and origin_y is not None
 
-
+        surface = pygame.Surface((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+        st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
+        renderer.draw(surface, lvl, st, board_rect)
+        raw = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw)
 

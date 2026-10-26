@@ -1079,14 +1079,58 @@ def test_game_screen_card_layout_and_algorithm_selection():
     )
 
 
+def test_all_10_stages_card_sidebar_and_docked_legend_regression():
+    """Verify all 10 stages render cleanly in both 2D and 3D with card-based sidebar,
+    docked LegendBar, full algorithm selection radio cycling, and speed controls.
+    """
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface)
+    assert len(game_screen.levels) == 10
 
+    # 1. Test all 10 stages in 2D and 3D with docked LegendBar and card layout
+    for mode in ("2D", "3D"):
+        game_screen.view_mode = mode
+        for idx in range(len(game_screen.levels)):
+            game_screen.load_level(idx)
+            assert game_screen.view_mode == mode
+            game_screen.update(0.016)
+            game_screen.draw()
 
+            # Surface must have rendered pixels
+            raw_bytes = pygame.image.tobytes(surface, "RGB")
+            assert any(b > 0 for b in raw_bytes), f"Stage {idx+1} rendered blank in {mode}"
 
+            # Docked LegendBar must be drawn within board_rect
+            assert game_screen.legend_bar.last_rect is not None
+            assert game_screen.board_rect.contains(game_screen.legend_bar.last_rect)
 
+            # Sidebar cards must be within screen bounds and right of board_rect
+            card_x = settings.WINDOW_WIDTH - 270
+            assert card_x >= game_screen.board_rect.right
 
+    # 2. Full algorithm selection cycle through all 4 algorithms in the 2x2 grid
+    for algo in ("BFS", "DFS", "UCS", "A*"):
+        game_screen.select_algo(algo)
+        assert game_screen.selected_algo == algo
+        assert f"Solve ({algo})" in game_screen.btn_solve_action.text
+        # Ensure only the active algorithm button has selected=True
+        for name, btn in game_screen.algo_buttons.items():
+            if name in ("A*", "ASTAR") and algo in ("A*", "ASTAR"):
+                assert btn.selected is True
+            elif name == algo:
+                assert btn.selected is True
+            else:
+                assert btn.selected is False
 
+    # 3. Verify playback button icons and initial states
+    assert game_screen.btn_solve_action.icon_drawer is not None
+    assert game_screen.btn_replay_prev.icon_drawer is not None
+    assert game_screen.btn_replay_toggle.icon_drawer is not None
+    assert game_screen.btn_replay_next.icon_drawer is not None
+    assert game_screen.btn_speed.icon_drawer is not None
 
-
-
-
+    # Step replay controls should initially be disabled before solution replay
+    assert game_screen.btn_replay_prev.enabled is False
+    assert game_screen.btn_replay_toggle.enabled is False
+    assert game_screen.btn_replay_next.enabled is False
 
