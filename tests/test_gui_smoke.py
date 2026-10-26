@@ -851,6 +851,32 @@ def test_all_10_stages_visual_patch_regression_2d():
                     )
 
 
+def test_2d_pixel_art_fragile_tile_rendering():
+    """Verify 2D fragile tile renders pixel-art crack with rust-brown under-shadow depth and dominant orange substrate."""
+    renderer = BoardRenderer(viewport_width=800, viewport_height=600)
+    tile_size = settings.TILE_SIZE  # 48
+    surf = pygame.Surface((tile_size, tile_size))
+    rect = pygame.Rect(0, 0, tile_size, tile_size)
+    renderer._draw_fragile_tile(surf, rect)
+
+    pixels = [surf.get_at((x, y))[:3] for x in range(rect.width) for y in range(rect.height)]
+    total_pixels = len(pixels)
+
+    white_crack_pixels = [p for p in pixels if p[0] > 240 and p[1] > 240 and p[2] > 240]
+    rust_shadow_pixels = [
+        p for p in pixels
+        if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
+    ]
+    orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+
+    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 240)"
+    assert len(rust_shadow_pixels) > 0, "Expected rust-brown shadow pixels (R in [110, 180], G in [30, 90], B < 60)"
+    assert len(orange_pixels) / total_pixels > 0.60, (
+        f"Orange pixels (R > G > B) must dominate > 60% of tile area (got {len(orange_pixels) / total_pixels:.2%})"
+    )
+
+
+
 
 
 
