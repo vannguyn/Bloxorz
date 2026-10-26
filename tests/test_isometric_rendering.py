@@ -349,3 +349,25 @@ class TestIsometricBlockRenderer:
         surf = pygame.Surface((800, 600))
         block_renderer.draw(surf, s1, transition_to=s2, progress=-0.5)
         block_renderer.draw(surf, s1, transition_to=s2, progress=1.5)
+
+
+def test_visual_redesign_tokens_defined_and_valid():
+    """Verify newly introduced visual affordance redesign design tokens are defined and valid RGB."""
+    expected_tokens = {
+        "COLOR_GOAL_WALL_LEFT": (18, 22, 32),
+        "COLOR_GOAL_WALL_RIGHT": (28, 34, 48),
+        "COLOR_GOAL_ABYSS": (6, 8, 12),
+        "COLOR_BRIDGE_DOCK_RAIL": (35, 60, 80),
+        "COLOR_BRIDGE_DOCK_PIN": (45, 85, 110),
+        "COLOR_FRAGILE_STRIPE": (255, 185, 45),
+        "COLOR_SWITCH_PEDESTAL": (70, 50, 10),
+        "COLOR_SWITCH_HEAVY_BASE": (45, 50, 60),
+    }
+    for name, expected_val in expected_tokens.items():
+        assert hasattr(settings, name), f"Missing design token {name} in config.settings"
+        val = getattr(settings, name)
+        assert isinstance(val, tuple), f"{name} must be a tuple"
+        assert len(val) == 3, f"{name} must have 3 elements (RGB)"
+        assert all(isinstance(c, int) and 0 <= c <= 255 for c in val), f"{name} components must be ints in [0, 255]"
+        assert val == expected_val, f"{name} has unexpected value {val}, expected {expected_val}"
+

@@ -25,17 +25,26 @@ COLOR_FLOOR = (195, 205, 218)
 COLOR_FLOOR_BORDER = (145, 155, 170)
 COLOR_GOAL = (35, 38, 48)
 COLOR_GOAL_RING = (255, 210, 50)
+COLOR_GOAL_WALL_LEFT = (18, 22, 32)      # Left internal goal shaft wall (shaded dark)
+COLOR_GOAL_WALL_RIGHT = (28, 34, 48)     # Right internal goal shaft wall (shaded mid-dark)
+COLOR_GOAL_ABYSS = (6, 8, 12)            # Deep optical abyss void floor
+
 COLOR_FRAGILE = (245, 130, 45)
 COLOR_FRAGILE_BORDER = (195, 80, 20)
+COLOR_FRAGILE_STRIPE = (255, 185, 45)    # High-contrast 45-degree hazard warning stripe
 
 COLOR_BRIDGE_CLOSED = (40, 45, 60)
 COLOR_BRIDGE_CLOSED_BORDER = (75, 80, 95)
+COLOR_BRIDGE_DOCK_RAIL = (35, 60, 80)    # Recessed docking rail wireframe at pit depth
+COLOR_BRIDGE_DOCK_PIN = (45, 85, 110)    # Surface corner docking guide pin/bracket
 COLOR_BRIDGE_OPEN = (100, 195, 175)
 COLOR_BRIDGE_OPEN_BORDER = (60, 150, 130)
 
 # Switches
 COLOR_SWITCH_SOFT = (255, 215, 0)
+COLOR_SWITCH_PEDESTAL = (70, 50, 10)     # Cylindrical base ring / bevel shadow for tactile switch
 COLOR_SWITCH_HEAVY = (235, 75, 75)
+COLOR_SWITCH_HEAVY_BASE = (45, 50, 60)   # Cast metal octagonal sub-plate base
 COLOR_SWITCH_SPLIT = (65, 175, 245)
 
 # Block
