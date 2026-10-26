@@ -19,6 +19,8 @@ __all__ = [
     "draw_step_forward_icon",
     "draw_speed_icon",
     "draw_metrics_icon",
+    "draw_eye_icon",
+    "draw_reset_icon",
 ]
 
 
@@ -267,3 +269,76 @@ def draw_metrics_icon(
             pygame.Rect(bx, by, bar_w, bar_h),
             border_radius=max(1, bar_w // 4),
         )
+
+
+def draw_eye_icon(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    color: tuple[int, int, int] = (255, 255, 255),
+) -> None:
+    """Draw a stylized human eye icon for 2D/3D view mode toggle."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+
+    cx, cy = rect.centerx, rect.centery
+    w, h = rect.width, rect.height
+    ew = max(6, int(w * 0.85))
+    eh = max(3, int(h * 0.35))
+    lw = max(1, int(min(w, h) * 0.09))
+
+    left = (cx - ew // 2, cy)
+    right = (cx + ew // 2, cy)
+
+    upper_pts = [
+        left,
+        (cx - ew // 4, cy - eh),
+        (cx, cy - eh),
+        (cx + ew // 4, cy - eh),
+        right,
+    ]
+    lower_pts = [
+        left,
+        (cx - ew // 4, cy + eh),
+        (cx, cy + eh),
+        (cx + ew // 4, cy + eh),
+        right,
+    ]
+    pygame.draw.lines(surface, color, False, upper_pts, lw)
+    pygame.draw.lines(surface, color, False, lower_pts, lw)
+
+    pupil_r = max(2, int(min(w, h) * 0.18))
+    pygame.draw.circle(surface, color, (cx, cy), pupil_r)
+
+
+def draw_reset_icon(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    color: tuple[int, int, int] = (255, 255, 255),
+) -> None:
+    """Draw a circular reload/restart arrow icon."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+
+    cx, cy = rect.centerx, rect.centery
+    w, h = rect.width, rect.height
+    lw = max(1, int(min(w, h) * 0.12))
+    inset = max(1, int(min(w, h) * 0.15))
+    arc_rect = rect.inflate(-inset * 2, -inset * 2)
+
+    # 3/4 circular arc (from 45 deg to 330 deg)
+    pygame.draw.arc(surface, color, arc_rect, math.radians(45), math.radians(330), lw)
+
+    # Arrowhead at the top opening
+    rx = arc_rect.width / 2.0
+    ry = arc_rect.height / 2.0
+    tip_x = int(cx + rx * math.cos(math.radians(45)))
+    tip_y = int(cy - ry * math.sin(math.radians(45)))
+
+    asize = max(3, int(min(w, h) * 0.28))
+    arrow_pts = [
+        (tip_x, tip_y - asize),
+        (tip_x + asize, tip_y),
+        (tip_x, tip_y + asize),
+    ]
+    pygame.draw.polygon(surface, color, arrow_pts)
+

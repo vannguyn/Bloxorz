@@ -112,8 +112,16 @@ def test_metrics_icon():
     _assert_icon_draws_pixels(draw_metrics_icon)
 
 
+def test_view_and_restart_icons():
+    """Verify eye icon for view mode and reset icon for restart."""
+    from ui.icons import draw_eye_icon, draw_reset_icon
+
+    for fn in (draw_eye_icon, draw_reset_icon):
+        _assert_icon_draws_pixels(fn)
+
+
 def test_all_icons_exported():
-    """Verify all 10 icons are exposed in ui.icons.__all__."""
+    """Verify all 12 icons are exposed in ui.icons.__all__."""
     import ui.icons as icons_mod
 
     expected_names = [
@@ -127,6 +135,8 @@ def test_all_icons_exported():
         "draw_step_forward_icon",
         "draw_speed_icon",
         "draw_metrics_icon",
+        "draw_eye_icon",
+        "draw_reset_icon",
     ]
 
     for name in expected_names:
