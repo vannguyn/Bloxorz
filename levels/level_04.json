@@ -1,28 +1,56 @@
 {
-      "id": "level_04",
-      "name": "Careful Footing",
-      "difficulty": "basic",
-      "description": "Avoid standing upright on the fragile tile; pass through it while lying down.",
-      "width": 8,
-      "height": 7,
+      "id": "level_05",
+      "name": "Sideways Crossing",
+      "difficulty": "intermediate",
+      "description": "Use a horizontal roll to cross the fragile lane without ending upright on it.",
+      "width": 9,
+      "height": 8,
       "start": {
         "position": [
-          3,
+          4,
           1
         ],
         "orientation": "standing"
       },
       "goal": [
-        3,
+        4,
         7
       ],
       "tiles": [
         [
-          3,
+          4,
           1
         ],
         [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          4,
+          7
+        ],
+        [
           3,
+          2
+        ],
+        [
+          5,
           2
         ],
         [
@@ -30,15 +58,15 @@
           3
         ],
         [
-          3,
-          4
+          5,
+          3
         ],
         [
           3,
-          5
+          6
         ],
         [
-          3,
+          5,
           6
         ],
         [
@@ -46,29 +74,17 @@
           7
         ],
         [
-          2,
-          3
-        ],
-        [
-          4,
-          3
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          4,
-          5
+          5,
+          7
         ]
       ],
       "fragile_tiles": [
         [
-          3,
+          4,
           5
         ],
         [
-          3,
+          4,
           6
         ]
       ],
