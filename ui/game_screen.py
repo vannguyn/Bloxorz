@@ -13,6 +13,7 @@ from rendering.isometric_board_renderer import IsometricBoardRenderer
 from rendering.isometric_block_renderer import IsometricBlockRenderer
 from rendering.animation import SolutionReplayer
 from ui.button import Button
+from ui.slider import Slider
 from ui.icons import (
     draw_network_icon,
     draw_tree_icon,
@@ -88,9 +89,48 @@ class GameScreen:
         # Playback speed settings
         self.speed_preset_idx = 1  # Default 1.0x
 
-        # Build UI Buttons
+        # Dynamic layout rects & coordinates
+        card_x = self.sidebar_rect.left + 14
+        card_w = self.sidebar_rect.width - 28
+        self.card2_rect = pygame.Rect(card_x, 258, card_w, 156)
+        self.card3_rect = pygame.Rect(card_x, self.card2_rect.bottom + 14, card_w, 120)
+        self.footer_y = 620
+        self.footer_rect = pygame.Rect(card_x, self.footer_y, card_w, 44)
+
+        # Build UI Buttons & Slider
         self.buttons: list[Button] = []
         self._init_buttons()
+
+    def _on_slider_drag_start(self) -> None:
+        """Pauses replay playback when timeline scrubbing begins."""
+        if self.replayer is not None:
+            self.replayer.pause()
+            self.btn_replay_toggle.text = "Play"
+            self.btn_replay_toggle.icon_drawer = draw_play_icon
+
+    def _on_slider_change(self, val: int) -> None:
+        """Seeks replayer to the target step and synchronizes game state."""
+        if self.replayer is not None and self.replayer.states:
+            max_idx = len(self.replayer.states) - 1
+            step = max(0, min(max_idx, int(val)))
+            self.replayer.current_index = step
+            self.current_state = self.replayer.current_state
+            if self.replayer.is_finished and is_goal(self.current_state, self.level):
+                self.outcome_status = "WIN"
+            elif self.outcome_status == "WIN":
+                self.outcome_status = None
+
+    def _update_layout(self) -> None:
+        """Synchronizes dynamic Card 2, Card 3, speed button, and slider layout states."""
+        if self.replayer is not None:
+            self.card2_rect.height = 192
+            self.btn_speed.rect.y = 408
+            self.timeline_slider.enabled = True
+        else:
+            self.card2_rect.height = 156
+            self.btn_speed.rect.y = 374
+            self.timeline_slider.enabled = False
+        self.card3_rect.top = self.card2_rect.bottom + 14
 
     def _init_buttons(self) -> None:
         card_x = self.sidebar_rect.left + 14
@@ -170,33 +210,50 @@ class GameScreen:
         self.btn_cancel = self.btn_solve_action  # Alias for backward compatibility
 
         # Step replay row: [◀◀ Step] [❚❚ Pause] [Step Forward ▶▶]
-        step_w = (inner_w - 12) // 3
-        step_w_mid = inner_w - 2 * step_w - 12
+        gap_x = 10
+        step_w = (inner_w - 2 * gap_x) // 3
+        step_w_mid = inner_w - 2 * step_w - 2 * gap_x
+        row2_y = 334
         self.btn_replay_prev = Button(
-            (card_x + 10, 328, step_w, 28),
+            (card_x + 10, row2_y, step_w, 28),
             "Step",
             self.replay_prev_step,
             icon_drawer=draw_step_back_icon,
             enabled=False,
         )
         self.btn_replay_toggle = Button(
-            (card_x + 10 + step_w + 6, 328, step_w_mid, 28),
+            (card_x + 10 + step_w + gap_x, row2_y, step_w_mid, 28),
             "Pause",
             self.replay_toggle_play,
             icon_drawer=draw_pause_icon,
             enabled=False,
         )
         self.btn_replay_next = Button(
-            (card_x + 10 + step_w + 6 + step_w_mid + 6, 328, step_w, 28),
+            (card_x + 10 + step_w + gap_x + step_w_mid + gap_x, row2_y, step_w, 28),
             "Step",
             self.replay_next_step,
             icon_drawer=draw_step_forward_icon,
             enabled=False,
         )
 
-        # Playback speed button
+        # Timeline Slider row (y = 374)
+        label_w = 80
+        slider_gap = 6
+        slider_x = card_x + 10 + label_w + slider_gap
+        slider_w = inner_w - (label_w + slider_gap)
+        self.timeline_slider = Slider(
+            (slider_x, 374, slider_w, 20),
+            min_val=0,
+            max_val=0,
+            value=0,
+            on_change=self._on_slider_change,
+            on_drag_start=self._on_slider_drag_start,
+            enabled=False,
+        )
+
+        # Playback speed button (y = 374 when idle, y = 408 when solved)
         self.btn_speed = Button(
-            (card_x + 10, 362, inner_w, 28),
+            (card_x + 10, 374, inner_w, 28),
             f"Speed: {self.SPEED_PRESETS[self.speed_preset_idx]}x",
             self.cycle_speed,
             icon_drawer=draw_speed_icon,
@@ -248,6 +305,10 @@ class GameScreen:
         init_mask = getattr(self.level, "initial_bridge_mask", 0)
         self.initial_state = GameState(block=self.level.start, bridge_mask=init_mask)
         self.current_state = self.initial_state
+        self.timeline_slider.min_val = 0
+        self.timeline_slider.max_val = 0
+        self.timeline_slider.value = 0
+        self._update_layout()
 
     def next_level(self) -> None:
         self.load_level(self.level_index + 1)
@@ -261,6 +322,10 @@ class GameScreen:
         self.outcome_status = None
         self.moves_count = 0
         self.current_state = self.initial_state
+        self.timeline_slider.min_val = 0
+        self.timeline_slider.max_val = 0
+        self.timeline_slider.value = 0
+        self._update_layout()
 
     def trigger_solve(self, algo: str) -> None:
         if self.solver_bridge.state == SolverBridgeState.RUNNING:
@@ -269,6 +334,10 @@ class GameScreen:
         self.replayer = None
         self.latest_result = None
         self.outcome_status = None
+        self.timeline_slider.min_val = 0
+        self.timeline_slider.max_val = 0
+        self.timeline_slider.value = 0
+        self._update_layout()
         self.solver_bridge.start_solve(algo, self.level, self.current_state)
 
     def cancel_solve(self) -> None:
@@ -287,10 +356,18 @@ class GameScreen:
     def replay_prev_step(self) -> None:
         if self.replayer:
             self.replayer.step_backward()
+            self.current_state = self.replayer.current_state
+            self.timeline_slider.value = self.replayer.current_index
+            if self.outcome_status == "WIN":
+                self.outcome_status = None
 
     def replay_next_step(self) -> None:
         if self.replayer:
             self.replayer.step_forward()
+            self.current_state = self.replayer.current_state
+            self.timeline_slider.value = self.replayer.current_index
+            if self.replayer.is_finished and is_goal(self.current_state, self.level):
+                self.outcome_status = "WIN"
 
     def cycle_speed(self) -> None:
         self.speed_preset_idx = (self.speed_preset_idx + 1) % len(self.SPEED_PRESETS)
@@ -313,6 +390,10 @@ class GameScreen:
         # If replayer is active, cancel it when user makes manual move
         if self.replayer:
             self.replayer = None
+            self.timeline_slider.min_val = 0
+            self.timeline_slider.max_val = 0
+            self.timeline_slider.value = 0
+            self._update_layout()
 
         next_state = apply_move(self.current_state, action, self.level)
         if next_state is None:
@@ -333,7 +414,11 @@ class GameScreen:
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handles keyboard and mouse events."""
-        # 1. Pass to UI buttons
+        # 1. Pass to timeline slider if active
+        if self.replayer is not None:
+            self.timeline_slider.handle_event(event)
+
+        # 2. Pass to UI buttons
         for btn in self.buttons:
             btn.handle_event(event)
 
@@ -371,10 +456,15 @@ class GameScreen:
                         res.path,
                         speed_multiplier=current_speed,
                     )
+                    self.timeline_slider.min_val = 0
+                    self.timeline_slider.max_val = self.replayer.total_steps
+                    self.timeline_slider.value = 0
                     self.btn_replay_toggle.text = "Pause"
                     self.btn_replay_toggle.icon_drawer = draw_pause_icon
                 else:
                     self.outcome_status = "UNSOLVABLE"
+
+        self._update_layout()
 
         # 2. Update button enabled & label states
         is_solving = (self.solver_bridge.state == SolverBridgeState.RUNNING)
@@ -400,6 +490,7 @@ class GameScreen:
 
         # 3. Update Replay
         if self.replayer:
+            self.timeline_slider.max_val = self.replayer.total_steps
             self.replayer.update(dt)
             self.current_state = self.replayer.current_state
             if self.replayer.is_playing:
@@ -408,6 +499,9 @@ class GameScreen:
             else:
                 self.btn_replay_toggle.text = "Play"
                 self.btn_replay_toggle.icon_drawer = draw_play_icon
+
+            if not self.timeline_slider.is_dragging:
+                self.timeline_slider.value = self.replayer.current_index
 
             if self.replayer.is_finished and is_goal(self.current_state, self.level):
                 self.outcome_status = "WIN"
@@ -484,19 +578,15 @@ class GameScreen:
         self.surface.blit(c1_title, (card_x + 32, 153))
 
         # --- Card 2: Playback Controls Container ---
-        card2_rect = pygame.Rect(card_x, 258, card_w, 142)
-        pygame.draw.rect(self.surface, settings.COLOR_CARD_BG, card2_rect, border_radius=8)
-        pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, card2_rect, 1, border_radius=8)
+        self._update_layout()
+        pygame.draw.rect(self.surface, settings.COLOR_CARD_BG, self.card2_rect, border_radius=8)
+        pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, self.card2_rect, 1, border_radius=8)
 
         draw_play_icon(self.surface, pygame.Rect(card_x + 12, 268, 14, 14), settings.COLOR_CARD_HEADER)
         c2_title = self.font_section.render("PLAYBACK", True, settings.COLOR_CARD_HEADER)
         self.surface.blit(c2_title, (card_x + 32, 267))
 
-        if self.replayer:
-            step_str = f"Step: {self.replayer.current_index}/{self.replayer.total_steps}"
-            step_surf = self.font_mono.render(step_str, True, settings.COLOR_TEXT_ACCENT)
-            self.surface.blit(step_surf, (card_x + card_w - 12 - step_surf.get_width(), 268))
-        elif self.solver_bridge.state == SolverBridgeState.RUNNING:
+        if self.solver_bridge.state == SolverBridgeState.RUNNING:
             spin_txt = f"Searching ({self.solver_bridge.current_algo})..."
             st_surf = self.font_mono.render(spin_txt, True, (255, 215, 0))
             self.surface.blit(st_surf, (card_x + card_w - 12 - st_surf.get_width(), 268))
@@ -504,14 +594,20 @@ class GameScreen:
             st_surf = self.font_mono.render("Search cancelled.", True, settings.COLOR_TEXT_MUTED)
             self.surface.blit(st_surf, (card_x + card_w - 12 - st_surf.get_width(), 268))
 
-        # --- Card 3: Solution Metrics Telemetry Container ---
-        card3_rect = pygame.Rect(card_x, 408, card_w, 154)
-        pygame.draw.rect(self.surface, settings.COLOR_CARD_BG, card3_rect, border_radius=8)
-        pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, card3_rect, 1, border_radius=8)
+        if self.replayer is not None:
+            step_str = f"Step: {self.replayer.current_index}/{self.replayer.total_steps}"
+            step_surf = self.font_mono.render(step_str, True, settings.COLOR_TEXT_ACCENT)
+            step_y = self.timeline_slider.rect.y + (self.timeline_slider.rect.height - step_surf.get_height()) // 2
+            self.surface.blit(step_surf, (card_x + 10, step_y))
+            self.timeline_slider.draw(self.surface)
 
-        draw_metrics_icon(self.surface, pygame.Rect(card_x + 12, 418, 14, 14), settings.COLOR_CARD_HEADER)
+        # --- Card 3: Solution Metrics Telemetry Container ---
+        pygame.draw.rect(self.surface, settings.COLOR_CARD_BG, self.card3_rect, border_radius=8)
+        pygame.draw.rect(self.surface, settings.COLOR_CARD_BORDER, self.card3_rect, 1, border_radius=8)
+
+        draw_metrics_icon(self.surface, pygame.Rect(card_x + 12, self.card3_rect.top + 10, 14, 14), settings.COLOR_CARD_HEADER)
         c3_title = self.font_section.render("SOLUTION METRICS", True, settings.COLOR_CARD_HEADER)
-        self.surface.blit(c3_title, (card_x + 32, 417))
+        self.surface.blit(c3_title, (card_x + 32, self.card3_rect.top + 9))
 
         if self.latest_result:
             r = self.latest_result
@@ -536,14 +632,14 @@ class GameScreen:
         ]
 
         for i, (key, val) in enumerate(metrics_rows):
-            row_y = 440 + i * 21
+            row_y = self.card3_rect.top + 30 + i * 17
             key_surf = self.font_mono.render(f"{key:<12}", True, settings.COLOR_METRIC_LABEL)
             val_surf = self.font_mono.render(val, True, settings.COLOR_METRIC_VALUE)
             self.surface.blit(key_surf, (card_x + 14, row_y))
             self.surface.blit(val_surf, (card_x + card_w - 14 - val_surf.get_width(), row_y))
 
         # --- Hotkeys Footer ---
-        footer_y = 574
+        footer_y = self.footer_y
         h_surf1 = self.font_mono.render("Arrows / WASD: Roll | R: Restart", True, (110, 120, 140))
         h_surf2 = self.font_mono.render("Space: Switch Cube | N: Next Level", True, (110, 120, 140))
         h_surf3 = self.font_mono.render("V: Toggle 2D/3D", True, (110, 120, 140))
