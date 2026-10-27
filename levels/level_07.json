@@ -1,40 +1,30 @@
 {
   "id": "level_07",
-  "name": "Bridge Detour",
+  "name": "Upper Loop Detour",
   "difficulty": "intermediate",
-  "description": "Climb the small upper loop, activate the switch, then return to the main span.",
-  "width": 10,
-  "height": 7,
-  "start": {
-    "position": [4, 1],
-    "orientation": "standing"
-  },
-  "goal": [4, 8],
+  "description": "Climb a compact upper loop, activate the remote switch, and descend before crossing the ravine.",
+  "width": 14,
+  "height": 10,
+  "start": {"position": [5, 1], "orientation": "standing"},
+  "goal": [5, 13],
   "tiles": [
-    [4, 1], [4, 2], [4, 3], [4, 6], [4, 7], [4, 8],
-    [3, 2], [3, 3], [2, 2], [2, 3],
-    [3, 6], [2, 6], [2, 7], [3, 7],
-    [5, 6], [5, 7]
+    [5, 1], [5, 2], [5, 3], [5, 4], [5, 7], [5, 8], [5, 9], [5, 10], [5, 11], [5, 12],
+    [3, 4], [4, 4], [2, 4], [2, 3], [2, 2], [3, 2], [4, 2],
+    [1, 2], [1, 3], [1, 4], [1, 5], [2, 5], [3, 5],
+    [6, 3], [7, 3], [7, 4], [8, 4], [8, 5],
+    [4, 7], [3, 7], [3, 8], [4, 8], [6, 8], [7, 8], [7, 9],
+    [4, 11], [6, 11], [5, 13]
   ],
   "fragile_tiles": [],
   "bridges": [
-    {
-      "id": "bridge_detour",
-      "tiles": [[4, 4], [4, 5]],
-      "initial_state": "closed"
-    }
+    {"id": "bridge_loop", "tiles": [[5, 5], [5, 6]], "initial_state": "closed"}
   ],
   "switches": [
     {
-      "id": "soft_detour",
+      "id": "soft_upper_loop",
       "type": "soft",
-      "position": [2, 3],
-      "effect": {
-        "type": "bridge",
-        "bridge_ids": ["bridge_detour"],
-        "mode": "toggle",
-        "trigger": "enter"
-      }
+      "position": [2, 4],
+      "effect": {"type": "bridge", "bridge_ids": ["bridge_loop"], "mode": "toggle", "trigger": "enter"}
     }
   ],
   "split_rules": {

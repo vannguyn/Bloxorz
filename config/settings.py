@@ -243,3 +243,10 @@ COLOR_BTN_ACTIVE = (38, 45, 62)
 COLOR_BTN_DISABLED = (32, 36, 48)
 COLOR_BTN_PRIMARY = (35, 115, 220)
 COLOR_BTN_PRIMARY_HOVER = (50, 135, 245)
+
+# Card Container & Metric Tokens
+COLOR_CARD_BG: tuple[int, int, int] = (17, 24, 39)
+COLOR_CARD_BORDER: tuple[int, int, int] = (31, 41, 55)
+COLOR_CARD_HEADER: tuple[int, int, int] = (229, 231, 235)
+COLOR_METRIC_LABEL: tuple[int, int, int] = (156, 163, 175)
+COLOR_METRIC_VALUE: tuple[int, int, int] = (243, 244, 246)

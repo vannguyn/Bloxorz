@@ -2,51 +2,36 @@
   "id": "level_10",
   "name": "Master Circuit",
   "difficulty": "advanced",
-  "description": "Split, activate the bridge with one cube, reunite, then cross the fragile pair while lying flat.",
-  "width": 12,
-  "height": 9,
-  "start": {
-    "position": [5, 1],
-    "orientation": "standing"
-  },
-  "goal": [5, 10],
+  "description": "Split the block, activate the final bridge, reunite through the circuit, and cross three fragile exit shelves.",
+  "width": 18,
+  "height": 11,
+  "start": {"position": [5, 1], "orientation": "standing"},
+  "goal": [5, 16],
   "tiles": [
-    [5, 1], [5, 2], [5, 3], [5, 4], [5, 7], [5, 8], [5, 9], [5, 10],
-    [4, 4], [4, 5], [3, 4], [3, 5], [3, 6],
-    [6, 4], [6, 5], [7, 4], [7, 5], [7, 6],
-    [4, 7], [3, 7], [6, 7], [7, 7], [5, 11]
+    [5, 1], [5, 2], [5, 3], [5, 4], [5, 7], [5, 8], [5, 9], [5, 10], [5, 11], [5, 12], [5, 13], [5, 14], [5, 15], [5, 16],
+    [4, 4], [4, 5], [3, 4], [3, 5], [3, 6], [3, 7], [4, 7],
+    [6, 4], [6, 5], [7, 4], [7, 5], [7, 6], [7, 7], [6, 7],
+    [2, 4], [2, 5], [2, 6], [2, 7], [1, 5], [1, 6],
+    [8, 4], [8, 5], [8, 6], [9, 5], [9, 6], [9, 7], [8, 7],
+    [4, 10], [3, 10], [3, 11], [4, 12], [6, 10], [7, 10], [7, 11], [6, 12],
+    [4, 14], [6, 14], [4, 16], [6, 16]
   ],
-  "fragile_tiles": [
-    [5, 8], [5, 9]
-  ],
+  "fragile_tiles": [[5, 8], [5, 9], [5, 11], [5, 12], [5, 14], [5, 15]],
   "bridges": [
-    {
-      "id": "bridge_final",
-      "tiles": [[5, 5], [5, 6]],
-      "initial_state": "closed"
-    }
+    {"id": "bridge_master", "tiles": [[5, 5], [5, 6], [6, 4]], "initial_state": "closed"}
   ],
   "switches": [
     {
       "id": "split_master",
       "type": "split",
       "position": [5, 4],
-      "effect": {
-        "type": "split",
-        "destinations": [[4, 4], [6, 4]],
-        "trigger": "enter"
-      }
+      "effect": {"type": "split", "destinations": [[3, 4], [7, 4]], "trigger": "enter"}
     },
     {
       "id": "soft_master",
       "type": "soft",
-      "position": [4, 5],
-      "effect": {
-        "type": "bridge",
-        "bridge_ids": ["bridge_final"],
-        "mode": "toggle",
-        "trigger": "enter"
-      }
+      "position": [3, 5],
+      "effect": {"type": "bridge", "bridge_ids": ["bridge_master"], "mode": "toggle", "trigger": "enter"}
     }
   ],
   "split_rules": {

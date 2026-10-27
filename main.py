@@ -4,13 +4,73 @@ Initializes Pygame-CE, opens window, and runs the main 60 FPS event-update-draw 
 """
 from __future__ import annotations
 
-import sys
-import pygame
-from config import settings
-from ui.game_screen import GameScreen
+import argparse
+import os
+from collections.abc import Sequence
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
+    """Build the command-line interface for launching or testing the game."""
+    parser = argparse.ArgumentParser(
+        description="Run Bloxorz or execute the project's pytest suite."
+    )
+    parser.add_argument(
+        "--test",
+        nargs="?",
+        const="tests",
+        metavar="PATH",
+        help="run pytest; optionally provide a test file or directory",
+    )
+    parser.add_argument(
+        "-k",
+        "--test-filter",
+        dest="test_filter",
+        metavar="EXPR",
+        help="pytest keyword expression used together with --test",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose-tests",
+        action="store_true",
+        help="show verbose pytest output when running tests",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet-tests",
+        action="store_true",
+        help="show compact pytest output when running tests",
+    )
+    return parser
+
+
+def run_tests(
+    target: str = "tests",
+    test_filter: str | None = None,
+    verbose: bool = False,
+    quiet: bool = False,
+) -> int:
+    """Run pytest in headless mode and return pytest's exit code."""
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+    import pytest
+
+    pytest_args = [target]
+    if test_filter:
+        pytest_args.extend(["-k", test_filter])
+    if verbose:
+        pytest_args.append("-v")
+    if quiet:
+        pytest_args.append("-q")
+    return int(pytest.main(pytest_args))
+
+
+def run_game() -> None:
+    """Start the normal interactive game loop."""
+    import pygame
+
+    from config import settings
+    from ui.game_screen import GameScreen
+
     pygame.init()
     pygame.font.init()
 
@@ -48,5 +108,24 @@ def main() -> None:
         pygame.quit()
 
 
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the game or the requested test command."""
+    args = build_parser().parse_args(argv)
+
+    if args.test is not None:
+        return run_tests(
+            target=args.test,
+            test_filter=args.test_filter,
+            verbose=args.verbose_tests,
+            quiet=args.quiet_tests,
+        )
+
+    if args.test_filter or args.verbose_tests or args.quiet_tests:
+        raise SystemExit("test options require --test")
+
+    run_game()
+    return 0
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

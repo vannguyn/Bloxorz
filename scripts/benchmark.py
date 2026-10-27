@@ -20,12 +20,11 @@ from core.interfaces import GameState, Level
 from levels.level_loader import load_all_levels
 from solvers.common import Solver, run_solver
 
-# Swappable import: mock solvers pending M3-M5 real solvers
+from solvers.BFS import BFSSolver
+from solvers.DFS import DFSSolver
+from solvers.UCS import UCSSolver
+from solvers.astar import AStarSolver
 from tests.mocks import (
-    MockBFSSolver,
-    MockDFSSolver,
-    MockUCSSolver,
-    MockAStarSolver,
     mock_level_simple,
     mock_level_with_fragile,
     mock_level_with_bridge,
@@ -35,10 +34,10 @@ from tests.mocks import (
 
 def get_benchmark_solvers() -> dict[str, Solver]:
     return {
-        "BFS": MockBFSSolver(),
-        "DFS": MockDFSSolver(),
-        "UCS": MockUCSSolver(),
-        "A*": MockAStarSolver(),
+        "BFS": BFSSolver(),
+        "DFS": DFSSolver(),
+        "UCS": UCSSolver(),
+        "A*": AStarSolver(),
     }
 
 
@@ -93,7 +92,7 @@ def run_benchmarks(export_csv_path: Path | None = None) -> list[dict]:
         export_csv_path.parent.mkdir(parents=True, exist_ok=True)
         keys = ["level_id", "level_name", "algorithm", "success", "time_ms", "memory_kb", "expanded_nodes", "solution_length", "cost"]
         with open(export_csv_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=keys)
+            writer = csv.DictWriter(f, fieldnames=keys, lineterminator="\n")
             writer.writeheader()
             writer.writerows(results)
         print(f"\n[OK] Benchmark results exported to: {export_csv_path}")
