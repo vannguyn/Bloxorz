@@ -109,14 +109,12 @@ class BoardRenderer:
         # Solid orange fragile body
         pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect)
 
-        # Diagonal hazard warning stripes covering tile face
+        # Diagonal hazard warning stripes (shorter loop, trimmed at bottom right)
         gap = max(6, self.tile_size // 6)
-        for offset in range(gap, rect.width + rect.height, gap):
+        for offset in range(gap, rect.width, gap):
             p1 = (rect.left + offset, rect.top)
             p2 = (rect.left, rect.top + offset)
-            clipped = rect.clipline(p1, p2)
-            if clipped:
-                pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, clipped[0], clipped[1], 2)
+            pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p1, p2, 2)
 
         # Perimeter warning border
         pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 2)
