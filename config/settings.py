@@ -250,9 +250,3 @@ COLOR_CARD_BORDER: tuple[int, int, int] = (31, 41, 55)
 COLOR_CARD_HEADER: tuple[int, int, int] = (229, 231, 235)
 COLOR_METRIC_LABEL: tuple[int, int, int] = (156, 163, 175)
 COLOR_METRIC_VALUE: tuple[int, int, int] = (243, 244, 246)
-
-# Playback Header Status Pill Tokens
-COLOR_PILL_GOAL_TEXT: tuple[int, int, int] = (0, 230, 118)
-COLOR_PILL_GOAL_BG: tuple[int, int, int] = (15, 35, 30)
-COLOR_PILL_GOAL_BORDER: tuple[int, int, int] = (25, 90, 60)
-COLOR_PILL_REPLAY_TEXT: tuple[int, int, int] = (70, 210, 245)
