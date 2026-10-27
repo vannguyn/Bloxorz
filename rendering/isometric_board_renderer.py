@@ -236,19 +236,48 @@ class IsometricBoardRenderer:
 
         # Top diamond face with solid orange body
         pygame.draw.polygon(surface, settings.COLOR_FRAGILE, corners)
-        pygame.draw.polygon(surface, border_color, corners, 1)
 
-        # Diagonal hazard warning stripes across diamond face
-        for t in (0.2, 0.4, 0.6, 0.8):
-            p_a = (
-                round((1 - t) * p_top[0] + t * p_right[0]),
-                round((1 - t) * p_top[1] + t * p_right[1]),
-            )
-            p_b = (
-                round((1 - t) * p_left[0] + t * p_bottom[0]),
-                round((1 - t) * p_left[1] + t * p_bottom[1]),
-            )
-            pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p_a, p_b, 2)
+        # Diagonal hazard warning stripes across diamond face (slanted 45-degree straight lines relative to grid)
+        cx = (p_left[0] + p_right[0]) / 2.0
+        cy = (p_top[1] + p_bottom[1]) / 2.0
+        hw = max(1.0, (p_right[0] - p_left[0]) / 2.0)
+        hh = max(1.0, (p_bottom[1] - p_top[1]) / 2.0)
+
+        step = max(6.0, hw / 3.0)
+        for offset in (-2 * step, -step, 0.0, step, 2 * step):
+            pts = []
+            # Edge 1: top-right (x in [0, hw], y in [-hh, 0])
+            y1 = offset - hw
+            x1 = y1 + offset
+            if 0 <= x1 <= hw and -hh <= y1 <= 0:
+                pts.append((cx + x1, cy + y1))
+            # Edge 2: bottom-right (x in [0, hw], y in [0, hh])
+            y2 = (hw - offset) / 3.0
+            x2 = y2 + offset
+            if 0 <= x2 <= hw and 0 <= y2 <= hh:
+                pts.append((cx + x2, cy + y2))
+            # Edge 3: bottom-left (x in [-hw, 0], y in [0, hh])
+            y3 = hw + offset
+            x3 = y3 + offset
+            if -hw <= x3 <= 0 and 0 <= y3 <= hh:
+                pts.append((cx + x3, cy + y3))
+            # Edge 4: top-left (x in [-hw, 0], y in [-hh, 0])
+            y4 = (-hw - offset) / 3.0
+            x4 = y4 + offset
+            if -hw <= x4 <= 0 and -hh <= y4 <= 0:
+                pts.append((cx + x4, cy + y4))
+
+            if len(pts) >= 2:
+                pygame.draw.line(
+                    surface,
+                    settings.COLOR_FRAGILE_STRIPE,
+                    (round(pts[0][0]), round(pts[0][1])),
+                    (round(pts[1][0]), round(pts[1][1])),
+                    2,
+                )
+
+        # Crisp perimeter border framing top diamond face (drawn AFTER stripes)
+        pygame.draw.polygon(surface, border_color, corners, 1)
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
