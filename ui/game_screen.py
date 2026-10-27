@@ -397,6 +397,12 @@ class GameScreen:
         if self.outcome_status is not None or self.solver_bridge.state == SolverBridgeState.RUNNING:
             return
 
+        # Spacebar cube toggle is only applicable when the block is in detached / split mode.
+        # Pressing SPACE while in fully assembled mode must be ignored as a no-op, rather than
+        # treating it as an illegal roll that causes the block to fall/be destroyed.
+        if action == "SPACE" and not self.current_state.block.is_split:
+            return
+
         # If replayer is active, cancel it when user makes manual move
         if self.replayer:
             self.replayer = None

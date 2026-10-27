@@ -118,6 +118,27 @@ def test_split_level_and_space_key():
     assert game_screen.current_state.block.active_cube == 1
 
 
+def test_spacebar_in_assembled_mode_does_not_destroy_block():
+    """Verify pressing SPACE while in assembled state is safely ignored as a no-op."""
+    surface = pygame.Surface((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.load_level(0)
+    assert game_screen.current_state.block.is_split is False
+    assert game_screen.outcome_status is None
+    initial_moves = game_screen.moves_count
+    initial_block = game_screen.current_state.block
+
+    # Press SPACE in assembled mode
+    event_space = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)
+    game_screen.handle_event(event_space)
+    game_screen.update(0.016)
+
+    # Must NOT fail with LOST_FALL or destroy the block
+    assert game_screen.outcome_status is None
+    assert game_screen.moves_count == initial_moves
+    assert game_screen.current_state.block == initial_block
+
+
 def test_sync_solver_bridge_contract():
     level = mock_level_simple()
     state = level.start
