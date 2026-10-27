@@ -9,7 +9,7 @@ import itertools
 
 from core.game_rules import get_successors, is_goal
 from core.interfaces import BlockState, GameState, Level, Orientation, SolverResult, TileType
-from solvers.common import Solver, make_result, reconstruct_path
+from solvers.common import Solver, reconstruct_path
 
 
 class UCSSolver(Solver):
@@ -92,7 +92,16 @@ class UCSSolver(Solver):
             expanded_nodes += 1
 
             if is_goal(state, level):
-                return make_result(reconstruct_path(came_from, state), expanded_nodes, cost=g)
+                path = reconstruct_path(came_from, state)
+                return SolverResult(
+                    path=path,
+                    expanded_nodes=expanded_nodes,
+                    search_time_ms=0.0,
+                    peak_memory_kb=0,
+                    solution_length=len(path),
+                    cost=g,
+                    success=True,
+                )
 
             for action, next_state in get_successors(state, level):
                 if next_state in expanded:
@@ -103,7 +112,15 @@ class UCSSolver(Solver):
                     came_from[next_state] = (state, action)
                     heapq.heappush(frontier, (new_g, next(counter), next_state))
 
-        return make_result(None, expanded_nodes)
+        return SolverResult(
+            path=None,
+            expanded_nodes=expanded_nodes,
+            search_time_ms=0.0,
+            peak_memory_kb=0,
+            solution_length=-1,
+            cost=float("inf"),
+            success=False,
+        )
 
 
 if __name__ == "__main__":
