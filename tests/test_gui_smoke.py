@@ -615,15 +615,14 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
     renderer = BoardRenderer(800, 600)
     block_renderer = BlockRenderer(renderer)
 
-    # 1. Verify Level 1 closed bridge vs heavy switch red exclusivity
-    lvl1 = load_level("level_01")
-    state_closed = GameState(block=lvl1.start, bridge_mask=0)
+    # 1. Verify the latest heavy-bridge level's closed bridge vs switch visuals.
+    lvl3 = load_level("level_03")
+    state_closed = GameState(block=lvl3.start, bridge_mask=0)
     surface = pygame.Surface((800, 600))
     surface.fill((0, 0, 0))
-    renderer.draw(surface, lvl1, state_closed)
+    renderer.draw(surface, lvl3, state_closed)
 
-    # North bridge cells at (4, 1) and (5, 1)
-    for cell in lvl1.bridges["north_bridge"]:
+    for cell in lvl3.bridges["bridge_heavy"]:
         rect = renderer.get_cell_rect(*cell)
         red_pixels = [
             surface.get_at((x, y))[:3]
@@ -637,8 +636,7 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
             f"2D closed bridge cell {cell} contained {len(red_pixels)} red pixels; strictly 0 expected"
         )
 
-    # Heavy switch at (4, 4)
-    heavy_sw = next(s for s in lvl1.switches if s.type == "heavy")
+    heavy_sw = next(s for s in lvl3.switches if s.type == "heavy")
     heavy_rect = renderer.get_cell_rect(*heavy_sw.position)
     heavy_red_pixels = [
         surface.get_at((x, y))[:3]
@@ -664,7 +662,7 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
     )
     surface_pressed = pygame.Surface((800, 600))
     surface_pressed.fill((0, 0, 0))
-    renderer.draw(surface_pressed, lvl1, state_pressed)
+    renderer.draw(surface_pressed, lvl3, state_pressed)
     pixels_pressed = [
         surface_pressed.get_at((x, y))[:3]
         for x in range(heavy_rect.left, heavy_rect.right)
@@ -859,7 +857,7 @@ def test_all_10_stages_visual_patch_regression_2d():
                         f"Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
                     )
 
-    assert fragile_tiles_checked == 7, f"Expected 7 fragile tiles across all stages, got {fragile_tiles_checked}"
+    assert fragile_tiles_checked == 20, f"Expected 20 fragile tiles across all stages, got {fragile_tiles_checked}"
 
 
 def test_2d_pixel_art_fragile_tile_rendering():
@@ -887,12 +885,250 @@ def test_2d_pixel_art_fragile_tile_rendering():
     )
 
 
+def test_button_icon_and_selected_state():
+    """Verify Button renders with selected=True using COLOR_BTN_PRIMARY, and draws an icon via icon_drawer."""
+    from ui.icons import draw_play_icon
+
+    surface = pygame.Surface((200, 100))
+    surface.fill((0, 0, 0))
+    font = pygame.font.Font(None, 16)
+
+    # 1. Button with selected=True, icon_drawer, and text
+    btn = Button(
+        (10, 10, 120, 36),
+        "Play",
+        icon_drawer=draw_play_icon,
+        selected=True,
+    )
+    assert btn.selected is True
+    assert btn.icon_drawer is draw_play_icon
+
+    btn.draw(surface, font)
+
+    # Background must contain COLOR_BTN_PRIMARY pixels
+    btn_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(btn.rect.left, btn.rect.right)
+        for y in range(btn.rect.top, btn.rect.bottom)
+    ]
+    assert settings.COLOR_BTN_PRIMARY in btn_pixels, (
+        f"Button with selected=True did not contain COLOR_BTN_PRIMARY {settings.COLOR_BTN_PRIMARY}"
+    )
+
+    # Active border should be COLOR_TEXT_ACCENT
+    assert settings.COLOR_TEXT_ACCENT in btn_pixels, (
+        f"Button with selected=True did not contain active border COLOR_TEXT_ACCENT {settings.COLOR_TEXT_ACCENT}"
+    )
+
+    # 2. Icon-only button (empty text) centers icon
+    surface.fill((0, 0, 0))
+    icon_only_btn = Button(
+        (10, 10, 50, 36),
+        "",
+        icon_drawer=draw_play_icon,
+        selected=False,
+    )
+    icon_only_btn.draw(surface, font)
+    icon_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(icon_only_btn.rect.left, icon_only_btn.rect.right)
+        for y in range(icon_only_btn.rect.top, icon_only_btn.rect.bottom)
+    ]
+    # Check drawn pixels exist (non-black and default button color exists)
+    assert settings.COLOR_BTN_DEFAULT in icon_pixels
+    assert any(p != (0, 0, 0) and p != settings.COLOR_BTN_DEFAULT for p in icon_pixels)
 
 
+def test_legend_bar_rendering():
+    """Verify LegendBar renders a pill bar containing 5 chips (Block, Goal, Fragile Tile, Closed Bridge, Split Switch)."""
+    from ui.legend_bar import LegendBar
+
+    legend = LegendBar()
+    surface = pygame.Surface((700, 680))
+    surface.fill((10, 15, 25))
+    area_rect = pygame.Rect(0, 0, 700, 680)
+    font = pygame.font.Font(None, 16)
+
+    bar_rect = legend.draw(surface, area_rect, font)
+    assert isinstance(bar_rect, pygame.Rect)
+
+    # Bar docked near the bottom of area_rect with height 34-36px
+    assert bar_rect.bottom <= area_rect.bottom
+    assert bar_rect.top >= area_rect.bottom - 50
+    assert 32 <= bar_rect.height <= 38
+
+    # Verify background and border colors in pill bar
+    pill_pixels = [
+        surface.get_at((x, y))[:3]
+        for x in range(bar_rect.left, bar_rect.right)
+        for y in range(bar_rect.top, bar_rect.bottom)
+    ]
+    assert settings.COLOR_CARD_BG in pill_pixels, "LegendBar container missing COLOR_CARD_BG"
+    assert settings.COLOR_CARD_BORDER in pill_pixels, "LegendBar container missing COLOR_CARD_BORDER"
+
+    # Verify 5 visual chips rendered:
+    # 1. Block: orange rect (245, 130, 45)
+    orange_pixels = [p for p in pill_pixels if p == (245, 130, 45)]
+    assert len(orange_pixels) > 0, "LegendBar missing Block chip orange rect (245, 130, 45)"
+
+    # 2. Goal: gold circle (255, 215, 0)
+    gold_pixels = [p for p in pill_pixels if p == (255, 215, 0)]
+    assert len(gold_pixels) > 0, "LegendBar missing Goal chip gold circle (255, 215, 0)"
+
+    # 3. Fragile Tile: amber rect with white crack
+    white_crack_pixels = [p for p in pill_pixels if p == (255, 255, 255)]
+    assert len(white_crack_pixels) > 0, "LegendBar missing Fragile Tile white crack pixels"
+
+    # 4. Closed Bridge: dark rect with red X (239, 68, 68)
+    red_x_pixels = [p for p in pill_pixels if p == (239, 68, 68)]
+    assert len(red_x_pixels) > 0, "LegendBar missing Closed Bridge red X (239, 68, 68)"
+
+    # 5. Split Switch: cyan arched wings (56, 189, 248)
+    cyan_pixels = [p for p in pill_pixels if p == (56, 189, 248)]
+    assert len(cyan_pixels) > 0, "LegendBar missing Split Switch cyan arched wings (56, 189, 248)"
+
+    # Check chips specification
+    assert hasattr(legend, "CHIPS")
+    chip_labels = [chip[0] for chip in legend.CHIPS]
+    assert chip_labels == ["Block", "Goal", "Fragile Tile", "Closed Bridge", "Split Switch"]
 
 
+def test_game_screen_card_layout_and_algorithm_selection():
+    """Verify card-based sidebar layout, interactive algorithm radio selection, telemetry keys, and docked LegendBar."""
+    from core.interfaces import SolverResult
+
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface)
+
+    # 1. screen.selected_algo defaults to "BFS"
+    assert hasattr(screen, "selected_algo"), "GameScreen missing selected_algo attribute"
+    assert screen.selected_algo == "BFS"
+
+    # Verify algorithm buttons exist and BFS is initially selected
+    assert hasattr(screen, "btn_algo_bfs")
+    assert hasattr(screen, "btn_algo_dfs")
+    assert hasattr(screen, "btn_solve_action")
+    assert screen.btn_algo_bfs.selected is True
+    assert screen.btn_algo_dfs.selected is False
+    assert "Solve (BFS)" in screen.btn_solve_action.text
+
+    # 2. Clicking DFS button switches screen.selected_algo to "DFS", highlights DFS, un-highlights BFS
+    dfs_click_event = pygame.event.Event(
+        pygame.MOUSEBUTTONUP,
+        button=1,
+        pos=screen.btn_algo_dfs.rect.center,
+    )
+    screen.btn_algo_dfs.is_pressed = True
+    screen.btn_algo_dfs.handle_event(dfs_click_event)
+
+    assert screen.selected_algo == "DFS"
+    assert screen.btn_algo_dfs.selected is True
+    assert screen.btn_algo_bfs.selected is False
+
+    # 3. Primary solve button label reflects "Solve (DFS)"
+    assert "Solve (DFS)" in screen.btn_solve_action.text
+
+    # 4. Verifies solution metrics card renders telemetry keys: Time:, Memory:, Expanded:, Length:, Cost:
+    rendered_texts: list[str] = []
+    real_font_mono = screen.font_mono
+
+    class FontSpy:
+        def __init__(self, font):
+            self._font = font
+
+        def render(self, text, antialias, color, background=None):
+            rendered_texts.append(str(text))
+            return self._font.render(text, antialias, color, background)
+
+        def __getattr__(self, name):
+            return getattr(self._font, name)
+
+    screen.font_mono = FontSpy(real_font_mono)
+
+    # Render without solver result (initial state)
+    screen.draw()
+    for key in ["Time:", "Memory:", "Expanded:", "Length:", "Cost:"]:
+        assert any(key in t for t in rendered_texts), (
+            f"Telemetry key '{key}' not found in rendered texts without result: {rendered_texts}"
+        )
+
+    # Render with an active solver result
+    rendered_texts.clear()
+    screen.latest_result = SolverResult(
+        path=["R", "R", "U"],
+        expanded_nodes=128,
+        search_time_ms=45.67,
+        peak_memory_kb=1024,
+        solution_length=3,
+        cost=3.0,
+        success=True,
+    )
+    screen.draw()
+    for key in ["Time:", "Memory:", "Expanded:", "Length:", "Cost:"]:
+        assert any(key in t for t in rendered_texts), (
+            f"Telemetry key '{key}' not found in rendered texts with result: {rendered_texts}"
+        )
+
+    # 5. Verifies LegendBar is rendered on the screen docked at bottom of board_rect
+    assert hasattr(screen, "legend_bar"), "GameScreen missing legend_bar attribute"
+    assert screen.legend_bar.last_rect is not None, "LegendBar was not drawn"
+    assert screen.board_rect.contains(screen.legend_bar.last_rect), (
+        f"LegendBar rect {screen.legend_bar.last_rect} is not contained within board_rect {screen.board_rect}"
+    )
 
 
+def test_all_10_stages_card_sidebar_and_docked_legend_regression():
+    """Verify all 10 stages render cleanly in both 2D and 3D with card-based sidebar,
+    docked LegendBar, full algorithm selection radio cycling, and speed controls.
+    """
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface)
+    assert len(game_screen.levels) == 10
 
+    # 1. Test all 10 stages in 2D and 3D with docked LegendBar and card layout
+    for mode in ("2D", "3D"):
+        game_screen.view_mode = mode
+        for idx in range(len(game_screen.levels)):
+            game_screen.load_level(idx)
+            assert game_screen.view_mode == mode
+            game_screen.update(0.016)
+            game_screen.draw()
 
+            # Surface must have rendered pixels
+            raw_bytes = pygame.image.tobytes(surface, "RGB")
+            assert any(b > 0 for b in raw_bytes), f"Stage {idx+1} rendered blank in {mode}"
+
+            # Docked LegendBar must be drawn within board_rect
+            assert game_screen.legend_bar.last_rect is not None
+            assert game_screen.board_rect.contains(game_screen.legend_bar.last_rect)
+
+            # Sidebar cards must be within screen bounds and right of board_rect
+            card_x = settings.WINDOW_WIDTH - 270
+            assert card_x >= game_screen.board_rect.right
+
+    # 2. Full algorithm selection cycle through all 4 algorithms in the 2x2 grid
+    for algo in ("BFS", "DFS", "UCS", "A*"):
+        game_screen.select_algo(algo)
+        assert game_screen.selected_algo == algo
+        assert f"Solve ({algo})" in game_screen.btn_solve_action.text
+        # Ensure only the active algorithm button has selected=True
+        for name, btn in game_screen.algo_buttons.items():
+            if name in ("A*", "ASTAR") and algo in ("A*", "ASTAR"):
+                assert btn.selected is True
+            elif name == algo:
+                assert btn.selected is True
+            else:
+                assert btn.selected is False
+
+    # 3. Verify playback button icons and initial states
+    assert game_screen.btn_solve_action.icon_drawer is not None
+    assert game_screen.btn_replay_prev.icon_drawer is not None
+    assert game_screen.btn_replay_toggle.icon_drawer is not None
+    assert game_screen.btn_replay_next.icon_drawer is not None
+    assert game_screen.btn_speed.icon_drawer is not None
+
+    # Step replay controls should initially be disabled before solution replay
+    assert game_screen.btn_replay_prev.enabled is False
+    assert game_screen.btn_replay_toggle.enabled is False
+    assert game_screen.btn_replay_next.enabled is False
 

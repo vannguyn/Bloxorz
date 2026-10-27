@@ -1,41 +1,41 @@
 level_id,level_name,algorithm,success,time_ms,memory_kb,expanded_nodes,solution_length,cost
-level_01,First Steps,BFS,True,0.029,0,12,4,4.0
-level_01,First Steps,DFS,True,0.005,0,28,4,4.0
-level_01,First Steps,UCS,True,0.005,0,15,4,4.0
-level_01,First Steps,A*,True,0.004,0,6,4,4.0
-level_02,Soft Toggle,BFS,True,0.003,0,12,4,4.0
-level_02,Soft Toggle,DFS,True,0.005,0,28,4,4.0
-level_02,Soft Toggle,UCS,True,0.003,0,15,4,4.0
-level_02,Soft Toggle,A*,True,0.003,0,6,4,4.0
-level_03,Heavy Pressure,BFS,True,0.002,0,12,4,4.0
-level_03,Heavy Pressure,DFS,True,0.007,0,28,4,4.0
-level_03,Heavy Pressure,UCS,True,0.004,0,15,4,4.0
-level_03,Heavy Pressure,A*,True,0.006,0,6,4,4.0
-level_04,Careful Footing,BFS,True,0.004,0,12,4,4.0
-level_04,Careful Footing,DFS,True,0.002,0,28,4,4.0
-level_04,Careful Footing,UCS,True,0.002,0,15,4,4.0
-level_04,Careful Footing,A*,True,0.002,0,6,4,4.0
-level_05,Sideways Crossing,BFS,True,0.002,0,12,4,4.0
-level_05,Sideways Crossing,DFS,True,0.002,0,28,4,4.0
-level_05,Sideways Crossing,UCS,True,0.002,0,15,4,4.0
-level_05,Sideways Crossing,A*,True,0.002,0,6,4,4.0
-level_06,Twin Controls,BFS,True,0.002,0,12,4,4.0
-level_06,Twin Controls,DFS,True,0.002,0,28,4,4.0
-level_06,Twin Controls,UCS,True,0.002,0,15,4,4.0
-level_06,Twin Controls,A*,True,0.002,0,6,4,4.0
-level_07,Bridge Detour,BFS,True,0.004,0,12,4,4.0
-level_07,Bridge Detour,DFS,True,0.002,0,28,4,4.0
-level_07,Bridge Detour,UCS,True,0.002,0,15,4,4.0
-level_07,Bridge Detour,A*,True,0.002,0,6,4,4.0
-level_08,Split Practice,BFS,True,0.002,0,12,4,4.0
-level_08,Split Practice,DFS,True,0.002,0,28,4,4.0
-level_08,Split Practice,UCS,True,0.002,0,15,4,4.0
-level_08,Split Practice,A*,True,0.002,0,6,4,4.0
-level_09,Split the Span,BFS,True,0.002,0,12,4,4.0
-level_09,Split the Span,DFS,True,0.002,0,28,4,4.0
-level_09,Split the Span,UCS,True,0.002,0,15,4,4.0
-level_09,Split the Span,A*,True,0.002,0,6,4,4.0
-level_10,Master Circuit,BFS,True,0.002,0,12,4,4.0
-level_10,Master Circuit,DFS,True,0.002,0,28,4,4.0
-level_10,Master Circuit,UCS,True,0.002,0,15,4,4.0
-level_10,Master Circuit,A*,True,0.002,0,6,4,4.0
+level_01,First Steps,BFS,True,0.644,4,5,4,4.0
+level_01,First Steps,DFS,True,0.52,3,5,4,4.0
+level_01,First Steps,UCS,True,0.55,2,5,4,4.0
+level_01,First Steps,A*,True,0.732,2,5,4,4.0
+level_02,Soft Toggle,BFS,True,1.381,4,8,4,4.0
+level_02,Soft Toggle,DFS,True,1.3,3,8,4,4.0
+level_02,Soft Toggle,UCS,True,1.361,3,8,4,4.0
+level_02,Soft Toggle,A*,True,0.979,3,5,4,4.0
+level_03,Heavy Pressure,BFS,True,1.855,4,10,7,7.0
+level_03,Heavy Pressure,DFS,True,1.84,4,10,7,7.0
+level_03,Heavy Pressure,UCS,True,1.885,3,10,7,7.0
+level_03,Heavy Pressure,A*,True,1.887,3,9,7,7.0
+level_05,Sideways Crossing,BFS,True,0.794,3,7,4,4.0
+level_05,Sideways Crossing,DFS,True,0.814,3,7,4,4.0
+level_05,Sideways Crossing,UCS,True,0.824,2,7,4,4.0
+level_05,Sideways Crossing,A*,True,0.712,2,5,4,4.0
+level_05,Sideways Crossing,BFS,True,0.952,3,7,4,4.0
+level_05,Sideways Crossing,DFS,True,1.504,3,7,4,4.0
+level_05,Sideways Crossing,UCS,True,0.862,2,7,4,4.0
+level_05,Sideways Crossing,A*,True,0.725,2,5,4,4.0
+level_06,Twin Controls,BFS,True,17.78,33,75,15,15.0
+level_06,Twin Controls,DFS,True,15.967,28,75,16,16.0
+level_06,Twin Controls,UCS,True,18.356,24,75,15,15.0
+level_06,Twin Controls,A*,True,13.613,20,57,15,15.0
+level_07,Bridge Detour,BFS,True,6.547,11,32,22,22.0
+level_07,Bridge Detour,DFS,True,5.778,10,28,22,22.0
+level_07,Bridge Detour,UCS,True,6.815,10,32,22,22.0
+level_07,Bridge Detour,A*,True,6.665,9,30,22,22.0
+level_08,Split Practice,BFS,True,37.809,86,149,9,9.0
+level_08,Split Practice,DFS,True,4.466,10,20,13,13.0
+level_08,Split Practice,UCS,True,36.67,71,149,9,9.0
+level_08,Split Practice,A*,True,37.623,73,149,9,9.0
+level_09,Split the Span,BFS,True,83.918,147,290,9,9.0
+level_09,Split the Span,DFS,True,123.488,236,413,253,253.0
+level_09,Split the Span,UCS,True,81.447,127,290,9,9.0
+level_09,Split the Span,A*,True,85.187,129,290,9,9.0
+level_10,Master Circuit,BFS,True,182.611,252,645,11,11.0
+level_10,Master Circuit,DFS,True,12.818,33,50,38,38.0
+level_10,Master Circuit,UCS,True,191.219,272,645,11,11.0
+level_10,Master Circuit,A*,True,195.319,277,645,11,11.0

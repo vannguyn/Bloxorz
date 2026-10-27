@@ -11,6 +11,50 @@ from abc import ABC, abstractmethod
 from core.interfaces import GameState, Level, SolverResult
 
 
+def reconstruct_path(
+    came_from: dict[GameState, tuple[GameState, str] | None],
+    goal: GameState,
+) -> list[str]:
+    """Reconstructs the action sequence from the start state to ``goal``."""
+    path: list[str] = []
+    current = goal
+
+    while came_from[current] is not None:
+        edge = came_from[current]
+        if edge is None:  # Kept for type checkers; the loop guards this case.
+            break
+        previous, action = edge
+        path.append(action)
+        current = previous
+
+    path.reverse()
+    return path
+
+
+def make_result(
+    path: list[str] | None,
+    expanded_nodes: int,
+    cost: float | None = None,
+) -> SolverResult:
+    """Creates the shared result object returned by every search algorithm."""
+    if path is None:
+        solution_length = -1
+        total_cost = 0.0
+    else:
+        solution_length = len(path)
+        total_cost = float(len(path)) if cost is None else float(cost)
+
+    return SolverResult(
+        path=path,
+        expanded_nodes=expanded_nodes,
+        search_time_ms=0.0,
+        peak_memory_kb=0,
+        solution_length=solution_length,
+        cost=total_cost,
+        success=path is not None,
+    )
+
+
 class Solver(ABC):
     """Abstract Base Class for all search algorithms. Pygame is forbidden here."""
 

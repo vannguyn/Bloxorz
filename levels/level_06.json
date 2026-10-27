@@ -1,56 +1,37 @@
 {
   "id": "level_06",
-  "name": "Twin Controls",
+  "name": "Twin Control Terrace",
   "difficulty": "intermediate",
-  "description": "Use two soft switches on elevated side paths to open both bridge spans.",
-  "width": 11,
-  "height": 8,
-  "start": {
-    "position": [4, 1],
-    "orientation": "standing"
-  },
-  "goal": [4, 9],
+  "description": "Press two soft switches on opposite terraces to open two bridge spans in sequence.",
+  "width": 15,
+  "height": 10,
+  "start": {"position": [5, 1], "orientation": "standing"},
+  "goal": [5, 13],
   "tiles": [
-    [4, 1], [4, 2], [4, 3], [4, 6], [4, 9],
-    [3, 2], [3, 3], [2, 2], [2, 3],
-    [3, 5], [2, 5], [3, 6], [2, 6], [3, 7], [2, 7],
-    [5, 6], [5, 7], [5, 8]
+    [5, 1], [5, 2], [5, 3], [5, 4], [5, 7], [5, 10], [5, 11], [5, 12], [5, 13],
+    [4, 2], [4, 3], [3, 2], [3, 3], [2, 2], [2, 3], [2, 4],
+    [4, 7], [3, 7], [2, 7], [2, 8], [3, 8], [3, 9], [4, 9],
+    [6, 2], [6, 3], [7, 2], [7, 3], [7, 4],
+    [6, 7], [7, 7], [7, 8], [8, 7], [8, 8], [8, 9],
+    [4, 12], [6, 12]
   ],
   "fragile_tiles": [],
   "bridges": [
-    {
-      "id": "bridge_a",
-      "tiles": [[4, 4], [4, 5]],
-      "initial_state": "closed"
-    },
-    {
-      "id": "bridge_b",
-      "tiles": [[4, 7], [4, 8]],
-      "initial_state": "closed"
-    }
+    {"id": "bridge_terrace_a", "tiles": [[5, 5], [5, 6]], "initial_state": "closed"},
+    {"id": "bridge_terrace_b", "tiles": [[5, 8], [5, 9]], "initial_state": "closed"}
   ],
   "switches": [
     {
-      "id": "soft_a",
+      "id": "soft_terrace_a",
       "type": "soft",
-      "position": [3, 2],
-      "effect": {
-        "type": "bridge",
-        "bridge_ids": ["bridge_a"],
-        "mode": "toggle",
-        "trigger": "enter"
-      }
+      "position": [4, 2],
+      "effect": {"type": "bridge", "bridge_ids": ["bridge_terrace_a"], "mode": "toggle", "trigger": "enter"}
     },
     {
-      "id": "soft_b",
+      "id": "soft_terrace_b",
       "type": "soft",
-      "position": [3, 6],
-      "effect": {
-        "type": "bridge",
-        "bridge_ids": ["bridge_b"],
-        "mode": "toggle",
-        "trigger": "enter"
-      }
+      "position": [4, 7],
+      "effect": {"type": "bridge", "bridge_ids": ["bridge_terrace_b"], "mode": "toggle", "trigger": "enter"}
     }
   ],
   "split_rules": {

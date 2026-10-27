@@ -1,104 +1,37 @@
 {
-      "id": "level_02",
-      "name": "Soft Toggle",
-      "difficulty": "basic",
-      "description": "Step on the soft switch to toggle the bridge, then cross it.",
-      "width": 8,
-      "height": 6,
-      "start": {
-        "position": [
-          3,
-          1
-        ],
-        "orientation": "standing"
-      },
-      "goal": [
-        3,
-        7
-      ],
-      "tiles": [
-        [
-          3,
-          1
-        ],
-        [
-          3,
-          2
-        ],
-        [
-          3,
-          3
-        ],
-        [
-          3,
-          4
-        ],
-        [
-          3,
-          7
-        ],
-        [
-          2,
-          3
-        ],
-        [
-          4,
-          3
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          4,
-          4
-        ]
-      ],
-      "fragile_tiles": [],
-      "bridges": [
-        {
-          "id": "bridge_a",
-          "tiles": [
-            [
-              3,
-              5
-            ],
-            [
-              3,
-              6
-            ]
-          ],
-          "initial_state": "closed"
-        }
-      ],
-      "switches": [
-        {
-          "id": "soft_a",
-          "type": "soft",
-          "position": [
-            3,
-            3
-          ],
-          "effect": {
-            "type": "bridge",
-            "bridge_ids": [
-              "bridge_a"
-            ],
-            "mode": "toggle",
-            "trigger": "enter"
-          }
-        }
-      ],
-      "split_rules": {
-        "control_switch_key": "SPACE",
-        "merge_when_adjacent": true,
-        "single_cube_can_win": false,
-        "single_cube_activates": [
-          "soft"
-        ],
-        "single_cube_cannot_activate": [
-          "heavy",
-          "split"
-        ]
-      }
+  "id": "level_02",
+  "name": "Soft Switch Courtyard",
+  "difficulty": "basic",
+  "description": "Leave the main lane, press the soft switch in the courtyard, and return across the opened bridge.",
+  "width": 14,
+  "height": 9,
+  "start": {"position": [4, 1], "orientation": "standing"},
+  "goal": [4, 9],
+  "tiles": [
+    [4, 1], [4, 2], [4, 3], [4, 4], [4, 6], [4, 7], [4, 8], [4, 9],
+    [2, 4], [3, 4], [2, 3], [3, 3],
+    [1, 2], [1, 3], [1, 4], [1, 5], [2, 5],
+    [5, 2], [6, 2], [6, 3], [6, 4], [5, 4],
+    [2, 6], [3, 6], [3, 7], [2, 7], [1, 7], [1, 8],
+    [5, 6], [6, 6], [6, 7], [5, 7], [5, 8], [3, 9], [5, 9]
+  ],
+  "fragile_tiles": [],
+  "bridges": [
+    {"id": "bridge_soft", "tiles": [[4, 4], [4, 5]], "initial_state": "closed"}
+  ],
+  "switches": [
+    {
+      "id": "soft_courtyard",
+      "type": "soft",
+      "position": [4, 3],
+      "effect": {"type": "bridge", "bridge_ids": ["bridge_soft"], "mode": "toggle", "trigger": "enter"}
     }
+  ],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": ["soft"],
+    "single_cube_cannot_activate": ["heavy", "split"]
+  }
+}

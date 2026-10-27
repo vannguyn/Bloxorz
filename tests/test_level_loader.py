@@ -15,57 +15,59 @@ class TestLoadLevel01:
         level = load_level("levels/level_01.json")
         assert isinstance(level, Level)
         assert level.id == "level_01"
-        assert level.name == "First Steps"
-        assert level.width == 8
-        assert level.height == 7
+        assert level.name == "Garden Traverse"
+        assert level.width == 13
+        assert level.height == 10
 
     def test_load_level_01_start_and_goal(self):
         level = load_level("levels/level_01.json")
-        assert level.start == BlockState(r=1, c=3, orientation=Orientation.STANDING)
-        assert level.goal == (6, 3)
-        assert level.tiles[(6, 3)] == TileType.GOAL
-        assert level.tiles[(1, 3)] == TileType.FLOOR
+        assert level.start == BlockState(r=5, c=1, orientation=Orientation.STANDING)
+        assert level.goal == (4, 10)
+        assert level.tiles[(4, 10)] == TileType.GOAL
+        assert level.tiles[(5, 1)] == TileType.FLOOR
 
-    def test_load_level_01_tiles_fragile_and_bridges(self):
+    def test_load_level_01_tiles_and_void(self):
         level = load_level("levels/level_01.json")
-        # Fragile tile at (3, 2)
-        assert level.tiles[(3, 2)] == TileType.FRAGILE
-
-        # Bridge tiles
-        assert "north_bridge" in level.bridges
-        assert level.bridges["north_bridge"] == [(4, 1), (5, 1)]
-        assert level.tiles[(4, 1)] == TileType.BRIDGE
-        assert level.tiles[(5, 1)] == TileType.BRIDGE
-
-        # Void cell check
+        assert not level.bridges
+        assert not level.switches
+        assert not any(tile == TileType.FRAGILE for tile in level.tiles.values())
         assert (0, 0) not in level.tiles
 
-    def test_load_level_01_switches(self):
-        level = load_level("levels/level_01.json")
-        assert len(level.switches) == 3
+    def test_level_02_soft_bridge_and_switch(self):
+        level = load_level("level_02")
+        assert level.bridges["bridge_soft"] == [(4, 4), (4, 5)]
+        assert level.tiles[(4, 4)] == TileType.BRIDGE
+        assert level.tiles[(4, 5)] == TileType.BRIDGE
 
-        # Soft switch
-        soft_sw = next(s for s in level.switches if s.id == "soft_toggle")
+        soft_sw = level.switches[0]
+        assert soft_sw.id == "soft_courtyard"
         assert soft_sw.type == "soft"
-        assert soft_sw.position == (2, 2)
-        assert soft_sw.bridge_ids == ["north_bridge"]
+        assert soft_sw.position == (4, 3)
+        assert soft_sw.bridge_ids == ["bridge_soft"]
         assert soft_sw.mode == "toggle"
         assert soft_sw.destinations is None
 
-        # Heavy switch
-        heavy_sw = next(s for s in level.switches if s.id == "heavy_permanent")
+    def test_level_03_heavy_bridge_and_switch(self):
+        level = load_level("level_03")
+        assert level.bridges["bridge_heavy"] == [(5, 6), (5, 7)]
+        assert level.tiles[(5, 6)] == TileType.BRIDGE
+        assert level.tiles[(5, 7)] == TileType.BRIDGE
+
+        heavy_sw = level.switches[0]
+        assert heavy_sw.id == "heavy_ravine"
         assert heavy_sw.type == "heavy"
-        assert heavy_sw.position == (4, 4)
-        assert heavy_sw.bridge_ids == ["north_bridge"]
+        assert heavy_sw.position == (5, 5)
+        assert heavy_sw.bridge_ids == ["bridge_heavy"]
         assert heavy_sw.mode == "permanent"
         assert heavy_sw.destinations is None
 
-        # Split switch
-        split_sw = next(s for s in level.switches if s.id == "split_switch")
-        assert split_sw.type == "split"
-        assert split_sw.position == (5, 4)
-        assert split_sw.bridge_ids == []
-        assert split_sw.destinations == ((1, 5), (3, 5))
+    def test_level_04_fragile_tiles(self):
+        level = load_level("level_04")
+        fragile_cells = [
+            cell for cell, tile in level.tiles.items() if tile == TileType.FRAGILE
+        ]
+        assert len(fragile_cells) == 4
+        assert all(cell in level.tiles for cell in fragile_cells)
 
     def test_load_level_01_split_rules(self):
         level = load_level("levels/level_01.json")
@@ -77,7 +79,7 @@ class TestLoadLevelFlexibility:
     def test_load_by_id_string(self):
         level = load_level("level_01")
         assert level.id == "level_01"
-        assert level.name == "First Steps"
+        assert level.name == "Garden Traverse"
 
     def test_load_by_path_object(self):
         level = load_level(Path("levels/level_01.json"))

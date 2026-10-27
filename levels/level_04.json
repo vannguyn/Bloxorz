@@ -1,103 +1,29 @@
 {
-      "id": "level_05",
-      "name": "Sideways Crossing",
-      "difficulty": "intermediate",
-      "description": "Use a horizontal roll to cross the fragile lane without ending upright on it.",
-      "width": 9,
-      "height": 8,
-      "start": {
-        "position": [
-          4,
-          1
-        ],
-        "orientation": "standing"
-      },
-      "goal": [
-        4,
-        7
-      ],
-      "tiles": [
-        [
-          4,
-          1
-        ],
-        [
-          4,
-          2
-        ],
-        [
-          4,
-          3
-        ],
-        [
-          4,
-          4
-        ],
-        [
-          4,
-          5
-        ],
-        [
-          4,
-          6
-        ],
-        [
-          4,
-          7
-        ],
-        [
-          3,
-          2
-        ],
-        [
-          5,
-          2
-        ],
-        [
-          3,
-          3
-        ],
-        [
-          5,
-          3
-        ],
-        [
-          3,
-          6
-        ],
-        [
-          5,
-          6
-        ],
-        [
-          3,
-          7
-        ],
-        [
-          5,
-          7
-        ]
-      ],
-      "fragile_tiles": [
-        [
-          4,
-          5
-        ],
-        [
-          4,
-          6
-        ]
-      ],
-      "bridges": [],
-      "switches": [],
-      "split_rules": {
-        "control_switch_key": "SPACE",
-        "merge_when_adjacent": true,
-        "single_cube_can_win": false,
-        "single_cube_activates": [],
-        "single_cube_cannot_activate": [
-          "heavy",
-          "split"
-        ]
-      }
-    }
+  "id": "level_04",
+  "name": "Amber Zigzag",
+  "difficulty": "intermediate",
+  "description": "Take the lower zigzag route and cross two amber glass shelves only while the block is lying down.",
+  "width": 15,
+  "height": 11,
+  "start": {"position": [5, 1], "orientation": "standing"},
+  "goal": [6, 10],
+  "tiles": [
+    [5, 1], [5, 2], [5, 3], [5, 4],
+    [6, 4], [7, 4], [8, 4], [8, 2], [8, 3],
+    [7, 2], [7, 3], [6, 2], [6, 3],
+    [6, 5], [6, 6], [6, 7], [6, 8], [6, 9], [6, 10],
+    [4, 1], [4, 2], [3, 2], [3, 3], [2, 2], [2, 3], [2, 4],
+    [8, 5], [8, 6], [9, 5], [9, 6], [9, 7], [8, 7],
+    [5, 11], [6, 11], [7, 10]
+  ],
+  "fragile_tiles": [[8, 2], [8, 3], [6, 5], [6, 6]],
+  "bridges": [],
+  "switches": [],
+  "split_rules": {
+    "control_switch_key": "SPACE",
+    "merge_when_adjacent": true,
+    "single_cube_can_win": false,
+    "single_cube_activates": [],
+    "single_cube_cannot_activate": ["heavy", "split"]
+  }
+}
