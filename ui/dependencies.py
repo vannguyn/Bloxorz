@@ -24,9 +24,9 @@ IS_MOCK_CORE: bool = False
 from tests.mocks import (
     MockBFSSolver,
     MockDFSSolver,
-    MockUCSSolver,
     MockAStarSolver,
 )
+from solvers.UCS import UCSSolver
 IS_MOCK_SOLVERS: bool = True
 
 IS_MOCK_MODE: bool = IS_MOCK_CORE or IS_MOCK_SOLVERS
@@ -52,7 +52,7 @@ def get_solver(algo: str) -> Solver:
     elif name == "DFS":
         return MockDFSSolver()
     elif name == "UCS":
-        return MockUCSSolver()
+        return UCSSolver()
     elif name in ("ASTAR", "A*"):
         return MockAStarSolver()
     raise ValueError(f"Unknown solver algorithm: {algo}")
