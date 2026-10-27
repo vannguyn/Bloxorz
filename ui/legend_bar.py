@@ -25,21 +25,16 @@ def _draw_chip_goal(surface: pygame.Surface, rect: pygame.Rect) -> None:
 
 
 def _draw_chip_fragile(surface: pygame.Surface, rect: pygame.Rect) -> None:
-    """3. Frosted glass rect with micro crack network for fragile tile."""
-    chip_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-    pygame.draw.rect(chip_surf, settings.COLOR_GLASS_FILL, (0, 0, rect.width, rect.height), border_radius=2)
-    pygame.draw.rect(chip_surf, settings.COLOR_GLASS_BORDER, (0, 0, rect.width, rect.height), 1, border_radius=2)
+    """3. Solid orange rect with diagonal hazard stripes for fragile tile."""
+    pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect, border_radius=2)
+    pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 1, border_radius=2)
 
-    # Micro corner sheen
-    sheen = [(0, 0), (int(rect.width * 0.45), 0), (0, int(rect.height * 0.45))]
-    pygame.draw.polygon(chip_surf, settings.COLOR_GLASS_SHEEN, sheen)
-    surface.blit(chip_surf, rect.topleft)
-
-    # Crisp pure-white micro crack line directly on surface
-    p1 = (rect.left + max(2, rect.width // 4), rect.top + 2)
-    p2 = (rect.left + rect.width // 2, rect.top + rect.height // 2)
-    p3 = (rect.right - max(2, rect.width // 4), rect.bottom - 3)
-    pygame.draw.lines(surface, (255, 255, 255), False, [p1, p2, p3], 1)
+    # Diagonal hazard stripes
+    gap = max(4, rect.width // 4)
+    for offset in range(gap, rect.width, gap):
+        p1 = (rect.left + offset, rect.top)
+        p2 = (rect.left, rect.top + offset)
+        pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p1, p2, 1)
 
 
 def _draw_chip_closed_bridge(surface: pygame.Surface, rect: pygame.Rect) -> None:

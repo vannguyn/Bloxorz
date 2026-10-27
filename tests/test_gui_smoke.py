@@ -533,16 +533,16 @@ def test_2d_special_cells_visual_redesign():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    glass_pixels = [
+    orange_pixels = [
         p for p in fragile_pixels
-        if p[2] > p[0] and p[2] > 100
+        if p == settings.COLOR_FRAGILE or (p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80)
     ]
-    crack_pixels = [
+    stripe_pixels = [
         p for p in fragile_pixels
-        if p[0] > 220 and p[1] > 220 and p[2] > 220
+        if p == settings.COLOR_FRAGILE_STRIPE
     ]
-    assert len(glass_pixels) > 50, "Fragile tile frosted glass base missing"
-    assert len(crack_pixels) > 0, "Fragile tile radiating white crack lines missing"
+    assert len(orange_pixels) > 50, "Fragile tile orange base missing"
+    assert len(stripe_pixels) > 0, "Fragile tile hazard warning stripes missing"
 
     # 3. Switch in 2D: verify pixel colors change when block is standing on switch vs away
     sw_cell = (1, 2)
@@ -717,19 +717,19 @@ def test_2d_amber_glass_and_switch_patch():
         for x in range(tile_rect.left, tile_rect.right)
         for y in range(tile_rect.top, tile_rect.bottom)
     ]
-    glass_base_pixels = [
+    orange_base_pixels = [
         p for p in fragile_pixels
-        if p[2] > p[0] and p[2] > 100
+        if p == settings.COLOR_FRAGILE or (p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80)
     ]
-    white_crack_pixels = [
+    stripe_pixels = [
         p for p in fragile_pixels
-        if p[0] > 220 and p[1] > 220 and p[2] > 220
+        if p == settings.COLOR_FRAGILE_STRIPE
     ]
-    assert len(glass_base_pixels) > 50, (
-        f"2D fragile tile frosted glass base pixels count={len(glass_base_pixels)}; expected > 50"
+    assert len(orange_base_pixels) > 50, (
+        f"2D fragile tile orange base pixels count={len(orange_base_pixels)}; expected > 50"
     )
-    assert len(white_crack_pixels) > 5, (
-        f"2D fragile tile white crack pixels count={len(white_crack_pixels)}; expected > 5"
+    assert len(stripe_pixels) > 5, (
+        f"2D fragile tile stripe pixels count={len(stripe_pixels)}; expected > 5"
     )
 
     # 2. Heavy switch in 2D: base plate COLOR_HEAVY_BASE and 12-point cross COLOR_HEAVY_RED
@@ -812,13 +812,13 @@ def test_all_10_stages_visual_patch_regression_2d():
                     for x in range(rect.left, rect.right)
                     for y in range(rect.top, rect.bottom)
                 ]
-                glass_pixels = [p for p in pixels if p[2] > p[0] and p[2] > 100]
-                white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
-                assert len(glass_pixels) > 50, (
-                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant frosted glass hues (found {len(glass_pixels)})"
+                orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+                stripe_pixels = [p for p in pixels if p == settings.COLOR_FRAGILE_STRIPE]
+                assert len(orange_pixels) > 50, (
+                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
                 )
-                assert len(white_crack_pixels) > 0, (
-                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
+                assert len(stripe_pixels) > 0, (
+                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking hazard warning stripes"
                 )
 
         # Check switches in this stage
@@ -872,7 +872,7 @@ def test_all_10_stages_visual_patch_regression_2d():
 
 
 def test_2d_pixel_art_fragile_tile_rendering():
-    """Verify 2D fragile tile renders frosted glass surface with translucent cyan/blue hues, sheen, and cracks."""
+    """Verify 2D fragile tile renders solid orange body with diagonal hazard warning stripes."""
     renderer = BoardRenderer(viewport_width=800, viewport_height=600)
     tile_size = settings.TILE_SIZE  # 48
     surf = pygame.Surface((tile_size, tile_size))
@@ -882,12 +882,12 @@ def test_2d_pixel_art_fragile_tile_rendering():
     pixels = [surf.get_at((x, y))[:3] for x in range(rect.width) for y in range(rect.height)]
     total_pixels = len(pixels)
 
-    white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
-    glass_pixels = [p for p in pixels if p[2] > p[0] and p[2] > 100]
+    orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+    stripe_pixels = [p for p in pixels if p == settings.COLOR_FRAGILE_STRIPE]
 
-    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 220)"
-    assert len(glass_pixels) / total_pixels > 0.60, (
-        f"Frosted glass pixels must dominate > 60% of tile area (got {len(glass_pixels) / total_pixels:.2%})"
+    assert len(stripe_pixels) > 0, "Expected diagonal hazard warning stripes"
+    assert len(orange_pixels) / total_pixels > 0.50, (
+        f"Orange pixels (R > G > B) must dominate > 50% of tile area (got {len(orange_pixels) / total_pixels:.2%})"
     )
 
 
@@ -981,9 +981,9 @@ def test_legend_bar_rendering():
     gold_pixels = [p for p in pill_pixels if p == (255, 215, 0)]
     assert len(gold_pixels) > 0, "LegendBar missing Goal chip gold circle (255, 215, 0)"
 
-    # 3. Fragile Tile: amber rect with white crack
-    white_crack_pixels = [p for p in pill_pixels if p == (255, 255, 255)]
-    assert len(white_crack_pixels) > 0, "LegendBar missing Fragile Tile white crack pixels"
+    # 3. Fragile Tile: orange rect with yellow stripes
+    fragile_stripe_pixels = [p for p in pill_pixels if p == settings.COLOR_FRAGILE_STRIPE]
+    assert len(fragile_stripe_pixels) > 0, "LegendBar missing Fragile Tile hazard stripe pixels"
 
     # 4. Closed Bridge: dark rect with red X (239, 68, 68)
     red_x_pixels = [p for p in pill_pixels if p == (239, 68, 68)]

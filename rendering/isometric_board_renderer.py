@@ -227,69 +227,28 @@ class IsometricBoardRenderer:
         pygame.draw.line(surface, highlight_color, p_top, p_right, 1)
 
     def _draw_fragile_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
-        """
-        Draws 3D Isometric Frosted Glass Fragile Tile:
-        - Thin slab depth (35% standard depth) with shaded translucent side walls.
-        - Translucent isometric diamond top face.
-        - Perspective-projected radiating structural cracks.
-        """
         p_top, p_right, p_bottom, p_left = corners
-        glass_depth = max(2, round(d * 0.35))
+        fragile_d = max(2, round(d * 0.35))
+        border_color = settings.COLOR_FRAGILE_BORDER
 
-        # Local bounding box
-        xs = [p[0] for p in corners]
-        ys = [p[1] for p in corners]
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-        tw = max(1, max_x - min_x)
-        th = max(1, max_y - min_y)
-        hw, hh = tw // 2, th // 2
+        # Thin vertical thickness side walls with shaded orange tones
+        self._draw_side_walls(surface, corners, fragile_d, settings.COLOR_FRAGILE, border_color)
 
-        # Combined local surface to handle side walls and top diamond alpha blending
-        tile_surf = pygame.Surface((tw + 1, th + glass_depth + 1), pygame.SRCALPHA)
+        # Top diamond face with solid orange body
+        pygame.draw.polygon(surface, settings.COLOR_FRAGILE, corners)
+        pygame.draw.polygon(surface, border_color, corners, 1)
 
-        # 1. Isometric side walls
-        local_left_wall = [
-            (p_left[0] - min_x, p_left[1] - min_y),
-            (p_bottom[0] - min_x, p_bottom[1] - min_y),
-            (p_bottom[0] - min_x, p_bottom[1] - min_y + glass_depth),
-            (p_left[0] - min_x, p_left[1] - min_y + glass_depth),
-        ]
-        local_right_wall = [
-            (p_bottom[0] - min_x, p_bottom[1] - min_y),
-            (p_right[0] - min_x, p_right[1] - min_y),
-            (p_right[0] - min_x, p_right[1] - min_y + glass_depth),
-            (p_bottom[0] - min_x, p_bottom[1] - min_y + glass_depth),
-        ]
-        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_WALL_LEFT, local_left_wall)
-        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_WALL_RIGHT, local_right_wall)
-
-        # 2. Top diamond face with frosted glass fill
-        local_diamond = [(x - min_x, y - min_y) for (x, y) in corners]
-        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_FILL, local_diamond)
-
-        # 3. Perspective-projected crack lines
-        crack_lines = [
-            [(hw, hh), (hw - int(hw * 0.4), hh - int(hh * 0.3)), (hw - int(hw * 0.8), hh)],
-            [(hw, hh), (hw + int(hw * 0.1), hh + int(hh * 0.6)), (hw - int(hw * 0.2), th - 2)],
-            [(hw, hh), (hw + int(hw * 0.5), hh - int(hh * 0.2)), (tw - int(hw * 0.2), hh + int(hh * 0.1))],
-        ]
-        for path in crack_lines:
-            pygame.draw.lines(tile_surf, settings.COLOR_GLASS_CRACK_MAIN, False, path, 2)
-
-        # Secondary crack branch
-        pygame.draw.line(
-            tile_surf,
-            settings.COLOR_GLASS_CRACK_SUB,
-            (hw - int(hw * 0.4), hh - int(hh * 0.3)),
-            (hw - int(hw * 0.3), int(hh * 0.2)),
-            1,
-        )
-
-        # 4. Crisp top diamond border
-        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_BORDER, local_diamond, width=1)
-
-        surface.blit(tile_surf, (min_x, min_y))
+        # Diagonal hazard warning stripes across diamond face
+        for t in (0.2, 0.4, 0.6, 0.8):
+            p_a = (
+                round((1 - t) * p_top[0] + t * p_right[0]),
+                round((1 - t) * p_top[1] + t * p_right[1]),
+            )
+            p_b = (
+                round((1 - t) * p_left[0] + t * p_bottom[0]),
+                round((1 - t) * p_left[1] + t * p_bottom[1]),
+            )
+            pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p_a, p_b, 2)
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners

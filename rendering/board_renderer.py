@@ -106,48 +106,20 @@ class BoardRenderer:
         pygame.draw.circle(surface, settings.COLOR_GOAL_RING, center, radius, 2)
 
     def _draw_fragile_tile(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
-        """
-        Draws 2D Frosted Glass Fragile Tile:
-        - Semi-transparent glass substrate.
-        - Specular light sheen across top-left corner.
-        - Branching structural fracture network.
-        - Crisp perimeter border.
-        """
-        w, h = rect.width, rect.height
-        glass_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        # Solid orange fragile body
+        pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect)
 
-        # 1. Translucent frosted glass fill
-        glass_surf.fill(settings.COLOR_GLASS_FILL)
+        # Diagonal hazard warning stripes covering tile face
+        gap = max(6, self.tile_size // 6)
+        for offset in range(gap, rect.width + rect.height, gap):
+            p1 = (rect.left + offset, rect.top)
+            p2 = (rect.left, rect.top + offset)
+            clipped = rect.clipline(p1, p2)
+            if clipped:
+                pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, clipped[0], clipped[1], 2)
 
-        # 2. Specular sheen reflection in top-left corner
-        sheen_points = [(0, 0), (int(w * 0.45), 0), (0, int(h * 0.45))]
-        pygame.draw.polygon(glass_surf, settings.COLOR_GLASS_SHEEN, sheen_points)
-
-        # 3. Structural crack network
-        # Main branches (2px width)
-        main_cracks = [
-            ((int(w * 0.45), int(h * 0.5)), (int(w * 0.25), int(h * 0.3))),
-            ((int(w * 0.25), int(h * 0.3)), (int(w * 0.05), int(h * 0.2))),
-            ((int(w * 0.45), int(h * 0.5)), (int(w * 0.65), int(h * 0.4))),
-            ((int(w * 0.65), int(h * 0.4)), (int(w * 0.95), int(h * 0.45))),
-            ((int(w * 0.45), int(h * 0.5)), (int(w * 0.4), int(h * 0.85))),
-        ]
-        for start, end in main_cracks:
-            pygame.draw.line(glass_surf, settings.COLOR_GLASS_CRACK_MAIN, start, end, 2)
-
-        # Secondary sub-cracks (1px width)
-        sub_cracks = [
-            ((int(w * 0.25), int(h * 0.3)), (int(w * 0.3), int(h * 0.05))),
-            ((int(w * 0.65), int(h * 0.4)), (int(w * 0.75), int(h * 0.7))),
-            ((int(w * 0.4), int(h * 0.85)), (int(w * 0.6), int(h * 0.95))),
-        ]
-        for start, end in sub_cracks:
-            pygame.draw.line(glass_surf, settings.COLOR_GLASS_CRACK_SUB, start, end, 1)
-
-        # 4. Glass edge border
-        pygame.draw.rect(glass_surf, settings.COLOR_GLASS_BORDER, (0, 0, w, h), width=2)
-
-        surface.blit(glass_surf, rect.topleft)
+        # Perimeter warning border
+        pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 2)
 
     def _draw_bridge_tile(self, surface: pygame.Surface, rect: pygame.Rect, is_open: bool) -> None:
         if is_open:
