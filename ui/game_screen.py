@@ -103,6 +103,7 @@ class GameScreen:
 
     def _on_slider_drag_start(self) -> None:
         """Pauses replay playback when timeline scrubbing begins."""
+        self.outcome_status = None
         if self.replayer is not None:
             self.replayer.pause()
             self.btn_replay_toggle.text = "Play"
@@ -110,15 +111,12 @@ class GameScreen:
 
     def _on_slider_change(self, val: int) -> None:
         """Seeks replayer to the target step and synchronizes game state."""
+        self.outcome_status = None
         if self.replayer is not None and self.replayer.states:
             max_idx = len(self.replayer.states) - 1
             step = max(0, min(max_idx, int(val)))
             self.replayer.current_index = step
             self.current_state = self.replayer.current_state
-            if self.replayer.is_finished and is_goal(self.current_state, self.level):
-                self.outcome_status = "WIN"
-            elif self.outcome_status == "WIN":
-                self.outcome_status = None
 
     def _update_layout(self) -> None:
         """Synchronizes dynamic Card 2, Card 3, speed button, and slider layout states."""
@@ -358,16 +356,14 @@ class GameScreen:
             self.replayer.step_backward()
             self.current_state = self.replayer.current_state
             self.timeline_slider.value = self.replayer.current_index
-            if self.outcome_status == "WIN":
-                self.outcome_status = None
+            self.outcome_status = None
 
     def replay_next_step(self) -> None:
         if self.replayer:
             self.replayer.step_forward()
             self.current_state = self.replayer.current_state
             self.timeline_slider.value = self.replayer.current_index
-            if self.replayer.is_finished and is_goal(self.current_state, self.level):
-                self.outcome_status = "WIN"
+            self.outcome_status = None
 
     def cycle_speed(self) -> None:
         self.speed_preset_idx = (self.speed_preset_idx + 1) % len(self.SPEED_PRESETS)
@@ -449,6 +445,7 @@ class GameScreen:
             if res:
                 self.latest_result = res
                 if res.success and res.path:
+                    self.outcome_status = None
                     current_speed = self.SPEED_PRESETS[self.speed_preset_idx]
                     self.replayer = SolutionReplayer(
                         self.level,
@@ -502,9 +499,6 @@ class GameScreen:
 
             if not self.timeline_slider.is_dragging:
                 self.timeline_slider.value = self.replayer.current_index
-
-            if self.replayer.is_finished and is_goal(self.current_state, self.level):
-                self.outcome_status = "WIN"
 
     def draw(self) -> None:
         """Paints the board, block, sidebar, legend bar, and status overlays."""
@@ -593,6 +587,25 @@ class GameScreen:
         elif self.solver_bridge.state == SolverBridgeState.CANCELLED:
             st_surf = self.font_mono.render("Search cancelled.", True, settings.COLOR_TEXT_MUTED)
             self.surface.blit(st_surf, (card_x + card_w - 12 - st_surf.get_width(), 268))
+        elif self.replayer is not None:
+            if self.replayer.is_finished and is_goal(self.current_state, self.level):
+                txt_surf = self.font_mono.render("[GOAL REACHED]", True, settings.COLOR_PILL_GOAL_TEXT)
+                pad_x = 6
+                pad_y = 2
+                pill_w = txt_surf.get_width() + pad_x * 2
+                pill_h = txt_surf.get_height() + pad_y * 2
+                pill_x = card_x + card_w - 12 - pill_w
+                pill_y = 267 + (c2_title.get_height() - pill_h) // 2
+                pill_rect = pygame.Rect(pill_x, pill_y, pill_w, pill_h)
+                pygame.draw.rect(self.surface, settings.COLOR_PILL_GOAL_BG, pill_rect, border_radius=4)
+                pygame.draw.rect(self.surface, settings.COLOR_PILL_GOAL_BORDER, pill_rect, 1, border_radius=4)
+                self.surface.blit(txt_surf, (pill_x + pad_x, pill_y + pad_y))
+            else:
+                txt_surf = self.font_mono.render("[REPLAYING]", True, settings.COLOR_PILL_REPLAY_TEXT)
+                pill_w = txt_surf.get_width()
+                pill_x = card_x + card_w - 12 - pill_w
+                pill_y = 267 + (c2_title.get_height() - txt_surf.get_height()) // 2
+                self.surface.blit(txt_surf, (pill_x, pill_y))
 
         if self.replayer is not None:
             step_str = f"Step: {self.replayer.current_index}/{self.replayer.total_steps}"

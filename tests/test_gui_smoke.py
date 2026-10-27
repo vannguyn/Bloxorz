@@ -13,7 +13,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
 from config import settings
-from core.interfaces import BlockState, GameState, Orientation, Switch
+from core.interfaces import BlockState, GameState, Level, Orientation, Switch, TileType
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
@@ -21,6 +21,7 @@ from ui.button import Button
 from ui.game_screen import GameScreen
 from ui.result_screen import ResultOverlay
 from ui.solver_bridge import on_solve, AsyncSolverBridge, SolverBridgeState
+from ui.dependencies import is_goal
 from tests.mocks import (
     mock_level_simple,
     mock_level_with_fragile,
@@ -1471,6 +1472,261 @@ def test_playback_slider_all_stages_scrubbing_regression():
             screen.draw()
             raw_bytes = pygame.image.tobytes(surface, "RGB")
             assert any(b > 0 for b in raw_bytes)
+
+
+def test_playback_never_triggers_win_overlay(monkeypatch):
+    """Verify that completing playback (via update, next_step, or scrubbing) never triggers win overlay."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Valid solution path reaching the goal on mock level 0
+    winning_path = ["R", "U", "L", "D", "R", "U", "R", "D", "R"]
+    screen.replayer = SolutionReplayer(screen.level, screen.current_state, winning_path)
+    screen.timeline_slider.min_val = 0
+    screen.timeline_slider.max_val = screen.replayer.total_steps
+    screen.timeline_slider.value = 0
+    screen._update_layout()
+
+    overlay_draws = []
+    original_draw = ResultOverlay.draw
+
+    def spy_draw(*args, **kwargs):
+        overlay_draws.append(args)
+        return original_draw(*args, **kwargs)
+
+    monkeypatch.setattr(ResultOverlay, "draw", spy_draw)
+
+    total_steps = screen.replayer.total_steps
+    assert total_steps == 9
+
+    # 1. Run playback to completion via update()
+    while not screen.replayer.is_finished:
+        screen.update(0.5)
+
+    assert screen.replayer.is_finished is True
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # 2. Test replay_next_step at final step does not trigger win
+    screen.replay_next_step()
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # 3. Test scrubbing to the final step does not trigger win
+    slider = screen.timeline_slider
+    # Scrub back to start
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (slider.rect.left, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == 0
+    # Scrub all the way to end
+    screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (slider.rect.right, slider.rect.centery), "buttons": (1, 0, 0)}))
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (slider.rect.right, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == total_steps
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+
+def test_playback_dismisses_prior_manual_win_overlay():
+    """Verify that scrubbing, stepping replay, or triggering solve dismisses any prior manual win/loss overlay."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Replayer on mock level 0
+    winning_path = ["R", "U", "L", "D", "R", "U", "R", "D", "R"]
+    screen.replayer = SolutionReplayer(screen.level, screen.current_state, winning_path)
+    screen.timeline_slider.min_val = 0
+    screen.timeline_slider.max_val = screen.replayer.total_steps
+    screen.timeline_slider.value = 0
+    screen._update_layout()
+
+    # 1. Slider drag start clears outcome_status
+    screen.outcome_status = "WIN"
+    screen._on_slider_drag_start()
+    assert screen.outcome_status is None
+
+    # 2. Slider change clears outcome_status
+    screen.outcome_status = "WIN"
+    screen._on_slider_change(1)
+    assert screen.outcome_status is None
+
+    # 3. Step forward clears outcome_status
+    screen.outcome_status = "WIN"
+    screen.replay_next_step()
+    assert screen.outcome_status is None
+
+    # 4. Step backward clears outcome_status
+    screen.outcome_status = "WIN"
+    screen.replay_prev_step()
+    assert screen.outcome_status is None
+
+    # 5. Trigger solve clears outcome_status
+    screen.outcome_status = "WIN"
+    screen.trigger_solve("BFS")
+    assert screen.outcome_status is None
+    # Wait for solve to finish
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            break
+
+    # 6. Manual gameplay reaching goal still sets outcome_status == "WIN"
+    screen.load_level(0)
+    assert screen.outcome_status is None
+    for move in winning_path:
+        screen.handle_manual_move(move)
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+
+
+def test_playback_header_status_pill_states():
+    """Verify that Card 2 PLAYBACK header displays [REPLAYING] and [GOAL REACHED] status pills."""
+    # 4-step linear corridor level where 4 'R' moves reach goal at (1, 7) standing
+    tiles = {(r, c): TileType.FLOOR for r in range(3) for c in range(9)}
+    goal = (1, 7)
+    tiles[goal] = TileType.GOAL
+    level_4step = Level(
+        width=9,
+        height=3,
+        tiles=tiles,
+        goal=goal,
+        start=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+        bridges={},
+        switches=[],
+        split_rules={},
+        id="lvl_4step",
+        name="Mock 4-Step Corridor",
+    )
+
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=[level_4step])
+    screen.load_level(0)
+
+    # Track rendered strings and colors via FontSpy on screen.font_mono
+    rendered_calls: list[tuple[str, tuple]] = []
+    real_font_mono = screen.font_mono
+
+    class FontSpy:
+        def __init__(self, font):
+            self._font = font
+
+        def render(self, text, antialias, color, background=None):
+            rendered_calls.append((str(text), color))
+            return self._font.render(text, antialias, color, background)
+
+        def __getattr__(self, name):
+            return getattr(self._font, name)
+
+    screen.font_mono = FontSpy(real_font_mono)
+
+    # 1. Trigger BFS solve on 4-step level
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out after 3.0 seconds")
+
+    assert screen.replayer is not None
+    assert screen.replayer.total_steps == 4
+    assert screen.replayer.current_index == 0
+
+    # Draw at step 0: should render "[REPLAYING]" in accent cyan (70, 210, 245)
+    rendered_calls.clear()
+    screen.draw()
+    replaying_calls = [(t, c) for t, c in rendered_calls if "[REPLAYING]" in t]
+    goal_calls = [(t, c) for t, c in rendered_calls if "[GOAL REACHED]" in t]
+    assert len(replaying_calls) > 0, f"Expected '[REPLAYING]' at step 0, rendered calls: {rendered_calls}"
+    assert replaying_calls[0][1] == (70, 210, 245)
+    assert len(goal_calls) == 0
+
+    # 2. Advance / scrub to step 4 (goal reached)
+    slider = screen.timeline_slider
+    # Scrub all the way to right end
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": (slider.rect.right, slider.rect.centery), "button": 1},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEMOTION,
+            {"pos": (slider.rect.right, slider.rect.centery), "buttons": (1, 0, 0)},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONUP,
+            {"pos": (slider.rect.right, slider.rect.centery), "button": 1},
+        )
+    )
+    assert screen.replayer.current_index == 4
+    assert is_goal(screen.current_state, screen.level) is True
+
+    # Draw at step 4: should render "[GOAL REACHED]" in emerald green (0, 230, 118)
+    rendered_calls.clear()
+    screen.draw()
+    replaying_calls = [(t, c) for t, c in rendered_calls if "[REPLAYING]" in t]
+    goal_calls = [(t, c) for t, c in rendered_calls if "[GOAL REACHED]" in t]
+    assert len(goal_calls) > 0, f"Expected '[GOAL REACHED]' at goal, rendered calls: {rendered_calls}"
+    assert goal_calls[0][1] == (0, 230, 118)
+    assert len(replaying_calls) == 0
+
+    # Verify subtle rounded dark-green pill background (15, 35, 30) and thin border (25, 90, 60)
+    card_x = screen.sidebar_rect.left + 14
+    card_w = screen.sidebar_rect.width - 28
+    found_bg = False
+    found_border = False
+    for x in range(card_x, card_x + card_w):
+        for y in range(260, 280):
+            pixel = surface.get_at((x, y))[:3]
+            if pixel == (15, 35, 30):
+                found_bg = True
+            elif pixel == (25, 90, 60):
+                found_border = True
+    assert found_bg is True, "Expected pill background (15, 35, 30) rendered on surface"
+    assert found_border is True, "Expected pill border (25, 90, 60) rendered on surface"
+
+    # 3. Scrub back to step 2 (intermediate step)
+    step2_x = slider.rect.left + int(slider.rect.width * (2 / 4))
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": (step2_x, slider.rect.centery), "button": 1},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEMOTION,
+            {"pos": (step2_x, slider.rect.centery), "buttons": (1, 0, 0)},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONUP,
+            {"pos": (step2_x, slider.rect.centery), "button": 1},
+        )
+    )
+    assert screen.replayer.current_index == 2
+
+    # Draw at step 2: should toggle back to "[REPLAYING]"
+    rendered_calls.clear()
+    screen.draw()
+    replaying_calls = [(t, c) for t, c in rendered_calls if "[REPLAYING]" in t]
+    goal_calls = [(t, c) for t, c in rendered_calls if "[GOAL REACHED]" in t]
+    assert len(replaying_calls) > 0, f"Expected '[REPLAYING]' after scrubbing to step 2, rendered calls: {rendered_calls}"
+    assert replaying_calls[0][1] == (70, 210, 245)
+    assert len(goal_calls) == 0
+
 
 
 
