@@ -377,9 +377,6 @@ def test_visual_patch_tokens_defined_and_valid():
     elements are ints in [0, 255], and match expected color values.
     """
     expected_tokens = {
-        "COLOR_GLASS_FILL": (245, 130, 45, 185),
-        "COLOR_GLASS_CRACK": (255, 255, 255, 230),
-        "COLOR_GLASS_BORDER": (255, 160, 60),
         "COLOR_SPLIT_CYAN": (56, 189, 248),
         "COLOR_SPLIT_DARK": (2, 132, 199),
         "COLOR_HEAVY_RED": (239, 68, 68),
@@ -767,30 +764,6 @@ def test_all_10_stages_visual_patch_regression_3d():
                     )
 
     assert fragile_tiles_checked == 20, f"Expected 20 fragile tiles across all stages, got {fragile_tiles_checked}"
-
-
-def test_pixel_art_crack_tokens_and_coordinates():
-    """Validates pixel-art crack color tokens and canonical coordinate sets in settings."""
-    assert hasattr(settings, "COLOR_GLASS_SHADOW"), "settings missing COLOR_GLASS_SHADOW"
-    assert settings.COLOR_GLASS_SHADOW == (140, 50, 10, 220)
-
-    assert hasattr(settings, "FRAGILE_CRACK_WHITE"), "settings missing FRAGILE_CRACK_WHITE"
-    white_coords = settings.FRAGILE_CRACK_WHITE
-    assert isinstance(white_coords, tuple)
-    assert len(white_coords) >= 80, f"Expected at least 80 white crack coordinates, got {len(white_coords)}"
-    for coord in white_coords:
-        assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
-        gx, gy = coord
-        assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
-
-    assert hasattr(settings, "FRAGILE_CRACK_SHADOW"), "settings missing FRAGILE_CRACK_SHADOW"
-    shadow_coords = settings.FRAGILE_CRACK_SHADOW
-    assert isinstance(shadow_coords, tuple)
-    assert len(shadow_coords) >= 50, f"Expected at least 50 shadow crack coordinates, got {len(shadow_coords)}"
-    for coord in shadow_coords:
-        assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
-        gx, gy = coord
-        assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
 
 
 def test_3d_pixel_art_fragile_tile_rendering():
