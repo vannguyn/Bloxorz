@@ -1,178 +1,163 @@
-# BIỂU MẪU BÁO CÁO VÀ BÀI TẬP CÁ NHÂN / ĐỒ ÁN MÔN HỌC
-### Khoa Công nghệ Thông tin — Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM (FIT - HCMUS)
+# Báo cáo thành viên số 5 — Võ Nhật Minh — 24120202
 
----
+**Phần A* để ghép vào project nằm trong `Astar.typ`.** Mở file này và chọn
+**Typst Preview: Preview Opened File** để xem riêng; export thành `Astar.pdf`.
+Nếu đã ghim `main.typ`, chạy **Unpin the Main File** trước khi preview file riêng.
+File này gom các phần bằng `#include`; sửa nội dung ở `sections/`.
+Phần thực nghiệm đọc bảng từ `data/validation.csv` do `collect_results.py` tạo.
+Trong file báo cáo chính cùng thư mục, dùng:
 
-## 📌 1. Giới thiệu tổng quan
-
-Bộ biểu mẫu được thiết kế chuyên biệt dành cho sinh viên **Khoa Công nghệ Thông tin - Trường ĐH Khoa học Tự nhiên (ĐHQG-HCM)**, đáp ứng đồng thời 2 nhu cầu phổ biến:
-1. **Bài tập cá nhân / Thực hành Lab hàng tuần (Assignment / Lab Report):** Gọn gàng (3–10 trang), có khối thông tin sinh viên ngay trên đầu trang 1 (Header block) giúp tiết kiệm giấy in, không rườm rà.
-2. **Báo cáo Đồ án môn học / Tiểu luận chuyên đề (Course Project Report):** Đầy đủ trang bìa phong cách hiện đại thanh lịch, mục lục tự động, danh mục hình ảnh & bảng biểu, phân chia chương mục rõ ràng, bảng phân công nhiệm vụ và tài liệu tham khảo.
-
-### 📐 Quy chuẩn định dạng học thuật (ĐHQG-HCM)
-* **Khổ giấy:** A4 ($21.0 \times 29.7\text{ cm}$).
-* **Lề trang chuẩn đóng tập:**
-  * Lề Trái (*Left*): **$3.0\text{ cm}$**
-  * Lề Phải (*Right*): **$2.0\text{ cm}$**
-  * Lề Trên (*Top*): **$2.0\text{ cm}$**
-  * Lề Dưới (*Bottom*): **$2.0\text{ cm}$**
-* **Kiểu chữ (Typography):**
-  * Văn bản chính: **Times New Roman $13\text{ pt}$**, dãn dòng $1.35$ lines, thụt đầu dòng $1.27\text{ cm}$, khoảng cách đoạn dưới $6\text{ pt}$.
-  * Mã nguồn / Kỹ thuật: **Consolas $10.5\text{ pt}$**.
-* **Tiêu đề bảng & hình:**
-  * Bảng biểu: **Bảng X:** đặt ở **TRÊN** bảng.
-  * Hình ảnh: **Hình X:** đặt ở **DƯỚI** hình.
-
----
-
-## 📂 2. Cấu trúc thư mục
-
-```text
-templates/
-├── README.md                      # Hướng dẫn chi tiết sử dụng bộ biểu mẫu
-├── word/
-│   ├── Mau_Bao_Cao_FIT_HCMUS.docx # Tệp Word mẫu hoàn chỉnh tích hợp sẵn hệ thống Styles
-│   └── figures/                   # Thư mục chứa biểu trưng chính thức HCMUS
-│       └── hcmus_logo.png
-├── latex/
-│   ├── main.tex                   # Tệp biên dịch chính (XeLaTeX)
-│   ├── main.pdf                   # Bản xuất PDF mẫu hoàn chỉnh để xem trước
-│   ├── fit_hcmus.sty              # Gói định dạng giao diện, màu sắc, bìa và môi trường
-│   ├── references.bib             # Tệp cơ sở dữ liệu trích dẫn BibTeX
-│   ├── figures/                   # Biểu trưng HCMUS dùng cho LaTeX
-│   │   └── hcmus_logo.png
-│   └── sections/                  # Các chương mục nội dung tách rời
-│       ├── 01_gioithieu.tex       # Mục 1: Bối cảnh, mục tiêu, yêu cầu
-│       ├── 02_kientruc_thietke.tex# Mục 2: Sơ đồ, bảng cấu hình, công thức toán
-│       ├── 03_thuat_toan_ma_nguon.tex # Mục 3: Mã giả (Pseudocode), Code block, Callouts
-│       └── 04_danhgia_phancong.tex    # Mục 4: Bảng phân công nhiệm vụ, Checklist nộp bài
-└── typst/
-    ├── main.typ                      # Tệp biên dịch chính của mẫu Typst
-    ├── references.bib                # Cơ sở dữ liệu trích dẫn BibTeX
-    ├── figures/
-    │   └── hcmus_logo.png            # Biểu trưng dùng trên bìa và header
-    └── sections/                     # Các chương mục nội dung dạng Typst
-        ├── 01_gioithieu.typ
-        ├── 02_kientruc_thietke.typ
-        ├── 03_thuat_toan_ma_nguon.typ
-        └── 04_danhgia_phancong.typ
+```typst
+#include "Astar.typ"
 ```
 
----
+`main.typ` đã được khôi phục về mẫu ban đầu theo yêu cầu. File tổng để làm
+việc với phần A* hiện tại là `Astar.typ`, xuất thành `Astar.pdf`.
+Nội dung bám code hiện
+tại và `docs/astar-heuristic.md`, không mô tả API tương lai như tính năng đã có.
+Đây là phần của thành viên số 5 — Võ Nhật Minh — MSSV 24120202 để ghép vào
+báo cáo nhóm, chưa thay thế các phần của những thành viên khác.
 
-## 📝 3. Hướng dẫn sử dụng Biểu mẫu Word (`.docx`)
+## 1. Cài extension trên VS Code
 
-Tệp `templates/word/Mau_Bao_Cao_FIT_HCMUS.docx` đã được định hình sẵn:
-1. **Lựa chọn chế độ sử dụng:**
-   * **Nếu làm Đồ án môn học:** Giữ nguyên trang bìa lớn ở trang 1. Xóa khối *Header rút gọn* ở trang 2 và bắt đầu viết từ mục 1.
-   * **Nếu làm Bài tập cá nhân / Lab ngắn:** Xóa trang bìa (trang 1) và dấu ngắt trang, sử dụng trực tiếp khối *Header rút gọn* trên đầu trang 1 để điền MSSV, Họ tên, Lớp.
-2. **Sử dụng hệ thống Quick Styles tích hợp sẵn:**
-   * `Heading 1`: Tiêu đề mục lớn (1., 2., 3.) - Times New Roman $15\text{ pt}$ Bold, màu xanh HCMUS `#003366`.
-   * `Heading 2`: Tiêu đề mục cấp 2 (1.1., 1.2.) - Times New Roman $13.5\text{ pt}$ Bold, màu `#1A2B4C`.
-   * `Heading 3`: Tiêu đề mục cấp 3 (1.1.1.) - Times New Roman $13\text{ pt}$ Bold Italic.
-   * `Normal`: Đoạn văn bản chuẩn $13\text{ pt}$, dãn dòng $1.35$.
-3. **Các thành phần kỹ thuật đã dựng sẵn:**
-   * **Khối Code Consolas:** Bảng 1 ô nền xám nhạt `#F6F8FA`, viền mỏng bo nhẹ, có đánh số thứ tự dòng code.
-   * **Khối Mã giả (Pseudocode):** Trình bày chuẩn bài báo khoa học.
-   * **Callout Boxes:** 3 loại hộp chú thích được tạo bởi bảng 1 ô có viền trái dày:
-     * ℹ **Ghi chú (Note):** Nền `#F0F5FA`, viền trái xanh dương `#005CA9`.
-     * 💡 **Mẹo hay (Tip):** Nền `#F2F9F4`, viền trái xanh lá `#4CAF50`.
-     * ⚠ **Cảnh báo (Warning):** Nền `#FFF9F2`, viền trái cam `#FF9800`.
-   * **Bảng phân công & Checklist:** Bảng có tiêu đề xanh HCMUS đậm, chữ trắng, các dòng xen kẽ xám nhạt.
-4. **Mẹo lưu thành Template dùng lâu dài:**
-   * Trong Microsoft Word: Chọn `File` $\rightarrow$ `Save As` $\rightarrow$ Chọn định dạng `Word Template (*.dotx)`.
-   * Từ lần sau chỉ cần chọn `New from template` là có ngay văn bản chuẩn.
+Máy được kiểm tra trong phiên làm việc đã có **Tinymist Typst 0.15.10**.
+Nếu Extensions hiển thị **Disable/Uninstall** thì extension đã cài; chỉ cần
+kiểm tra nó không bị Disable trong workspace.
 
----
+Nếu cài trên máy khác:
 
-## ⚡ 4. Hướng dẫn sử dụng Biểu mẫu LaTeX (`.tex`)
+1. Mở VS Code, nhấn `Ctrl+Shift+X`.
+2. Tìm **Tinymist Typst**, chọn extension của **Myriad-Dreamin**.
+   Extension ID: `myriad-dreamin.tinymist`.
+3. Chọn **Install**. Có thể cài bằng terminal:
 
-Dự án được tối ưu hóa cho **XeLaTeX** hoặc **LuaLaTeX** để tải trực tiếp font **Times New Roman** và **Consolas** hệ thống.
+   ```powershell
+   code --install-extension myriad-dreamin.tinymist
+   ```
 
-### 4.1. Chuyển đổi giữa Đồ án và Bài tập ngắn
-Trong tệp [main.tex](file:///d:/Codes/doc-misc/templates/latex/main.tex), bạn chỉ cần điều chỉnh dòng:
-```latex
-\newif\ifisprojectreport
-\isprojectreporttrue   % <--- Giữ nguyên true cho Đồ án (có bìa + mục lục)
-                       % <--- Đổi thành \isprojectreportfalse cho Bài tập cá nhân ngắn
+4. Mở thư mục gốc `Bloxorz` bằng **File > Open Folder**.
+
+Tinymist hỗ trợ preview và export PDF; không bắt buộc cài thêm Typst Preview,
+LaTeX Workshop hay một distribution LaTeX. Typst CLI là tùy chọn nếu muốn
+dùng lệnh `typst compile/watch` độc lập trong terminal. Hướng dẫn chính thức:
+[Tinymist cho VS Code](https://myriad-dreamin.github.io/tinymist/frontend/vscode.html).
+
+## 2. Xem trước và sửa tài liệu nhiều file
+
+1. Mở **`typst/main.typ`**, không bắt đầu preview từ file section.
+2. Nhấn `Ctrl+Shift+P`, tìm **Pin the Main File to the Currently Open Document**
+   của Tinymist để ghim `main.typ` làm tài liệu chính.
+3. Nhấn `Ctrl+Shift+P`, chạy **Typst Preview: Preview Opened File**.
+4. Mở các file trong `sections/` để sửa; preview sẽ cập nhật theo tài liệu chính.
+
+Tên lệnh được xác nhận từ Tinymist 0.15.10 cài trên máy; ở phiên bản khác có
+thể tìm bằng từ khóa **Typst Preview**, **Pin Main**, **Export PDF**.
+Không dùng Markdown Preview để mở `.typ`.
+
+## 3. Xuất PDF
+
+Mở/ghim `main.typ`, rồi `Ctrl+Shift+P` > **Export the Opened File as PDF**.
+Kiểm tra file `typst/main.pdf`. Các PDF `main_lab.pdf` và `main_project.pdf`
+có sẵn là bản mẫu cũ, không phải bản báo cáo mới này.
+
+Hoặc tại thư mục gốc repo, chạy:
+
+```powershell
+.\typst\compile.ps1
 ```
 
-### 4.2. Biên dịch trên máy tính cá nhân (Local)
-Mở terminal tại thư mục `templates/latex/` và chạy:
-```bash
-xelatex main.tex
-bibtex main
-xelatex main.tex
-xelatex main.tex
-```
-*(Hoặc trong VS Code với extension LaTeX Workshop, cấu hình recipe biên dịch chọn `xelatex`).*
+Script dùng `typst` nếu đã có trong PATH, nếu không dùng `tinymist.exe` từ
+extension VS Code trên Windows. Không cần thêm thư mục extension vào PATH.
+Nếu PowerShell không cho chạy script, dùng lệnh Export trong VS Code.
+Trên máy hiện tại PowerShell đang chặn chạy `.ps1`, nên ưu tiên Export PDF.
 
-## ⚡ 5. Hướng dẫn sử dụng Biểu mẫu Typst (`.typ`)
+Nếu đã cài Typst CLI độc lập:
 
-Thư mục [typst/](typst/) chứa biểu mẫu Typst chuẩn hoá hoàn chỉnh tương đương với bản LaTeX, bao gồm bìa đồ án, chế độ bài tập ngắn, mục lục tự động, header/footer, thuật toán, mã nguồn và trích dẫn BibTeX.
-
-### 5.1. Soạn thảo trên Visual Studio Code (Khuyên dùng)
-1. Cài đặt tiện ích mở rộng [**Tinymist Typst**](https://marketplace.visualstudio.com/items?itemName=myriad-dreamit.tinymist) trên VS Code.
-2. Mở file [typst/main.typ](typst/main.typ).
-3. **Các tính năng nổi bật của Tinymist:**
-   * **Xem trước thời gian thực (Live Preview):** Nhấn vào biểu tượng kính lúp / **Show Preview** ở góc trên bên phải thanh công cụ editor (hoặc bấm `Ctrl + K, V`) để mở tab xem trước cạnh mã nguồn; tài liệu sẽ tự động cập nhật ngay lập tức khi bạn gõ.
-   * **Xuất PDF nhanh (Export PDF):** Nhấn vào nút **Export** / **Export to PDF** trên thanh công cụ góc phải của file `.typ`, hoặc nhấn `Ctrl + Shift + P` $\rightarrow$ gõ `Tinymist: Export Current Document as PDF`.
-
-### 5.2. Biên dịch bằng dòng lệnh (CLI)
-Nếu máy tính đã cài đặt [Typst CLI](https://github.com/typst/typst):
-```bash
-# Biên dịch ra file PDF
+```powershell
 typst compile typst/main.typ typst/main.pdf
-
-# Hoặc bật chế độ tự động theo dõi thay đổi và biên dịch lại khi lưu file:
 typst watch typst/main.typ typst/main.pdf
 ```
 
-### 5.3. Cấu hình nội dung báo cáo
-* Sửa thông tin môn học, giảng viên, lớp, danh sách sinh viên tại hàm `fit_report` ở đầu [main.typ](typst/main.typ).
-* **Chế độ hiển thị:**
-  * Đặt `is_project_report: true`: Chế độ đồ án lớn (có trang bìa riêng và trang mục lục).
-  * Đặt `is_project_report: false`: Chế độ bài tập ngắn / Lab (sử dụng header thu gọn ngay đầu trang 1).
-* Nội dung các phần được tách độc lập trong thư mục `typst/sections/`. Các thành phần giao diện mẫu (hộp ghi chú `callout`, thuật toán `algorithm_box`, bảng biểu) được định nghĩa sẵn trong [components.typ](typst/components.typ).
+Lần biên dịch đầu cần mạng để tải các package đã được ghim phiên bản trong
+`template.typ`: `chic-hdr:0.5.0`, `equate:0.3.2`, `codly:1.3.0` cùng dependency.
+Nếu bị lỗi download, kiểm tra kết nối/proxy rồi biên dịch lại. Preview và
+export dùng cùng môi trường compiler/package:
+[Tài liệu export của Tinymist](https://myriad-dreamin.github.io/tinymist/feature/export.html).
 
-### 4.3. Sử dụng trên Overleaf
-1. Nén toàn bộ thư mục `templates/latex/` thành tệp `.zip`.
-2. Truy cập [Overleaf.com](https://www.overleaf.com) $\rightarrow$ `New Project` $\rightarrow$ `Upload Project`.
-3. Bấm vào nút **Menu** ở góc trên bên trái của Overleaf:
-   * Tại mục **Compiler**: Chọn **XeLaTeX** (hoặc LuaLaTeX).
-   * Tại mục **Main document**: Chọn `main.tex`.
-4. Bấm **Recompile**.
+## 4. Viết nội dung ở đâu?
 
-### 4.4. Cú pháp các khối đặc thù trong LaTeX
-* **Chèn hộp chú thích:**
-  ```latex
-  \begin{calloutnote}[Tiêu đề ghi chú]
-      Nội dung ghi chú kỹ thuật...
-  \end{calloutnote}
+| File | Nội dung |
+|---|---|
+| `main.typ` | Bìa, thông tin người thực hiện, thứ tự các chương |
+| `sections/01_gioithieu.typ` | Mục tiêu, input/output, ranh giới module |
+| `sections/02_kientruc_thietke.typ` | StepCost và cấu trúc dữ liệu |
+| `sections/03_thuat_toan_ma_nguon.typ` | A*, mã giả, reopen và tích hợp |
+| `sections/04_danhgia_phancong.typ` | Relaxation, teleport, chứng minh heuristic |
+| `sections/05_thucnghiem.typ` | Bảng chi phí, số nút, thời gian/bộ nhớ và đánh giá |
+| `references.bib` | Nguồn nội bộ cho nội dung code và chứng minh |
+| `template.typ`, `components.typ` | Định dạng, bảng, hộp thuật toán |
+| `data/validation.csv` | Kết quả tổng hợp, trung vị thời gian và bộ nhớ |
+| `data/raw_runs.csv` | Số liệu từng lần đo, gồm thứ tự chạy |
+| `data/environment.json` | Môi trường, quy trình đo và hash phiên bản code/level |
 
-  \begin{callouttip}[Mẹo tối ưu]
-      Nội dung mẹo hay...
-  \end{callouttip}
+Trước khi nộp, điền mã môn, giảng viên, lớp, MSSV, tên và email trong
+`main.typ`; các giá trị trong dấu `[...]` là chỗ điền, không phải dữ liệu thật.
+Năm học cũng cần kiểm tra lại. Không tự điền tỷ lệ đóng góp hoặc kết quả
+benchmark chưa được nhóm xác nhận.
 
-  \begin{calloutwarning}[Lưu ý quan trọng]
-      Nội dung cảnh báo...
-  \end{calloutwarning}
-  ```
-* **Chèn mã nguồn (Code listing):**
-  ```latex
-  \begin{lstlisting}[language=Python, caption={Tiêu đề code}]
-  def hello_world():
-      print("Hello FIT - HCMUS")
-  \end{lstlisting}
-  ```
-* **Chèn thuật toán (Mã giả):**
-  ```latex
-  \begin{algorithm}[h!]
-      \caption{Tên thuật toán}
-      \begin{algorithmic}[1]
-          \Require Đầu vào ...
-          \Ensure Đầu ra ...
-          \State Khởi tạo ...
-      \end{algorithmic}
-  \end{algorithm}
-  ```
+Ví dụ cú pháp Typst:
+
+````typst
+== Tiêu đề mục
+
+Đoạn văn với *chữ đậm*, _chữ nghiêng_ và `tên_hàm`.
+
+$ f(s) = g(s) + h(s) $
+
+- Ý thứ nhất.
+- Ý thứ hai.
+
+```python
+result = run_solver(AStarSolver(), level, start)
+```
+````
+
+## 5. Cập nhật kết quả sau khi đổi code
+
+```powershell
+python typst/collect_results.py
+```
+
+Sau khi chạy xong, mở `Astar.typ` và chọn **Export the Opened File as PDF**.
+Nếu PowerShell cho phép chạy script, có thể dùng compiler CLI thay thế.
+
+Script dùng thư viện chuẩn Python và module repo, không cần pygame/pytest.
+Mặc định đo 5 lần mỗi màn/cấu hình sau một lần chạy thử không ghi số đo,
+qua `run_solver()` như UI. Nó xóa cache heuristic trước mỗi lần, chạy tuần
+tự, đổi thứ tự A*/h=0 giữa các lần lặp và lấy trung vị. Thời gian gồm phần
+solve, bộ nhớ là peak Python allocations qua tracemalloc (byte // 1024).
+Replay và kiểm tra goal/cost được thực hiện ngoài khoảng đo.
+
+Có thể đổi số lần lặp:
+
+```powershell
+python typst/collect_results.py --repeats 10
+```
+
+Số liệu từng lần được lưu ở `data/raw_runs.csv`; bảng tổng hợp ở
+`data/validation.csv` và điều kiện đo ở `data/environment.json`. Bảng và
+nhận xét trong Typst cập nhật theo dữ liệu này sau khi export lại.
+Đối chứng là cùng solver với `h=0`, không phải implementation UCS độc lập.
+Hiện script chưa đặt timeout; lỗi sẽ dừng thu thập, không công bố bộ CSV
+mới chưa hoàn tất. Số đo có thể khác UI do UI hiển thị một lần chạy, trạng
+thái người chơi và điều kiện cache khác nhau.
+
+## 6. Lỗi thường gặp
+
+- **Undefined variable khi mở section:** ghim `main.typ` và preview lại.
+- **Sai đường dẫn ảnh/bibliography:** giữ cấu trúc thư mục, biên dịch `main.typ`.
+- **Không tìm thấy `typst`:** dùng extension hoặc `compile.ps1`; extension đã
+  cài không đồng nghĩa lệnh `typst` có sẵn trong PATH.
+- **Font tiếng Việt:** mẫu dùng Times New Roman và Consolas. Máy khác cần có
+  font hỗ trợ tiếng Việt hoặc thay font trong `template.typ`.
+- **Lỗi sau khi sửa:** mở Problems bằng `Ctrl+Shift+M`, sửa lỗi đầu tiên trước.

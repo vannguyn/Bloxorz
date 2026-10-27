@@ -166,10 +166,11 @@
   caption: none,
   inset: 6pt,
   stroke_color: rgb("#E0E5ED"),
+  align: auto,
 ) = {
   let content = table(
     columns: columns,
-    align: (center + horizon,) * (columns.len()),
+    align: if align == auto { (center + horizon,) * columns.len() } else { align },
     stroke: 0.5pt + stroke_color,
     fill: (col, row) => if row == 0 {
       hcmus_blue
@@ -184,8 +185,40 @@
   )
 
   if caption != none {
-    figure(content, caption: caption)
+    figure(content, kind: table, caption: caption)
   } else {
     content
   }
+}
+
+// Định dạng phần báo cáo độc lập, không tạo trang bìa hoặc mục lục riêng.
+#let report_section(body) = {
+  set page(
+    paper: "a4",
+    margin: (left: 30mm, right: 20mm, top: 20mm, bottom: 20mm),
+    numbering: "1",
+  )
+  set text(font: "Times New Roman", size: 13pt, lang: "vi")
+  set par(justify: true, leading: 0.72em, spacing: 6pt, first-line-indent: 1.27cm)
+  set heading(numbering: "1.1.")
+  show heading.where(level: 1): set text(size: 15pt, weight: "bold", fill: hcmus_blue)
+  show heading.where(level: 2): set text(size: 13.5pt, weight: "bold", fill: dark_navy)
+  show heading.where(level: 3): set text(size: 13pt, weight: "bold", style: "italic", fill: dark_navy)
+  set list(indent: 0.8cm, spacing: 6pt)
+  set enum(indent: 0.8cm, spacing: 6pt)
+  show table.cell: set par(first-line-indent: 0pt, justify: false)
+  show figure.where(kind: table): set figure.caption(position: top)
+  show figure.where(kind: table): set figure(supplement: [Bảng])
+  show figure.where(kind: image): set figure(supplement: [Hình])
+  show figure.where(kind: image): set figure.caption(position: bottom)
+  show figure.caption: set text(size: 12pt)
+  show raw: set text(font: "Consolas", size: 10.5pt)
+  show raw.where(block: true): it => block(
+    width: 100%, inset: 8pt, breakable: true,
+    fill: rgb("#F6F8FA"), stroke: 0.6pt + rgb("#D0D7DE"),
+  )[
+    #set par(first-line-indent: 0pt, justify: false, spacing: 0pt, leading: 0.45em)
+    #it
+  ]
+  body
 }
