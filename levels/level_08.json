@@ -1,32 +1,28 @@
 {
   "id": "level_08",
-  "name": "Split Practice",
+  "name": "Split Garden",
   "difficulty": "advanced",
-  "description": "Split while standing at the center, reposition one cube, and merge before the goal.",
-  "width": 10,
-  "height": 8,
-  "start": {
-    "position": [4, 1],
-    "orientation": "standing"
-  },
-  "goal": [4, 8],
+  "description": "Split at the central gate, switch control between the cubes, reunite, and cross a fragile garden lane.",
+  "width": 15,
+  "height": 10,
+  "start": {"position": [4, 1], "orientation": "standing"},
+  "goal": [4, 11],
   "tiles": [
-    [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8],
-    [3, 2], [2, 2], [2, 3], [3, 5], [2, 5], [2, 6],
-    [5, 2], [6, 2], [6, 3], [5, 5], [6, 5], [6, 6]
+    [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12],
+    [3, 5], [2, 5], [2, 6], [2, 7], [3, 7], [3, 8],
+    [5, 5], [6, 5], [6, 6], [6, 7], [5, 7], [5, 8],
+    [1, 4], [1, 5], [1, 6], [2, 4], [2, 8],
+    [7, 4], [7, 5], [8, 5], [8, 6], [8, 7], [7, 7],
+    [3, 10], [2, 10], [2, 11], [5, 10], [6, 10], [6, 11], [3, 12], [5, 12]
   ],
-  "fragile_tiles": [],
+  "fragile_tiles": [[4, 9], [4, 10]],
   "bridges": [],
   "switches": [
     {
-      "id": "split_a",
+      "id": "split_garden_gate",
       "type": "split",
       "position": [4, 4],
-      "effect": {
-        "type": "split",
-        "destinations": [[4, 5], [4, 6]],
-        "trigger": "enter"
-      }
+      "effect": {"type": "split", "destinations": [[4, 5], [4, 6]], "trigger": "enter"}
     }
   ],
   "split_rules": {
