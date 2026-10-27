@@ -29,13 +29,18 @@ COLOR_GOAL_WALL_LEFT = (18, 22, 32)      # Left internal goal shaft wall (shaded
 COLOR_GOAL_WALL_RIGHT = (28, 34, 48)     # Right internal goal shaft wall (shaded mid-dark)
 COLOR_GOAL_ABYSS = (6, 8, 12)            # Deep optical abyss void floor
 
-COLOR_FRAGILE = (245, 130, 45)
-COLOR_FRAGILE_BORDER = (195, 80, 20)
-COLOR_FRAGILE_STRIPE = (255, 185, 45)    # High-contrast 45-degree hazard warning stripe
-COLOR_GLASS_FILL = (245, 130, 45, 185)   # Amber-orange translucent glass fill with alpha
-COLOR_GLASS_CRACK = (255, 255, 255, 230) # Radiating fracture cracks with alpha
-COLOR_GLASS_SHADOW: tuple[int, int, int, int] = (140, 50, 10, 220)  # Glass fracture bevel under-shadow with alpha
-COLOR_GLASS_BORDER = (255, 160, 60)      # Glass tile perimeter border
+COLOR_FRAGILE = (180, 225, 250)              # Frosted glass base (light cyan/ice)
+COLOR_FRAGILE_BORDER = (125, 211, 252)       # Crisp glass border
+COLOR_FRAGILE_STRIPE = (255, 185, 45)       # High-contrast hazard stripe token
+COLOR_GLASS_FILL = (180, 225, 250, 150)      # Frosted glass translucent fill (Alpha = 150)
+COLOR_GLASS_BORDER = (125, 211, 252, 230)    # Crisp glass border (Alpha = 230)
+COLOR_GLASS_CRACK_MAIN = (255, 255, 255, 230)# Main reflective white cracks (Alpha = 230)
+COLOR_GLASS_CRACK_SUB = (200, 240, 255, 160) # Subtle secondary crack branches (Alpha = 160)
+COLOR_GLASS_WALL_LEFT = (70, 140, 180, 200)  # Left wall shadow (Alpha = 200)
+COLOR_GLASS_WALL_RIGHT = (115, 190, 230, 200)# Right wall highlight (Alpha = 200)
+COLOR_GLASS_SHEEN = (255, 255, 255, 60)      # Specular corner sheen (Alpha = 60)
+COLOR_GLASS_CRACK = COLOR_GLASS_CRACK_MAIN   # Backward-compatible alias
+COLOR_GLASS_SHADOW: tuple[int, int, int, int] = (140, 50, 10, 220)
 
 # Canonical 32x32 pixel-art crack coordinates for fragile glass tiles
 FRAGILE_CRACK_WHITE: tuple[tuple[int, int], ...] = (

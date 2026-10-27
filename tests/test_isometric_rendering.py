@@ -377,9 +377,9 @@ def test_visual_patch_tokens_defined_and_valid():
     elements are ints in [0, 255], and match expected color values.
     """
     expected_tokens = {
-        "COLOR_GLASS_FILL": (245, 130, 45, 185),
+        "COLOR_GLASS_FILL": (180, 225, 250, 150),
         "COLOR_GLASS_CRACK": (255, 255, 255, 230),
-        "COLOR_GLASS_BORDER": (255, 160, 60),
+        "COLOR_GLASS_BORDER": (125, 211, 252, 230),
         "COLOR_SPLIT_CYAN": (56, 189, 248),
         "COLOR_SPLIT_DARK": (2, 132, 199),
         "COLOR_HEAVY_RED": (239, 68, 68),
@@ -451,10 +451,10 @@ def test_3d_special_cells_visual_redesign():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    has_cracks = any(p[0] > 240 and p[1] > 240 and p[2] > 240 for p in fragile_pixels)
+    has_cracks = any(p[0] > 220 and p[1] > 220 and p[2] > 220 for p in fragile_pixels)
     assert has_cracks, "Fragile tile diamond should render white fracture crack lines"
-    has_amber = any(p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80 for p in fragile_pixels)
-    assert has_amber, "Fragile tile diamond should render amber glass fill"
+    has_glass = any(p[2] > p[0] and p[2] > 100 for p in fragile_pixels)
+    assert has_glass, "Fragile tile diamond should render frosted glass fill"
 
     # 3. Goal Tile: shaft interior wall colors present
     goal_rect = renderer.get_cell_rect(2, 2)
@@ -626,15 +626,15 @@ def test_3d_amber_glass_and_switch_patch():
     ]
     white_cracks = [
         p for p in fragile_pixels
-        if p[0] > 240 and p[1] > 240 and p[2] > 240
+        if p[0] > 220 and p[1] > 220 and p[2] > 220
     ]
     assert len(white_cracks) > 0, "Fragile top diamond should contain white fracture crack pixels"
 
-    amber_pixels = [
+    glass_pixels = [
         p for p in fragile_pixels
-        if p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80
+        if p[2] > p[0] and p[2] > 100
     ]
-    assert len(amber_pixels) > 0, "Fragile top diamond should contain amber glass pixels"
+    assert len(glass_pixels) > 0, "Fragile top diamond should contain frosted glass pixels"
 
     # 2. Heavy switch in 3D: COLOR_HEAVY_BASE and COLOR_HEAVY_RED
     heavy_rect = renderer.get_cell_rect(1, 0)
@@ -710,20 +710,13 @@ def test_all_10_stages_visual_patch_regression_3d():
                     for x in range(rect.left, rect.right)
                     for y in range(rect.top, rect.bottom)
                 ]
-                orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+                glass_pixels = [p for p in pixels if p[2] > p[0] and p[2] > 100]
                 white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
-                rust_shadow_pixels = [
-                    p for p in pixels
-                    if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-                ]
-                assert len(orange_pixels) > 20, (
-                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
+                assert len(glass_pixels) > 20, (
+                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant frosted glass hues (found {len(glass_pixels)})"
                 )
                 assert len(white_crack_pixels) > 0, (
                     f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
-                )
-                assert len(rust_shadow_pixels) > 0, (
-                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking rust under-shadow pixels"
                 )
 
         # Check switches in this stage
@@ -837,19 +830,12 @@ def test_3d_pixel_art_fragile_tile_rendering():
     total_diamond_pixels = len(diamond_pixels)
     assert total_diamond_pixels > 0, "Top diamond should contain drawn pixels"
 
-    white_crack_pixels = [p for p in diamond_pixels if p[0] > 240 and p[1] > 240 and p[2] > 240]
-    shadow_pixels = [
-        p for p in diamond_pixels
-        if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-    ]
-    orange_pixels = [p for p in diamond_pixels if p[0] > p[1] > p[2]]
+    white_crack_pixels = [p for p in diamond_pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
+    glass_pixels = [p for p in diamond_pixels if p[2] > p[0] and p[2] > 100]
 
-    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 240) on projected diamond surface"
-    assert len(shadow_pixels) > 0, (
-        "Expected shadow pixels (R in [110, 180], G in [30, 90], B < 60) on projected diamond surface"
-    )
-    assert len(orange_pixels) / total_diamond_pixels > 0.60, (
-        f"Orange pixels (R > G > B) must dominate > 60% of diamond surface (got {len(orange_pixels) / total_diamond_pixels:.2%})"
+    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 220) on projected diamond surface"
+    assert len(glass_pixels) / total_diamond_pixels > 0.60, (
+        f"Frosted glass pixels must dominate > 60% of diamond surface (got {len(glass_pixels) / total_diamond_pixels:.2%})"
     )
 
 

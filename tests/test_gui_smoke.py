@@ -533,15 +533,15 @@ def test_2d_special_cells_visual_redesign():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    amber_pixels = [
+    glass_pixels = [
         p for p in fragile_pixels
-        if p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80
+        if p[2] > p[0] and p[2] > 100
     ]
     crack_pixels = [
         p for p in fragile_pixels
-        if p[0] > 240 and p[1] > 240 and p[2] > 240
+        if p[0] > 220 and p[1] > 220 and p[2] > 220
     ]
-    assert len(amber_pixels) > 50, "Fragile tile amber base missing"
+    assert len(glass_pixels) > 50, "Fragile tile frosted glass base missing"
     assert len(crack_pixels) > 0, "Fragile tile radiating white crack lines missing"
 
     # 3. Switch in 2D: verify pixel colors change when block is standing on switch vs away
@@ -717,16 +717,16 @@ def test_2d_amber_glass_and_switch_patch():
         for x in range(tile_rect.left, tile_rect.right)
         for y in range(tile_rect.top, tile_rect.bottom)
     ]
-    amber_base_pixels = [
+    glass_base_pixels = [
         p for p in fragile_pixels
-        if p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80
+        if p[2] > p[0] and p[2] > 100
     ]
     white_crack_pixels = [
         p for p in fragile_pixels
-        if p[0] > 240 and p[1] > 240 and p[2] > 240
+        if p[0] > 220 and p[1] > 220 and p[2] > 220
     ]
-    assert len(amber_base_pixels) > 50, (
-        f"2D fragile tile amber base pixels count={len(amber_base_pixels)}; expected > 50"
+    assert len(glass_base_pixels) > 50, (
+        f"2D fragile tile frosted glass base pixels count={len(glass_base_pixels)}; expected > 50"
     )
     assert len(white_crack_pixels) > 5, (
         f"2D fragile tile white crack pixels count={len(white_crack_pixels)}; expected > 5"
@@ -812,20 +812,13 @@ def test_all_10_stages_visual_patch_regression_2d():
                     for x in range(rect.left, rect.right)
                     for y in range(rect.top, rect.bottom)
                 ]
-                orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+                glass_pixels = [p for p in pixels if p[2] > p[0] and p[2] > 100]
                 white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
-                rust_shadow_pixels = [
-                    p for p in pixels
-                    if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-                ]
-                assert len(orange_pixels) > 50, (
-                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
+                assert len(glass_pixels) > 50, (
+                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant frosted glass hues (found {len(glass_pixels)})"
                 )
                 assert len(white_crack_pixels) > 0, (
                     f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
-                )
-                assert len(rust_shadow_pixels) > 0, (
-                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking rust under-shadow pixels"
                 )
 
         # Check switches in this stage
@@ -879,7 +872,7 @@ def test_all_10_stages_visual_patch_regression_2d():
 
 
 def test_2d_pixel_art_fragile_tile_rendering():
-    """Verify 2D fragile tile renders pixel-art crack with rust-brown under-shadow depth and dominant orange substrate."""
+    """Verify 2D fragile tile renders frosted glass surface with translucent cyan/blue hues, sheen, and cracks."""
     renderer = BoardRenderer(viewport_width=800, viewport_height=600)
     tile_size = settings.TILE_SIZE  # 48
     surf = pygame.Surface((tile_size, tile_size))
@@ -889,17 +882,12 @@ def test_2d_pixel_art_fragile_tile_rendering():
     pixels = [surf.get_at((x, y))[:3] for x in range(rect.width) for y in range(rect.height)]
     total_pixels = len(pixels)
 
-    white_crack_pixels = [p for p in pixels if p[0] > 240 and p[1] > 240 and p[2] > 240]
-    rust_shadow_pixels = [
-        p for p in pixels
-        if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-    ]
-    orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+    white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
+    glass_pixels = [p for p in pixels if p[2] > p[0] and p[2] > 100]
 
-    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 240)"
-    assert len(rust_shadow_pixels) > 0, "Expected rust-brown shadow pixels (R in [110, 180], G in [30, 90], B < 60)"
-    assert len(orange_pixels) / total_pixels > 0.60, (
-        f"Orange pixels (R > G > B) must dominate > 60% of tile area (got {len(orange_pixels) / total_pixels:.2%})"
+    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 220)"
+    assert len(glass_pixels) / total_pixels > 0.60, (
+        f"Frosted glass pixels must dominate > 60% of tile area (got {len(glass_pixels) / total_pixels:.2%})"
     )
 
 

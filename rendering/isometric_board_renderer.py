@@ -227,50 +227,69 @@ class IsometricBoardRenderer:
         pygame.draw.line(surface, highlight_color, p_top, p_right, 1)
 
     def _draw_fragile_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
+        """
+        Draws 3D Isometric Frosted Glass Fragile Tile:
+        - Thin slab depth (35% standard depth) with shaded translucent side walls.
+        - Translucent isometric diamond top face.
+        - Perspective-projected radiating structural cracks.
+        """
         p_top, p_right, p_bottom, p_left = corners
         glass_depth = max(2, round(d * 0.35))
 
-        # Side walls with shaded amber tones and glass border
-        self._draw_side_walls(surface, corners, glass_depth, settings.COLOR_FRAGILE, settings.COLOR_GLASS_BORDER)
-
-        # Base fill
-        pygame.draw.polygon(surface, settings.COLOR_FRAGILE, corners)
-
-        # Bounding box of top diamond
+        # Local bounding box
         xs = [p[0] for p in corners]
         ys = [p[1] for p in corners]
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
         tw = max(1, max_x - min_x)
         th = max(1, max_y - min_y)
+        hw, hh = tw // 2, th // 2
 
-        # Alpha surface for translucent amber glass and pixel-art crack projection
-        iso_crack = pygame.Surface((tw, th), pygame.SRCALPHA)
-        local_corners = [(x - min_x, y - min_y) for (x, y) in corners]
-        pygame.draw.polygon(iso_crack, settings.COLOR_GLASS_FILL, local_corners)
+        # Combined local surface to handle side walls and top diamond alpha blending
+        tile_surf = pygame.Surface((tw + 1, th + glass_depth + 1), pygame.SRCALPHA)
 
-        pw = max(2, round(tw / 32.0))
-        ph = max(1, round(th / 32.0))
+        # 1. Isometric side walls
+        local_left_wall = [
+            (p_left[0] - min_x, p_left[1] - min_y),
+            (p_bottom[0] - min_x, p_bottom[1] - min_y),
+            (p_bottom[0] - min_x, p_bottom[1] - min_y + glass_depth),
+            (p_left[0] - min_x, p_left[1] - min_y + glass_depth),
+        ]
+        local_right_wall = [
+            (p_bottom[0] - min_x, p_bottom[1] - min_y),
+            (p_right[0] - min_x, p_right[1] - min_y),
+            (p_right[0] - min_x, p_right[1] - min_y + glass_depth),
+            (p_bottom[0] - min_x, p_bottom[1] - min_y + glass_depth),
+        ]
+        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_WALL_LEFT, local_left_wall)
+        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_WALL_RIGHT, local_right_wall)
 
-        # Under-shadow layer (depth)
-        for gx, gy in settings.FRAGILE_CRACK_SHADOW:
-            u = gx / 32.0
-            v = gy / 32.0
-            px = int(round(tw * 0.5 + (u - v) * (tw * 0.5)))
-            py = int(round((u + v) * (th * 0.5)))
-            pygame.draw.rect(iso_crack, settings.COLOR_GLASS_SHADOW, (px, py, pw, ph))
+        # 2. Top diamond face with frosted glass fill
+        local_diamond = [(x - min_x, y - min_y) for (x, y) in corners]
+        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_FILL, local_diamond)
 
-        # White starburst crack highlight layer
-        crack_color = settings.COLOR_GLASS_CRACK[:3]
-        for gx, gy in settings.FRAGILE_CRACK_WHITE:
-            u = gx / 32.0
-            v = gy / 32.0
-            px = int(round(tw * 0.5 + (u - v) * (tw * 0.5)))
-            py = int(round((u + v) * (th * 0.5)))
-            pygame.draw.rect(iso_crack, crack_color, (px, py, pw, ph))
+        # 3. Perspective-projected crack lines
+        crack_lines = [
+            [(hw, hh), (hw - int(hw * 0.4), hh - int(hh * 0.3)), (hw - int(hw * 0.8), hh)],
+            [(hw, hh), (hw + int(hw * 0.1), hh + int(hh * 0.6)), (hw - int(hw * 0.2), th - 2)],
+            [(hw, hh), (hw + int(hw * 0.5), hh - int(hh * 0.2)), (tw - int(hw * 0.2), hh + int(hh * 0.1))],
+        ]
+        for path in crack_lines:
+            pygame.draw.lines(tile_surf, settings.COLOR_GLASS_CRACK_MAIN, False, path, 2)
 
-        surface.blit(iso_crack, (min_x, min_y))
-        pygame.draw.polygon(surface, settings.COLOR_GLASS_BORDER, corners, 1)
+        # Secondary crack branch
+        pygame.draw.line(
+            tile_surf,
+            settings.COLOR_GLASS_CRACK_SUB,
+            (hw - int(hw * 0.4), hh - int(hh * 0.3)),
+            (hw - int(hw * 0.3), int(hh * 0.2)),
+            1,
+        )
+
+        # 4. Crisp top diamond border
+        pygame.draw.polygon(tile_surf, settings.COLOR_GLASS_BORDER, local_diamond, width=1)
+
+        surface.blit(tile_surf, (min_x, min_y))
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
