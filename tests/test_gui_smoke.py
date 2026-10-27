@@ -13,7 +13,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
 from config import settings
-from core.interfaces import BlockState, GameState, Level, Orientation, Switch, TileType
+from core.interfaces import BlockState, GameState, Level, Orientation, SolverResult, Switch, TileType
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
@@ -27,6 +27,7 @@ from tests.mocks import (
     mock_level_with_fragile,
     mock_level_with_bridge,
     mock_level_split,
+    MockBFSSolver,
 )
 
 
@@ -243,6 +244,22 @@ def test_replayer_speed_control():
     # At delay 0.2, 0.45s should advance 2 steps (timer keeps remaining 0.05s)
     assert replayer.current_index == 2
     assert replayer.timer == pytest.approx(0.05)
+
+
+def test_replayer_empty_path_boundary_guard():
+    from tests.mocks import mock_level_simple
+    from core.interfaces import GameState
+    from rendering.animation import SolutionReplayer
+    level = mock_level_simple()
+    state = GameState(block=level.start, bridge_mask=0)
+    replayer = SolutionReplayer(level, state, [], step_delay=0.4)
+    assert replayer.is_finished is True
+    replayer.play()
+    assert replayer.is_playing is True
+    # update() must catch is_finished, reset is_playing to False, and return False
+    changed = replayer.update(0.1)
+    assert changed is False
+    assert replayer.is_playing is False
 
 
 def test_game_screen_speed_button_cycle_and_persistence():
@@ -1474,8 +1491,8 @@ def test_playback_slider_all_stages_scrubbing_regression():
             assert any(b > 0 for b in raw_bytes)
 
 
-def test_playback_never_triggers_win_overlay(monkeypatch):
-    """Verify that completing playback (via update, next_step, or scrubbing) never triggers win overlay."""
+def test_playback_overlay_suppression_and_goal_activation(monkeypatch):
+    """Verify that intermediate playback/scrubbing keeps overlay suppressed, while reaching the goal activates overlay and scrubbing backward toggles it off."""
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     screen = GameScreen(surface, levels=_mock_levels())
     screen.load_level(0)
@@ -1500,35 +1517,155 @@ def test_playback_never_triggers_win_overlay(monkeypatch):
     total_steps = screen.replayer.total_steps
     assert total_steps == 9
 
-    # 1. Run playback to completion via update()
+    # 1. Intermediate playback keeps overlay suppressed
+    screen.update(0.1)
+    assert not screen.replayer.is_finished
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # Run playback to completion via update() -> activates WIN overlay
     while not screen.replayer.is_finished:
         screen.update(0.5)
 
     assert screen.replayer.is_finished is True
     assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+    screen.draw()
+    assert len(overlay_draws) > 0
+
+    # 2. Stepping backward toggles overlay off
+    overlay_draws.clear()
+    screen.replay_prev_step()
+    assert screen.replayer.current_index == total_steps - 1
     assert screen.outcome_status is None
     screen.draw()
     assert len(overlay_draws) == 0
 
-    # 2. Test replay_next_step at final step does not trigger win
+    # Stepping forward back to goal activates WIN overlay
     screen.replay_next_step()
-    assert screen.outcome_status is None
+    assert screen.replayer.current_index == total_steps
+    assert screen.outcome_status == "WIN"
     screen.draw()
-    assert len(overlay_draws) == 0
+    assert len(overlay_draws) > 0
 
-    # 3. Test scrubbing to the final step does not trigger win
+    # 3. Scrubbing backward toggles overlay off
+    overlay_draws.clear()
     slider = screen.timeline_slider
     # Scrub back to start
     screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (slider.rect.left, slider.rect.centery), "button": 1}))
     assert screen.replayer.current_index == 0
-    # Scrub all the way to end
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # Scrub all the way to end -> activates WIN overlay
     screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (slider.rect.right, slider.rect.centery), "buttons": (1, 0, 0)}))
     screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (slider.rect.right, slider.rect.centery), "button": 1}))
     assert screen.replayer.current_index == total_steps
     assert is_goal(screen.current_state, screen.level) is True
-    assert screen.outcome_status is None
+    assert screen.outcome_status == "WIN"
     screen.draw()
-    assert len(overlay_draws) == 0
+    assert len(overlay_draws) > 0
+
+
+def test_playback_overlay_authority_and_toggle(monkeypatch):
+    """Verify playback controls have full authority over victory overlay (activation, stepping, scrubbing, restart)."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    # 4-step level where start is (1, 1) and goal is (4, 4)
+    tiles = {(r, c): TileType.FLOOR for r in range(6) for c in range(6)}
+    tiles[(4, 4)] = TileType.GOAL
+    lvl4 = Level(
+        width=6,
+        height=6,
+        tiles=tiles,
+        goal=(4, 4),
+        start=BlockState(1, 1, Orientation.STANDING),
+        bridges={},
+        switches=[],
+        split_rules={},
+        id="mock_4step",
+        name="Mock 4 Step",
+    )
+    screen = GameScreen(surface, levels=[lvl4])
+    screen.load_level(0)
+
+    overlay_draw_moves = []
+    original_draw = ResultOverlay.draw
+
+    def spy_draw(surface, area_rect, status, moves_count=0, font_large=None, font_small=None):
+        overlay_draw_moves.append(moves_count)
+        return original_draw(surface, area_rect, status, moves_count=moves_count, font_large=font_large, font_small=font_small)
+
+    monkeypatch.setattr(ResultOverlay, "draw", spy_draw)
+
+    # Solve mock level 0 (4 steps)
+    res_mock = SolverResult(
+        path=["D", "D", "R", "R"],
+        expanded_nodes=4,
+        search_time_ms=1.0,
+        peak_memory_kb=10,
+        solution_length=4,
+        cost=4.0,
+        success=True,
+    )
+    def mock_poll():
+        screen.solver_bridge.state = SolverBridgeState.FINISHED
+        return res_mock
+
+    monkeypatch.setattr(screen.solver_bridge, "start_solve", lambda algo, lvl, st: setattr(screen.solver_bridge, "state", SolverBridgeState.RUNNING))
+    monkeypatch.setattr(screen.solver_bridge, "poll", mock_poll)
+
+    screen.trigger_solve("BFS")
+    screen.update(0.016)
+
+    assert screen.replayer is not None
+    assert screen.replayer.total_steps == 4
+
+    # Let replayer play to finish: assert outcome_status == "WIN"
+    while not screen.replayer.is_finished:
+        screen.update(0.2)
+
+    assert screen.replayer.current_index == 4
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+
+    # Verify victory overlay receives total_steps moves count instead of 0
+    overlay_draw_moves.clear()
+    screen.draw()
+    assert len(overlay_draw_moves) > 0
+    assert overlay_draw_moves[-1] == screen.replayer.total_steps == 4
+
+    # Click << Step (replay_prev_step): assert current_index == 3 and outcome_status is None
+    screen.replay_prev_step()
+    assert screen.replayer.current_index == 3
+    assert screen.outcome_status is None
+
+    # Click >> Step (replay_next_step): assert current_index == 4 and outcome_status == "WIN"
+    screen.replay_next_step()
+    assert screen.replayer.current_index == 4
+    assert screen.outcome_status == "WIN"
+    overlay_draw_moves.clear()
+    screen.draw()
+    assert overlay_draw_moves[-1] == screen.replayer.total_steps == 4
+
+    # Drag slider to step 2: assert current_index == 2 and outcome_status is None
+    screen._on_slider_drag_start()
+    assert screen.outcome_status is None
+    screen._on_slider_change(2)
+    assert screen.replayer.current_index == 2
+    assert screen.outcome_status is None
+
+    # Drag slider back to step 4: assert current_index == 4 and outcome_status == "WIN"
+    screen._on_slider_change(4)
+    assert screen.replayer.current_index == 4
+    assert screen.outcome_status == "WIN"
+
+    # Click Play toggle button at step 4: assert current_index == 0, is_playing is True, and outcome_status is None
+    screen.replay_toggle_play()
+    assert screen.replayer.current_index == 0
+    assert screen.replayer.is_playing is True
+    assert screen.outcome_status is None
 
 
 def test_playback_dismisses_prior_manual_win_overlay():
@@ -1728,5 +1865,71 @@ def test_playback_header_status_pill_states():
     assert len(goal_calls) == 0
 
 
+def test_solver_always_solves_from_initial_state():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)  # Simple corridor
 
+    initial_state = screen.initial_state
+    assert screen.moves_count == 0
+
+    # Move manually to change current_state and moves_count
+    event_right = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)
+    screen.handle_event(event_right)
+    screen.update(0.016)
+
+    assert screen.moves_count == 1
+    assert screen.current_state != initial_state
+
+    # Trigger solve
+    screen.trigger_solve("BFS")
+
+    # Assert that current_state is reset to initial_state, moves_count reset to 0, outcome_status is None
+    assert screen.current_state == screen.initial_state
+    assert screen.moves_count == 0
+    assert screen.outcome_status is None
+
+    # Wait for solve to finish
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    assert screen.latest_result is not None
+    assert screen.latest_result.success is True
+    # Path must be full solution from initial_state (4 steps: ["R", "R", "R", "R"])
+    assert screen.latest_result.path == ["R", "R", "R", "R"]
+    assert screen.replayer is not None
+    assert screen.replayer.initial_state == screen.initial_state
+    assert screen.replayer.total_steps == 4
+
+
+def test_replayer_auto_pauses_and_switches_button_to_play():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    assert screen.replayer is not None
+    assert screen.replayer.is_playing is True
+    assert screen.btn_replay_toggle.text == "Pause"
+
+    # Advance time past completion
+    for _ in range(50):
+        screen.update(0.1)
+        if screen.replayer.is_finished:
+            break
+
+    assert screen.replayer.is_finished is True
+    assert screen.replayer.is_playing is False
+    assert screen.btn_replay_toggle.text == "Play"
 

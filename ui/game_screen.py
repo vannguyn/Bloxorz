@@ -111,12 +111,17 @@ class GameScreen:
 
     def _on_slider_change(self, val: int) -> None:
         """Seeks replayer to the target step and synchronizes game state."""
-        self.outcome_status = None
         if self.replayer is not None and self.replayer.states:
             max_idx = len(self.replayer.states) - 1
             step = max(0, min(max_idx, int(val)))
             self.replayer.current_index = step
             self.current_state = self.replayer.current_state
+            if self.replayer.is_finished and is_goal(self.current_state, self.level):
+                self.outcome_status = "WIN"
+            else:
+                self.outcome_status = None
+        else:
+            self.outcome_status = None
 
     def _update_layout(self) -> None:
         """Synchronizes dynamic Card 2, Card 3, speed button, and slider layout states."""
@@ -332,18 +337,24 @@ class GameScreen:
         self.replayer = None
         self.latest_result = None
         self.outcome_status = None
+        self.moves_count = 0
+        self.current_state = self.initial_state
         self.timeline_slider.min_val = 0
         self.timeline_slider.max_val = 0
         self.timeline_slider.value = 0
         self._update_layout()
-        self.solver_bridge.start_solve(algo, self.level, self.current_state)
+        self.solver_bridge.start_solve(algo, self.level, self.initial_state)
 
     def cancel_solve(self) -> None:
         self.solver_bridge.cancel()
 
     def replay_toggle_play(self) -> None:
         if self.replayer:
+            if self.replayer.is_finished:
+                self.outcome_status = None
             self.replayer.toggle_pause()
+            self.current_state = self.replayer.current_state
+            self.timeline_slider.value = self.replayer.current_index
             if not self.replayer.is_playing:
                 self.btn_replay_toggle.text = "Play"
                 self.btn_replay_toggle.icon_drawer = draw_play_icon
@@ -363,7 +374,10 @@ class GameScreen:
             self.replayer.step_forward()
             self.current_state = self.replayer.current_state
             self.timeline_slider.value = self.replayer.current_index
-            self.outcome_status = None
+            if self.replayer.is_finished and is_goal(self.current_state, self.level):
+                self.outcome_status = "WIN"
+            else:
+                self.outcome_status = None
 
     def cycle_speed(self) -> None:
         self.speed_preset_idx = (self.speed_preset_idx + 1) % len(self.SPEED_PRESETS)
@@ -449,7 +463,7 @@ class GameScreen:
                     current_speed = self.SPEED_PRESETS[self.speed_preset_idx]
                     self.replayer = SolutionReplayer(
                         self.level,
-                        self.current_state,
+                        self.initial_state,
                         res.path,
                         speed_multiplier=current_speed,
                     )
@@ -500,6 +514,11 @@ class GameScreen:
             if not self.timeline_slider.is_dragging:
                 self.timeline_slider.value = self.replayer.current_index
 
+            if self.replayer.is_finished and is_goal(self.current_state, self.level):
+                self.outcome_status = "WIN"
+            elif self.replayer.is_playing:
+                self.outcome_status = None
+
     def draw(self) -> None:
         """Paints the board, block, sidebar, legend bar, and status overlays."""
         # Clear background
@@ -515,11 +534,12 @@ class GameScreen:
 
         # 2. Draw Win/Loss Overlay if applicable
         if self.outcome_status is not None:
+            moves_display = self.replayer.total_steps if self.replayer is not None else self.moves_count
             ResultOverlay.draw(
                 self.surface,
                 self.board_rect,
                 self.outcome_status,
-                moves_count=self.moves_count,
+                moves_count=moves_display,
                 font_large=self.font_large,
                 font_small=self.font_body,
             )
