@@ -12,6 +12,7 @@ from rendering.block_renderer import BlockRenderer
 from rendering.isometric_board_renderer import IsometricBoardRenderer
 from rendering.isometric_block_renderer import IsometricBlockRenderer
 from rendering.animation import SolutionReplayer
+from rendering.camera import CameraMode, CameraState, is_level_oversized
 from ui.button import Button
 from ui.slider import Slider
 from ui.icons import (
@@ -25,6 +26,8 @@ from ui.icons import (
     draw_step_forward_icon,
     draw_speed_icon,
     draw_metrics_icon,
+    draw_camera_focus_icon,
+    draw_camera_overview_icon,
 )
 from ui.legend_bar import LegendBar
 from ui.result_screen import ResultOverlay
@@ -64,6 +67,10 @@ class GameScreen:
 
         # View mode: "2D" (default) or "3D"
         self.view_mode = "2D"
+
+        # Camera & Display
+        self.camera = CameraState()
+        self.is_oversized = False
 
         # Algorithm selection & Legend Bar
         self.selected_algo: str = "BFS"
@@ -138,6 +145,15 @@ class GameScreen:
     def _init_buttons(self) -> None:
         card_x = self.sidebar_rect.left + 14
         card_w = self.sidebar_rect.width - 28
+
+        # --- Camera HUD Toggle (Top-Left of Board Area) ---
+        self.btn_camera_toggle = Button(
+            (16, 16, 32, 32),
+            "",
+            on_click=self.toggle_zoom_mode,
+            icon_drawer=draw_camera_focus_icon,
+            enabled=False,
+        )
 
         # --- Top Level Switcher / View Controls ---
         top_btn_w = (card_w - 8) // 2
@@ -277,6 +293,7 @@ class GameScreen:
             self.btn_replay_toggle,
             self.btn_replay_next,
             self.btn_speed,
+            self.btn_camera_toggle,
         ]
 
     def select_algo(self, algo: str) -> None:
@@ -311,6 +328,18 @@ class GameScreen:
         self.timeline_slider.min_val = 0
         self.timeline_slider.max_val = 0
         self.timeline_slider.value = 0
+
+        # Update oversized status and reset camera
+        avail_w = settings.BOARD_AREA_WIDTH - 2 * settings.BOARD_MARGIN
+        avail_h = settings.BOARD_AREA_HEIGHT - 2 * settings.BOARD_MARGIN
+        self.is_oversized = is_level_oversized(self.level, avail_w, avail_h, is_3d=(self.view_mode == "3D"))
+        self.camera.mode = CameraMode.PANORAMIC
+        self.camera.pos = [0.0, 0.0]
+        self.camera.target_pos = [0.0, 0.0]
+        if hasattr(self, "btn_camera_toggle"):
+            self.btn_camera_toggle.enabled = self.is_oversized
+            self.btn_camera_toggle.icon_drawer = draw_camera_focus_icon
+
         self._update_layout()
 
     def next_level(self) -> None:
@@ -328,6 +357,18 @@ class GameScreen:
         self.timeline_slider.min_val = 0
         self.timeline_slider.max_val = 0
         self.timeline_slider.value = 0
+
+        # Update oversized status and reset camera
+        avail_w = settings.BOARD_AREA_WIDTH - 2 * settings.BOARD_MARGIN
+        avail_h = settings.BOARD_AREA_HEIGHT - 2 * settings.BOARD_MARGIN
+        self.is_oversized = is_level_oversized(self.level, avail_w, avail_h, is_3d=(self.view_mode == "3D"))
+        self.camera.mode = CameraMode.PANORAMIC
+        self.camera.pos = [0.0, 0.0]
+        self.camera.target_pos = [0.0, 0.0]
+        if hasattr(self, "btn_camera_toggle"):
+            self.btn_camera_toggle.enabled = self.is_oversized
+            self.btn_camera_toggle.icon_drawer = draw_camera_focus_icon
+
         self._update_layout()
 
     def trigger_solve(self, algo: str) -> None:
@@ -342,6 +383,18 @@ class GameScreen:
         self.timeline_slider.min_val = 0
         self.timeline_slider.max_val = 0
         self.timeline_slider.value = 0
+
+        # Update oversized status and reset camera
+        avail_w = settings.BOARD_AREA_WIDTH - 2 * settings.BOARD_MARGIN
+        avail_h = settings.BOARD_AREA_HEIGHT - 2 * settings.BOARD_MARGIN
+        self.is_oversized = is_level_oversized(self.level, avail_w, avail_h, is_3d=(self.view_mode == "3D"))
+        self.camera.mode = CameraMode.PANORAMIC
+        self.camera.pos = [0.0, 0.0]
+        self.camera.target_pos = [0.0, 0.0]
+        if hasattr(self, "btn_camera_toggle"):
+            self.btn_camera_toggle.enabled = self.is_oversized
+            self.btn_camera_toggle.icon_drawer = draw_camera_focus_icon
+
         self._update_layout()
         self.solver_bridge.start_solve(algo, self.level, self.initial_state)
 
@@ -391,6 +444,74 @@ class GameScreen:
         self.view_mode = "3D" if self.view_mode == "2D" else "2D"
         if hasattr(self, "btn_view_mode"):
             self.btn_view_mode.text = f"View: {self.view_mode}"
+
+        # Re-check oversized status for the new view mode
+        avail_w = settings.BOARD_AREA_WIDTH - 2 * settings.BOARD_MARGIN
+        avail_h = settings.BOARD_AREA_HEIGHT - 2 * settings.BOARD_MARGIN
+        self.is_oversized = is_level_oversized(self.level, avail_w, avail_h, is_3d=(self.view_mode == "3D"))
+        if hasattr(self, "btn_camera_toggle"):
+            self.btn_camera_toggle.enabled = self.is_oversized
+            if not self.is_oversized:
+                self.camera.mode = CameraMode.PANORAMIC
+                self.camera.target_pos = [0.0, 0.0]
+                self.btn_camera_toggle.icon_drawer = draw_camera_focus_icon
+
+    def toggle_zoom_mode(self) -> None:
+        """Toggles between Panoramic Overview and Focused Tracking view for oversized maps."""
+        if not self.is_oversized:
+            return
+        if self.camera.mode == CameraMode.PANORAMIC:
+            self.camera.mode = CameraMode.FOCUSED
+            self.btn_camera_toggle.icon_drawer = draw_camera_overview_icon
+            self._update_camera_target()
+            self.camera.snap_to_target()
+        else:
+            self.camera.mode = CameraMode.PANORAMIC
+            self.btn_camera_toggle.icon_drawer = draw_camera_focus_icon
+            self.camera.target_pos = [0.0, 0.0]
+
+    def _get_camera_target_for_block(self) -> tuple[float, float]:
+        """Calculates camera delta to center active block within board_rect."""
+        forced_tile_size = settings.TILE_SIZE
+        block = self.current_state.block
+
+        # Determine target grid position (r, c)
+        if getattr(block, "is_split", False):
+            if getattr(block, "cube_positions", None):
+                active_idx = getattr(block, "active_cube", 0)
+                pos = block.cube_positions[active_idx]
+            elif hasattr(block, "cube1") and hasattr(block, "cube2"):
+                pos = block.cube1 if getattr(block, "active_cube", 0) == 0 else block.cube2
+            else:
+                pos = (getattr(block, "r", 0), getattr(block, "c", 0))
+            avg_r, avg_c = float(pos[0]), float(pos[1])
+        else:
+            if callable(getattr(block, "occupied_cells", None)):
+                cells = block.occupied_cells()
+            elif hasattr(block, "positions"):
+                cells = block.positions
+            else:
+                cells = [(getattr(block, "r", 0), getattr(block, "c", 0))]
+            avg_r = sum(r for r, c in cells) / max(1, len(cells))
+            avg_c = sum(c for r, c in cells) / max(1, len(cells))
+
+        if self.view_mode == "3D":
+            self.iso_board_renderer.compute_layout(self.level, self.board_rect, force_tile_size=forced_tile_size)
+            px, py = self.iso_board_renderer.project(avg_r + 0.5, avg_c + 0.5, z=0.5)
+            return (float(self.board_rect.centerx - px), float(self.board_rect.centery - py))
+        else:
+            self.board_renderer.compute_layout(self.level, self.board_rect, force_tile_size=forced_tile_size)
+            bx = self.board_renderer.origin_x + (avg_c + 0.5) * self.board_renderer.tile_size
+            by = self.board_renderer.origin_y + (avg_r + 0.5) * self.board_renderer.tile_size
+            return (float(self.board_rect.centerx - bx), float(self.board_rect.centery - by))
+
+    def _update_camera_target(self) -> None:
+        """Updates camera target coordinates based on current mode."""
+        if self.camera.mode == CameraMode.FOCUSED:
+            tx, ty = self._get_camera_target_for_block()
+            self.camera.target_pos = [tx, ty]
+        else:
+            self.camera.target_pos = [0.0, 0.0]
 
     def handle_manual_move(self, action: str) -> None:
         """Processes manual roll or spacebar cube toggle."""
@@ -450,6 +571,8 @@ class GameScreen:
                 self.handle_manual_move("R")
             elif event.key == pygame.K_SPACE:
                 self.handle_manual_move("SPACE")
+            elif event.key == pygame.K_z:
+                self.toggle_zoom_mode()
             elif event.key == pygame.K_r:
                 self.restart_level()
             elif event.key == pygame.K_n:
@@ -525,18 +648,38 @@ class GameScreen:
             elif self.replayer.is_playing:
                 self.outcome_status = None
 
+        # 4. Update Camera tracking and lerp
+        if self.camera.mode == CameraMode.FOCUSED:
+            self._update_camera_target()
+        self.camera.update(dt)
+
     def draw(self) -> None:
         """Paints the board, block, sidebar, legend bar, and status overlays."""
         # Clear background
         self.surface.fill(settings.COLOR_BG)
 
-        # 1. Draw Board & Block
+        # 1. Draw Board & Block (clipped to board_rect to prevent viewport overflow)
+        prev_clip = self.surface.get_clip()
+        self.surface.set_clip(self.board_rect)
+
+        force_tile = settings.TILE_SIZE if self.camera.mode == CameraMode.FOCUSED else None
+        cam_offset = (self.camera.pos[0], self.camera.pos[1])
+
         if self.view_mode == "3D":
-            self.iso_board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
+            self.iso_board_renderer.draw(
+                self.surface, self.level, self.current_state, self.board_rect,
+                camera_offset=cam_offset, force_tile_size=force_tile,
+            )
             self.iso_block_renderer.draw(self.surface, self.current_state)
         else:
-            self.board_renderer.draw(self.surface, self.level, self.current_state, self.board_rect)
+            self.board_renderer.draw(
+                self.surface, self.level, self.current_state, self.board_rect,
+                camera_offset=cam_offset, force_tile_size=force_tile,
+            )
             self.block_renderer.draw(self.surface, self.current_state)
+
+        # Restore clip for UI elements
+        self.surface.set_clip(prev_clip)
 
         # 2. Draw Win/Loss Overlay if applicable
         if self.outcome_status is not None:
@@ -553,7 +696,10 @@ class GameScreen:
         # 3. Draw Legend Bar docked at the bottom of the board area
         self.legend_bar.draw(self.surface, self.board_rect, self.font_mono)
 
-        # 4. Draw Sidebar Panel
+        # 4. Draw Camera HUD Toggle button at top-left of board area
+        self.btn_camera_toggle.draw(self.surface)
+
+        # 5. Draw Sidebar Panel
         self._draw_sidebar()
 
     def _draw_sidebar(self) -> None:

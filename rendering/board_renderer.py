@@ -21,7 +21,12 @@ class BoardRenderer:
         self.origin_x = 0
         self.origin_y = 0
 
-    def compute_layout(self, level: Level, area_rect: pygame.Rect | None = None) -> tuple[int, int, int]:
+    def compute_layout(
+        self,
+        level: Level,
+        area_rect: pygame.Rect | None = None,
+        force_tile_size: int | None = None,
+    ) -> tuple[int, int, int]:
         """Calculates origin and dynamic tile size to center active cells inside the viewport area."""
         rect = area_rect or pygame.Rect(0, 0, self.viewport_width, self.viewport_height)
         avail_w = rect.width - 2 * settings.BOARD_MARGIN
@@ -41,9 +46,12 @@ class BoardRenderer:
         span_c = max(1, max_c - min_c + 1)
         span_r = max(1, max_r - min_r + 1)
 
-        size_w = avail_w // span_c
-        size_h = avail_h // span_r
-        tile_size = max(10, min(settings.TILE_SIZE, size_w, size_h))
+        if force_tile_size is not None:
+            tile_size = force_tile_size
+        else:
+            size_w = avail_w // span_c
+            size_h = avail_h // span_r
+            tile_size = max(10, min(settings.TILE_SIZE, size_w, size_h))
 
         origin_x = round(rect.centerx - ((min_c + max_c + 1) / 2.0) * tile_size)
         origin_y = round(rect.centery - ((min_r + max_r + 1) / 2.0) * tile_size)
@@ -65,9 +73,13 @@ class BoardRenderer:
         level: Level,
         state: GameState,
         area_rect: pygame.Rect | None = None,
+        camera_offset: tuple[float, float] = (0.0, 0.0),
+        force_tile_size: int | None = None,
     ) -> None:
         """Draws all board tiles, bridges, and switches."""
-        self.compute_layout(level, area_rect)
+        self.compute_layout(level, area_rect, force_tile_size=force_tile_size)
+        self.origin_x += round(camera_offset[0])
+        self.origin_y += round(camera_offset[1])
 
         # Build bridge open/closed status map from state.bridge_mask
         bridge_index_map = {b_id: i for i, b_id in enumerate(level.bridges.keys())}
