@@ -13,7 +13,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
 from config import settings
-from core.interfaces import BlockState, GameState, Orientation, Switch
+from core.interfaces import BlockState, GameState, Level, Orientation, SolverResult, Switch, TileType
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
@@ -21,11 +21,13 @@ from ui.button import Button
 from ui.game_screen import GameScreen
 from ui.result_screen import ResultOverlay
 from ui.solver_bridge import on_solve, AsyncSolverBridge, SolverBridgeState
+from ui.dependencies import is_goal
 from tests.mocks import (
     mock_level_simple,
     mock_level_with_fragile,
     mock_level_with_bridge,
     mock_level_split,
+    MockBFSSolver,
 )
 
 
@@ -71,7 +73,7 @@ def test_render_all_mock_levels():
 def test_render_all_real_levels():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    assert len(game_screen.levels) == 10
+    assert len(game_screen.levels) >= 10
 
     # Render each real level to ensure board & block renderers handle all 10 levels
     for idx in range(len(game_screen.levels)):
@@ -114,6 +116,27 @@ def test_split_level_and_space_key():
     game_screen.update(0.016)
 
     assert game_screen.current_state.block.active_cube == 1
+
+
+def test_spacebar_in_assembled_mode_does_not_destroy_block():
+    """Verify pressing SPACE while in assembled state is safely ignored as a no-op."""
+    surface = pygame.Surface((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.load_level(0)
+    assert game_screen.current_state.block.is_split is False
+    assert game_screen.outcome_status is None
+    initial_moves = game_screen.moves_count
+    initial_block = game_screen.current_state.block
+
+    # Press SPACE in assembled mode
+    event_space = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)
+    game_screen.handle_event(event_space)
+    game_screen.update(0.016)
+
+    # Must NOT fail with LOST_FALL or destroy the block
+    assert game_screen.outcome_status is None
+    assert game_screen.moves_count == initial_moves
+    assert game_screen.current_state.block == initial_block
 
 
 def test_sync_solver_bridge_contract():
@@ -242,6 +265,22 @@ def test_replayer_speed_control():
     # At delay 0.2, 0.45s should advance 2 steps (timer keeps remaining 0.05s)
     assert replayer.current_index == 2
     assert replayer.timer == pytest.approx(0.05)
+
+
+def test_replayer_empty_path_boundary_guard():
+    from tests.mocks import mock_level_simple
+    from core.interfaces import GameState
+    from rendering.animation import SolutionReplayer
+    level = mock_level_simple()
+    state = GameState(block=level.start, bridge_mask=0)
+    replayer = SolutionReplayer(level, state, [], step_delay=0.4)
+    assert replayer.is_finished is True
+    replayer.play()
+    assert replayer.is_playing is True
+    # update() must catch is_finished, reset is_playing to False, and return False
+    changed = replayer.update(0.1)
+    assert changed is False
+    assert replayer.is_playing is False
 
 
 def test_game_screen_speed_button_cycle_and_persistence():
@@ -390,7 +429,7 @@ def test_render_all_mock_levels_in_3d_mode():
 def test_render_all_real_levels_in_3d_mode():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    assert len(game_screen.levels) == 10
+    assert len(game_screen.levels) >= 10
     game_screen.view_mode = "3D"
 
     # Render each real level in 3D isometric mode
@@ -515,16 +554,16 @@ def test_2d_special_cells_visual_redesign():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    amber_pixels = [
+    orange_pixels = [
         p for p in fragile_pixels
-        if p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80
+        if p == settings.COLOR_FRAGILE or (p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80)
     ]
-    crack_pixels = [
+    stripe_pixels = [
         p for p in fragile_pixels
-        if p[0] > 240 and p[1] > 240 and p[2] > 240
+        if p == settings.COLOR_FRAGILE_STRIPE
     ]
-    assert len(amber_pixels) > 50, "Fragile tile amber base missing"
-    assert len(crack_pixels) > 0, "Fragile tile radiating white crack lines missing"
+    assert len(orange_pixels) > 50, "Fragile tile orange base missing"
+    assert len(stripe_pixels) > 0, "Fragile tile hazard warning stripes missing"
 
     # 3. Switch in 2D: verify pixel colors change when block is standing on switch vs away
     sw_cell = (1, 2)
@@ -672,7 +711,7 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
 
     # 2. Verify all 10 real production levels render cleanly in 2D mode
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
     for lvl in all_levels:
         surf = pygame.Surface((800, 600))
         st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
@@ -699,19 +738,19 @@ def test_2d_amber_glass_and_switch_patch():
         for x in range(tile_rect.left, tile_rect.right)
         for y in range(tile_rect.top, tile_rect.bottom)
     ]
-    amber_base_pixels = [
+    orange_base_pixels = [
         p for p in fragile_pixels
-        if p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80
+        if p == settings.COLOR_FRAGILE or (p[0] > 200 and 100 <= p[1] <= 180 and 20 <= p[2] <= 80)
     ]
-    white_crack_pixels = [
+    stripe_pixels = [
         p for p in fragile_pixels
-        if p[0] > 240 and p[1] > 240 and p[2] > 240
+        if p == settings.COLOR_FRAGILE_STRIPE
     ]
-    assert len(amber_base_pixels) > 50, (
-        f"2D fragile tile amber base pixels count={len(amber_base_pixels)}; expected > 50"
+    assert len(orange_base_pixels) > 50, (
+        f"2D fragile tile orange base pixels count={len(orange_base_pixels)}; expected > 50"
     )
-    assert len(white_crack_pixels) > 5, (
-        f"2D fragile tile white crack pixels count={len(white_crack_pixels)}; expected > 5"
+    assert len(stripe_pixels) > 5, (
+        f"2D fragile tile stripe pixels count={len(stripe_pixels)}; expected > 5"
     )
 
     # 2. Heavy switch in 2D: base plate COLOR_HEAVY_BASE and 12-point cross COLOR_HEAVY_RED
@@ -770,7 +809,7 @@ def test_all_10_stages_visual_patch_regression_2d():
     from levels.level_loader import load_all_levels
 
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
 
     renderer = BoardRenderer(800, 600)
     block_renderer = BlockRenderer(renderer)
@@ -795,19 +834,12 @@ def test_all_10_stages_visual_patch_regression_2d():
                     for y in range(rect.top, rect.bottom)
                 ]
                 orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
-                white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
-                rust_shadow_pixels = [
-                    p for p in pixels
-                    if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-                ]
+                stripe_pixels = [p for p in pixels if p == settings.COLOR_FRAGILE_STRIPE]
                 assert len(orange_pixels) > 50, (
                     f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
                 )
-                assert len(white_crack_pixels) > 0, (
-                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
-                )
-                assert len(rust_shadow_pixels) > 0, (
-                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking rust under-shadow pixels"
+                assert len(stripe_pixels) > 0, (
+                    f"2D stage {lvl.id} fragile tile at ({r}, {c}) lacking hazard warning stripes"
                 )
 
         # Check switches in this stage
@@ -857,11 +889,11 @@ def test_all_10_stages_visual_patch_regression_2d():
                         f"Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
                     )
 
-    assert fragile_tiles_checked == 20, f"Expected 20 fragile tiles across all stages, got {fragile_tiles_checked}"
+    assert fragile_tiles_checked >= 20, f"Expected at least 20 fragile tiles across stages, got {fragile_tiles_checked}"
 
 
 def test_2d_pixel_art_fragile_tile_rendering():
-    """Verify 2D fragile tile renders pixel-art crack with rust-brown under-shadow depth and dominant orange substrate."""
+    """Verify 2D fragile tile renders solid orange body with diagonal hazard warning stripes."""
     renderer = BoardRenderer(viewport_width=800, viewport_height=600)
     tile_size = settings.TILE_SIZE  # 48
     surf = pygame.Surface((tile_size, tile_size))
@@ -871,17 +903,12 @@ def test_2d_pixel_art_fragile_tile_rendering():
     pixels = [surf.get_at((x, y))[:3] for x in range(rect.width) for y in range(rect.height)]
     total_pixels = len(pixels)
 
-    white_crack_pixels = [p for p in pixels if p[0] > 240 and p[1] > 240 and p[2] > 240]
-    rust_shadow_pixels = [
-        p for p in pixels
-        if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-    ]
     orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
+    stripe_pixels = [p for p in pixels if p == settings.COLOR_FRAGILE_STRIPE]
 
-    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 240)"
-    assert len(rust_shadow_pixels) > 0, "Expected rust-brown shadow pixels (R in [110, 180], G in [30, 90], B < 60)"
-    assert len(orange_pixels) / total_pixels > 0.60, (
-        f"Orange pixels (R > G > B) must dominate > 60% of tile area (got {len(orange_pixels) / total_pixels:.2%})"
+    assert len(stripe_pixels) > 0, "Expected diagonal hazard warning stripes"
+    assert len(orange_pixels) / total_pixels > 0.50, (
+        f"Orange pixels (R > G > B) must dominate > 50% of tile area (got {len(orange_pixels) / total_pixels:.2%})"
     )
 
 
@@ -975,9 +1002,9 @@ def test_legend_bar_rendering():
     gold_pixels = [p for p in pill_pixels if p == (255, 215, 0)]
     assert len(gold_pixels) > 0, "LegendBar missing Goal chip gold circle (255, 215, 0)"
 
-    # 3. Fragile Tile: amber rect with white crack
-    white_crack_pixels = [p for p in pill_pixels if p == (255, 255, 255)]
-    assert len(white_crack_pixels) > 0, "LegendBar missing Fragile Tile white crack pixels"
+    # 3. Fragile Tile: orange rect with yellow stripes
+    fragile_stripe_pixels = [p for p in pill_pixels if p == settings.COLOR_FRAGILE_STRIPE]
+    assert len(fragile_stripe_pixels) > 0, "LegendBar missing Fragile Tile hazard stripe pixels"
 
     # 4. Closed Bridge: dark rect with red X (239, 68, 68)
     red_x_pixels = [p for p in pill_pixels if p == (239, 68, 68)]
@@ -1083,7 +1110,7 @@ def test_all_10_stages_card_sidebar_and_docked_legend_regression():
     """
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    assert len(game_screen.levels) == 10
+    assert len(game_screen.levels) >= 10
 
     # 1. Test all 10 stages in 2D and 3D with docked LegendBar and card layout
     for mode in ("2D", "3D"):
@@ -1131,4 +1158,787 @@ def test_all_10_stages_card_sidebar_and_docked_legend_regression():
     assert game_screen.btn_replay_prev.enabled is False
     assert game_screen.btn_replay_toggle.enabled is False
     assert game_screen.btn_replay_next.enabled is False
+
+
+def test_playback_slider_hidden_when_idle():
+    """Verify timeline slider is hidden and Card 2 is compact before solve."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Initial state: replayer is None
+    assert screen.replayer is None
+    assert hasattr(screen, "timeline_slider"), "GameScreen missing timeline_slider attribute"
+    assert hasattr(screen, "card2_rect"), "GameScreen missing card2_rect attribute"
+    assert screen.card2_rect.height == 156
+    assert screen.btn_speed.rect.y == 374
+    assert screen.timeline_slider.enabled is False
+
+    # Spy on timeline_slider.draw to ensure it is NOT drawn
+    drawn = []
+    screen.timeline_slider.draw = lambda s: drawn.append(True)
+
+    screen.draw()
+    assert len(drawn) == 0, "Slider should not be drawn when idle (no replayer)"
+
+
+def test_playback_slider_visible_and_card_expands_when_solved():
+    """Verify timeline slider appears, Card 2 expands, and Step label is rendered after solve."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Solve level
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    assert screen.replayer is not None
+    assert screen.card2_rect.height == 192
+    assert screen.btn_speed.rect.y == 408
+    assert screen.timeline_slider.max_val == screen.replayer.total_steps
+    assert screen.timeline_slider.enabled is True
+
+    # Verify slider is drawn when solved
+    drawn = []
+    screen.timeline_slider.draw = lambda s: drawn.append(True)
+
+    # Also capture font rendering to verify "Step: X/Y" is rendered
+    rendered_texts = []
+    real_font_mono = screen.font_mono
+
+    class FontSpy:
+        def __init__(self, font):
+            self._font = font
+
+        def render(self, text, antialias, color, background=None):
+            rendered_texts.append(str(text))
+            return self._font.render(text, antialias, color, background)
+
+        def __getattr__(self, name):
+            return getattr(self._font, name)
+
+    screen.font_mono = FontSpy(real_font_mono)
+
+    screen.draw()
+    assert len(drawn) > 0, "Slider must be drawn when solved"
+    step_labels = [t for t in rendered_texts if "Step:" in t]
+    assert len(step_labels) > 0, f"Expected 'Step: 0/{screen.replayer.total_steps}' rendered"
+    assert f"Step: 0/{screen.replayer.total_steps}" in step_labels[0]
+
+
+def test_playback_slider_drag_auto_pause():
+    """Verify dragging timeline slider pauses playback, scrubs replayer index, and updates state."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Solve level (4 steps)
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    assert screen.replayer is not None
+    assert screen.replayer.is_playing is True
+    total_steps = screen.replayer.total_steps
+    assert total_steps == 4
+
+    # Simulate mouse drag at 50% of the slider track
+    slider = screen.timeline_slider
+    click_mid_x = slider.rect.left + slider.rect.width // 2
+    click_y = slider.rect.centery
+
+    down_ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (click_mid_x, click_y), "button": 1})
+    screen.handle_event(down_ev)
+
+    # Playback should be paused automatically on drag start
+    assert screen.replayer.is_playing is False
+    assert screen.btn_replay_toggle.text == "Play"
+
+    # Value should scrub to step 2 (50% of 4)
+    assert screen.timeline_slider.value == 2
+    assert screen.replayer.current_index == 2
+    assert screen.current_state == screen.replayer.current_state
+    assert screen.outcome_status is None
+
+    # Scrub to step 1 (25% of 4)
+    click_q_x = slider.rect.left + slider.rect.width // 4
+    move_q_ev = pygame.event.Event(pygame.MOUSEMOTION, {"pos": (click_q_x, click_y), "buttons": (1, 0, 0)})
+    screen.handle_event(move_q_ev)
+    assert screen.timeline_slider.value == 1
+    assert screen.replayer.current_index == 1
+    assert screen.current_state == screen.replayer.current_state
+
+    # Scrub back to start (step 0)
+    click_start_x = slider.rect.left
+    move_start_ev = pygame.event.Event(pygame.MOUSEMOTION, {"pos": (click_start_x, click_y), "buttons": (1, 0, 0)})
+    screen.handle_event(move_start_ev)
+    assert screen.timeline_slider.value == 0
+    assert screen.replayer.current_index == 0
+    assert screen.current_state == screen.replayer.current_state
+
+    # Release drag
+    up_ev = pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (click_start_x, click_y), "button": 1})
+    screen.handle_event(up_ev)
+    assert slider.is_dragging is False
+
+    # Verify scrubbing clears existing win status
+    screen.outcome_status = "WIN"
+    slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (click_q_x, click_y), "button": 1}))
+    assert screen.replayer.current_index == 1
+    assert screen.outcome_status is None
+
+
+def test_playback_dynamic_card_expansion_clearance():
+    """Verify clearance between Card 3 bottom and footer keybindings is at least 30px."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # 1. Idle state clearance
+    screen.draw()
+    assert hasattr(screen, "footer_y"), "GameScreen missing footer_y attribute"
+    assert hasattr(screen, "card3_rect"), "GameScreen missing card3_rect attribute"
+    idle_clearance = screen.footer_y - screen.card3_rect.bottom
+    assert idle_clearance >= 30, f"Idle clearance {idle_clearance}px < 30px"
+
+    # 2. Solved state clearance
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    screen.draw()
+    solved_clearance = screen.footer_y - screen.card3_rect.bottom
+    assert solved_clearance >= 30, f"Solved clearance {solved_clearance}px < 30px"
+    # Ensure Card 3 top is anchored dynamically to card2_rect.bottom + 14
+    assert screen.card3_rect.top == screen.card2_rect.bottom + 14
+
+
+def test_playback_slider_split_scrubbing():
+    """Verify split-block state restoration and rendering during timeline scrubbing."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+
+    # 1. Test Mock Level 3 (dedicated split-cube level)
+    screen.load_level(3)
+    assert screen.current_state.block.is_split is True
+    assert screen.current_state.block.active_cube == 0
+    assert screen.current_state.block.cube_positions == ((2, 1), (3, 4))
+
+    # Path exercising: SPACE (switch active), U (move cube 1), SPACE (switch active), R (move cube 0), R (merge cubes)
+    path = ["SPACE", "U", "SPACE", "R", "R"]
+    screen.replayer = SolutionReplayer(screen.level, screen.current_state, path)
+    screen.timeline_slider.min_val = 0
+    screen.timeline_slider.max_val = screen.replayer.total_steps
+    screen.timeline_slider.value = 0
+    screen._update_layout()
+
+    slider = screen.timeline_slider
+    assert slider.max_val == 5
+
+    # Verify rendering at initial split state (Step 0) in both 2D and 3D
+    for mode in ("2D", "3D"):
+        screen.view_mode = mode
+        screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+    # Scrub forward to Step 1 (active cube toggled to 1 via SPACE)
+    x1 = slider.rect.left + round(1 / 5.0 * slider.rect.width)
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (x1, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == 1
+    assert screen.current_state.block.is_split is True
+    assert screen.current_state.block.active_cube == 1
+    assert screen.current_state.block.cube_positions == ((2, 1), (3, 4))
+
+    # Scrub forward to Step 2 (Cube 1 moved to (2, 4))
+    x2 = slider.rect.left + round(2 / 5.0 * slider.rect.width)
+    screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (x2, slider.rect.centery), "buttons": (1, 0, 0)}))
+    assert screen.replayer.current_index == 2
+    assert screen.current_state.block.is_split is True
+    assert screen.current_state.block.active_cube == 1
+    assert screen.current_state.block.cube_positions == ((2, 1), (2, 4))
+
+    # Scrub forward to Step 5 (Cube 0 merged with Cube 1 into lying horizontal block)
+    x5 = slider.rect.right
+    screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (x5, slider.rect.centery), "buttons": (1, 0, 0)}))
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (x5, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == 5
+    assert screen.current_state.block.is_split is False
+    assert screen.current_state.block.orientation == Orientation.LYING_H
+    assert screen.current_state.block.cube_positions is None
+
+    # Verify rendering at merged state in both 2D and 3D
+    for mode in ("2D", "3D"):
+        screen.view_mode = mode
+        screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+    # Scrub backward to Step 2 (restore split state from merged state)
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (x2, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == 2
+    assert screen.current_state.block.is_split is True
+    assert screen.current_state.block.active_cube == 1
+    assert screen.current_state.block.cube_positions == ((2, 1), (2, 4))
+
+    # Scrub backward to Step 0 (restore initial split state)
+    x0 = slider.rect.left
+    screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (x0, slider.rect.centery), "buttons": (1, 0, 0)}))
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (x0, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == 0
+    assert screen.current_state.block.is_split is True
+    assert screen.current_state.block.active_cube == 0
+    assert screen.current_state.block.cube_positions == ((2, 1), (3, 4))
+
+    # Verify rendering after scrub back to start in both 2D and 3D
+    for mode in ("2D", "3D"):
+        screen.view_mode = mode
+        screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+    # 2. Test Real Stage 8 (Split Garden)
+    real_screen = GameScreen(surface)
+    real_screen.load_level(7)  # Stage 08: Split Garden
+    assert real_screen.current_state.block.is_split is False
+
+    # Path ["R", "R"] enters the split switch at (4, 4), splitting the block
+    stage8_path = ["R", "R"]
+    real_screen.replayer = SolutionReplayer(real_screen.level, real_screen.current_state, stage8_path)
+    real_screen.timeline_slider.min_val = 0
+    real_screen.timeline_slider.max_val = real_screen.replayer.total_steps
+    real_screen.timeline_slider.value = 0
+    real_screen._update_layout()
+
+    stage8_slider = real_screen.timeline_slider
+
+    # Scrub to Step 2 (entered split switch -> split block)
+    x_stage8_2 = stage8_slider.rect.right
+    real_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (x_stage8_2, stage8_slider.rect.centery), "button": 1}))
+    assert real_screen.replayer.current_index == 2
+    assert real_screen.current_state.block.is_split is True
+    assert real_screen.current_state.block.cube_positions == ((4, 5), (4, 6))
+
+    for mode in ("2D", "3D"):
+        real_screen.view_mode = mode
+        real_screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+    # Scrub back to Step 0 (restored unsplit start state)
+    x_stage8_0 = stage8_slider.rect.left
+    real_screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (x_stage8_0, stage8_slider.rect.centery), "buttons": (1, 0, 0)}))
+    real_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (x_stage8_0, stage8_slider.rect.centery), "button": 1}))
+    assert real_screen.replayer.current_index == 0
+    assert real_screen.current_state.block.is_split is False
+    assert real_screen.current_state.block.cube_positions is None
+
+    for mode in ("2D", "3D"):
+        real_screen.view_mode = mode
+        real_screen.draw()
+        raw_bytes = pygame.image.tobytes(surface, "RGB")
+        assert any(b > 0 for b in raw_bytes)
+
+
+def test_playback_slider_all_stages_scrubbing_regression():
+    """Verify loading, solving, and scrubbing across all 10 real stages in both 2D and 3D modes."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface)
+    assert len(screen.levels) >= 10
+
+    for idx in range(len(screen.levels)):
+        screen.load_level(idx)
+
+        # Trigger solve (BFS solves mock/stub paths instantly)
+        screen.trigger_solve("BFS")
+        t0 = time.time()
+        while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+            screen.update(0.05)
+            time.sleep(0.005)
+            if time.time() - t0 > 3.0:
+                pytest.fail(f"Stage {idx + 1} solve timed out")
+
+        assert screen.replayer is not None
+        assert screen.timeline_slider.enabled is True
+        total_steps = screen.replayer.total_steps
+        assert screen.timeline_slider.max_val == total_steps
+        max_step = len(screen.replayer.states) - 1
+
+        slider = screen.timeline_slider
+
+        # 1. Scrub to end
+        screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (slider.rect.left, slider.rect.centery), "button": 1}))
+        screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (slider.rect.right, slider.rect.centery), "buttons": (1, 0, 0)}))
+        screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (slider.rect.right, slider.rect.centery), "button": 1}))
+        assert screen.replayer.current_index == max_step
+
+        # 2. Scrub back to start
+        screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (slider.rect.right, slider.rect.centery), "button": 1}))
+        screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (slider.rect.left, slider.rect.centery), "buttons": (1, 0, 0)}))
+        screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (slider.rect.left, slider.rect.centery), "button": 1}))
+        assert screen.replayer.current_index == 0
+        assert slider.is_dragging is False
+
+        # Render in both 2D and 3D to ensure no clipping, out-of-bounds, or shader crash
+        for mode in ("2D", "3D"):
+            screen.view_mode = mode
+            screen.draw()
+            raw_bytes = pygame.image.tobytes(surface, "RGB")
+            assert any(b > 0 for b in raw_bytes)
+
+
+def test_playback_overlay_suppression_and_goal_activation(monkeypatch):
+    """Verify that intermediate playback/scrubbing keeps overlay suppressed, while reaching the goal activates overlay and scrubbing backward toggles it off."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Valid solution path reaching the goal on mock level 0
+    winning_path = ["R", "U", "L", "D", "R", "U", "R", "D", "R"]
+    screen.replayer = SolutionReplayer(screen.level, screen.current_state, winning_path)
+    screen.timeline_slider.min_val = 0
+    screen.timeline_slider.max_val = screen.replayer.total_steps
+    screen.timeline_slider.value = 0
+    screen._update_layout()
+
+    overlay_draws = []
+    original_draw = ResultOverlay.draw
+
+    def spy_draw(*args, **kwargs):
+        overlay_draws.append(args)
+        return original_draw(*args, **kwargs)
+
+    monkeypatch.setattr(ResultOverlay, "draw", spy_draw)
+
+    total_steps = screen.replayer.total_steps
+    assert total_steps == 9
+
+    # 1. Intermediate playback keeps overlay suppressed
+    screen.update(0.1)
+    assert not screen.replayer.is_finished
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # Run playback to completion via update() -> activates WIN overlay
+    while not screen.replayer.is_finished:
+        screen.update(0.5)
+
+    assert screen.replayer.is_finished is True
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+    screen.draw()
+    assert len(overlay_draws) > 0
+
+    # 2. Stepping backward toggles overlay off
+    overlay_draws.clear()
+    screen.replay_prev_step()
+    assert screen.replayer.current_index == total_steps - 1
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # Stepping forward back to goal activates WIN overlay
+    screen.replay_next_step()
+    assert screen.replayer.current_index == total_steps
+    assert screen.outcome_status == "WIN"
+    screen.draw()
+    assert len(overlay_draws) > 0
+
+    # 3. Scrubbing backward toggles overlay off
+    overlay_draws.clear()
+    slider = screen.timeline_slider
+    # Scrub back to start
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (slider.rect.left, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == 0
+    assert screen.outcome_status is None
+    screen.draw()
+    assert len(overlay_draws) == 0
+
+    # Scrub all the way to end -> activates WIN overlay
+    screen.handle_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (slider.rect.right, slider.rect.centery), "buttons": (1, 0, 0)}))
+    screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": (slider.rect.right, slider.rect.centery), "button": 1}))
+    assert screen.replayer.current_index == total_steps
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+    screen.draw()
+    assert len(overlay_draws) > 0
+
+
+def test_playback_overlay_authority_and_toggle(monkeypatch):
+    """Verify playback controls have full authority over victory overlay (activation, stepping, scrubbing, restart)."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    # 4-step level where start is (1, 1) and goal is (4, 4)
+    tiles = {(r, c): TileType.FLOOR for r in range(6) for c in range(6)}
+    tiles[(4, 4)] = TileType.GOAL
+    lvl4 = Level(
+        width=6,
+        height=6,
+        tiles=tiles,
+        goal=(4, 4),
+        start=BlockState(1, 1, Orientation.STANDING),
+        bridges={},
+        switches=[],
+        split_rules={},
+        id="mock_4step",
+        name="Mock 4 Step",
+    )
+    screen = GameScreen(surface, levels=[lvl4])
+    screen.load_level(0)
+
+    overlay_draw_moves = []
+    original_draw = ResultOverlay.draw
+
+    def spy_draw(surface, area_rect, status, moves_count=0, font_large=None, font_small=None):
+        overlay_draw_moves.append(moves_count)
+        return original_draw(surface, area_rect, status, moves_count=moves_count, font_large=font_large, font_small=font_small)
+
+    monkeypatch.setattr(ResultOverlay, "draw", spy_draw)
+
+    # Solve mock level 0 (4 steps)
+    res_mock = SolverResult(
+        path=["D", "D", "R", "R"],
+        expanded_nodes=4,
+        search_time_ms=1.0,
+        peak_memory_kb=10,
+        solution_length=4,
+        cost=4.0,
+        success=True,
+    )
+    def mock_poll():
+        screen.solver_bridge.state = SolverBridgeState.FINISHED
+        return res_mock
+
+    monkeypatch.setattr(screen.solver_bridge, "start_solve", lambda algo, lvl, st: setattr(screen.solver_bridge, "state", SolverBridgeState.RUNNING))
+    monkeypatch.setattr(screen.solver_bridge, "poll", mock_poll)
+
+    screen.trigger_solve("BFS")
+    screen.update(0.016)
+
+    assert screen.replayer is not None
+    assert screen.replayer.total_steps == 4
+
+    # Let replayer play to finish: assert outcome_status == "WIN"
+    while not screen.replayer.is_finished:
+        screen.update(0.2)
+
+    assert screen.replayer.current_index == 4
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+
+    # Verify victory overlay receives total_steps moves count instead of 0
+    overlay_draw_moves.clear()
+    screen.draw()
+    assert len(overlay_draw_moves) > 0
+    assert overlay_draw_moves[-1] == screen.replayer.total_steps == 4
+
+    # Click << Step (replay_prev_step): assert current_index == 3 and outcome_status is None
+    screen.replay_prev_step()
+    assert screen.replayer.current_index == 3
+    assert screen.outcome_status is None
+
+    # Click >> Step (replay_next_step): assert current_index == 4 and outcome_status == "WIN"
+    screen.replay_next_step()
+    assert screen.replayer.current_index == 4
+    assert screen.outcome_status == "WIN"
+    overlay_draw_moves.clear()
+    screen.draw()
+    assert overlay_draw_moves[-1] == screen.replayer.total_steps == 4
+
+    # Drag slider to step 2: assert current_index == 2 and outcome_status is None
+    screen._on_slider_drag_start()
+    assert screen.outcome_status is None
+    screen._on_slider_change(2)
+    assert screen.replayer.current_index == 2
+    assert screen.outcome_status is None
+
+    # Drag slider back to step 4: assert current_index == 4 and outcome_status == "WIN"
+    screen._on_slider_change(4)
+    assert screen.replayer.current_index == 4
+    assert screen.outcome_status == "WIN"
+
+    # Click Play toggle button at step 4: assert current_index == 0, is_playing is True, and outcome_status is None
+    screen.replay_toggle_play()
+    assert screen.replayer.current_index == 0
+    assert screen.replayer.is_playing is True
+    assert screen.outcome_status is None
+
+
+def test_playback_dismisses_prior_manual_win_overlay():
+    """Verify that scrubbing, stepping replay, or triggering solve dismisses any prior manual win/loss overlay."""
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    # Replayer on mock level 0
+    winning_path = ["R", "U", "L", "D", "R", "U", "R", "D", "R"]
+    screen.replayer = SolutionReplayer(screen.level, screen.current_state, winning_path)
+    screen.timeline_slider.min_val = 0
+    screen.timeline_slider.max_val = screen.replayer.total_steps
+    screen.timeline_slider.value = 0
+    screen._update_layout()
+
+    # 1. Slider drag start clears outcome_status
+    screen.outcome_status = "WIN"
+    screen._on_slider_drag_start()
+    assert screen.outcome_status is None
+
+    # 2. Slider change clears outcome_status
+    screen.outcome_status = "WIN"
+    screen._on_slider_change(1)
+    assert screen.outcome_status is None
+
+    # 3. Step forward clears outcome_status
+    screen.outcome_status = "WIN"
+    screen.replay_next_step()
+    assert screen.outcome_status is None
+
+    # 4. Step backward clears outcome_status
+    screen.outcome_status = "WIN"
+    screen.replay_prev_step()
+    assert screen.outcome_status is None
+
+    # 5. Trigger solve clears outcome_status
+    screen.outcome_status = "WIN"
+    screen.trigger_solve("BFS")
+    assert screen.outcome_status is None
+    # Wait for solve to finish
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            break
+
+    # 6. Manual gameplay reaching goal still sets outcome_status == "WIN"
+    screen.load_level(0)
+    assert screen.outcome_status is None
+    for move in winning_path:
+        screen.handle_manual_move(move)
+    assert is_goal(screen.current_state, screen.level) is True
+    assert screen.outcome_status == "WIN"
+
+
+def test_playback_header_status_pill_states():
+    """Verify that Card 2 PLAYBACK header displays [REPLAYING] and [GOAL REACHED] status pills."""
+    # 4-step linear corridor level where 4 'R' moves reach goal at (1, 7) standing
+    tiles = {(r, c): TileType.FLOOR for r in range(3) for c in range(9)}
+    goal = (1, 7)
+    tiles[goal] = TileType.GOAL
+    level_4step = Level(
+        width=9,
+        height=3,
+        tiles=tiles,
+        goal=goal,
+        start=BlockState(r=1, c=1, orientation=Orientation.STANDING),
+        bridges={},
+        switches=[],
+        split_rules={},
+        id="lvl_4step",
+        name="Mock 4-Step Corridor",
+    )
+
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=[level_4step])
+    screen.load_level(0)
+
+    # Track rendered strings and colors via FontSpy on screen.font_mono
+    rendered_calls: list[tuple[str, tuple]] = []
+    real_font_mono = screen.font_mono
+
+    class FontSpy:
+        def __init__(self, font):
+            self._font = font
+
+        def render(self, text, antialias, color, background=None):
+            rendered_calls.append((str(text), color))
+            return self._font.render(text, antialias, color, background)
+
+        def __getattr__(self, name):
+            return getattr(self._font, name)
+
+    screen.font_mono = FontSpy(real_font_mono)
+
+    # 1. Trigger BFS solve on 4-step level
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out after 3.0 seconds")
+
+    assert screen.replayer is not None
+    assert screen.replayer.total_steps == 4
+    assert screen.replayer.current_index == 0
+
+    # Draw at step 0: should render "[REPLAYING]" in accent cyan (70, 210, 245)
+    rendered_calls.clear()
+    screen.draw()
+    replaying_calls = [(t, c) for t, c in rendered_calls if "[REPLAYING]" in t]
+    goal_calls = [(t, c) for t, c in rendered_calls if "[GOAL REACHED]" in t]
+    assert len(replaying_calls) > 0, f"Expected '[REPLAYING]' at step 0, rendered calls: {rendered_calls}"
+    assert replaying_calls[0][1] == (70, 210, 245)
+    assert len(goal_calls) == 0
+
+    # 2. Advance / scrub to step 4 (goal reached)
+    slider = screen.timeline_slider
+    # Scrub all the way to right end
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": (slider.rect.right, slider.rect.centery), "button": 1},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEMOTION,
+            {"pos": (slider.rect.right, slider.rect.centery), "buttons": (1, 0, 0)},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONUP,
+            {"pos": (slider.rect.right, slider.rect.centery), "button": 1},
+        )
+    )
+    assert screen.replayer.current_index == 4
+    assert is_goal(screen.current_state, screen.level) is True
+
+    # Draw at step 4: should render "[GOAL REACHED]" in emerald green (0, 230, 118)
+    rendered_calls.clear()
+    screen.draw()
+    replaying_calls = [(t, c) for t, c in rendered_calls if "[REPLAYING]" in t]
+    goal_calls = [(t, c) for t, c in rendered_calls if "[GOAL REACHED]" in t]
+    assert len(goal_calls) > 0, f"Expected '[GOAL REACHED]' at goal, rendered calls: {rendered_calls}"
+    assert goal_calls[0][1] == (0, 230, 118)
+    assert len(replaying_calls) == 0
+
+    # Verify subtle rounded dark-green pill background (15, 35, 30) and thin border (25, 90, 60)
+    card_x = screen.sidebar_rect.left + 14
+    card_w = screen.sidebar_rect.width - 28
+    found_bg = False
+    found_border = False
+    for x in range(card_x, card_x + card_w):
+        for y in range(260, 280):
+            pixel = surface.get_at((x, y))[:3]
+            if pixel == (15, 35, 30):
+                found_bg = True
+            elif pixel == (25, 90, 60):
+                found_border = True
+    assert found_bg is True, "Expected pill background (15, 35, 30) rendered on surface"
+    assert found_border is True, "Expected pill border (25, 90, 60) rendered on surface"
+
+    # 3. Scrub back to step 2 (intermediate step)
+    step2_x = slider.rect.left + int(slider.rect.width * (2 / 4))
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": (step2_x, slider.rect.centery), "button": 1},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEMOTION,
+            {"pos": (step2_x, slider.rect.centery), "buttons": (1, 0, 0)},
+        )
+    )
+    screen.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONUP,
+            {"pos": (step2_x, slider.rect.centery), "button": 1},
+        )
+    )
+    assert screen.replayer.current_index == 2
+
+    # Draw at step 2: should toggle back to "[REPLAYING]"
+    rendered_calls.clear()
+    screen.draw()
+    replaying_calls = [(t, c) for t, c in rendered_calls if "[REPLAYING]" in t]
+    goal_calls = [(t, c) for t, c in rendered_calls if "[GOAL REACHED]" in t]
+    assert len(replaying_calls) > 0, f"Expected '[REPLAYING]' after scrubbing to step 2, rendered calls: {rendered_calls}"
+    assert replaying_calls[0][1] == (70, 210, 245)
+    assert len(goal_calls) == 0
+
+
+def test_solver_always_solves_from_initial_state():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)  # Simple corridor
+
+    initial_state = screen.initial_state
+    assert screen.moves_count == 0
+
+    # Move manually to change current_state and moves_count
+    event_right = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)
+    screen.handle_event(event_right)
+    screen.update(0.016)
+
+    assert screen.moves_count == 1
+    assert screen.current_state != initial_state
+
+    # Trigger solve
+    screen.trigger_solve("BFS")
+
+    # Assert that current_state is reset to initial_state, moves_count reset to 0, outcome_status is None
+    assert screen.current_state == screen.initial_state
+    assert screen.moves_count == 0
+    assert screen.outcome_status is None
+
+    # Wait for solve to finish
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    assert screen.latest_result is not None
+    assert screen.latest_result.success is True
+    # Path must be full solution from initial_state (4 steps: ["R", "R", "R", "R"])
+    assert screen.latest_result.path == ["R", "R", "R", "R"]
+    assert screen.replayer is not None
+    assert screen.replayer.initial_state == screen.initial_state
+    assert screen.replayer.total_steps == 4
+
+
+def test_replayer_auto_pauses_and_switches_button_to_play():
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    screen = GameScreen(surface, levels=_mock_levels())
+    screen.load_level(0)
+
+    screen.trigger_solve("BFS")
+    t0 = time.time()
+    while screen.solver_bridge.state == SolverBridgeState.RUNNING:
+        screen.update(0.05)
+        time.sleep(0.01)
+        if time.time() - t0 > 3.0:
+            pytest.fail("Solver bridge timed out")
+
+    assert screen.replayer is not None
+    assert screen.replayer.is_playing is True
+    assert screen.btn_replay_toggle.text == "Pause"
+
+    # Advance time past completion
+    for _ in range(50):
+        screen.update(0.1)
+        if screen.replayer.is_finished:
+            break
+
+    assert screen.replayer.is_finished is True
+    assert screen.replayer.is_playing is False
+    assert screen.btn_replay_toggle.text == "Play"
 

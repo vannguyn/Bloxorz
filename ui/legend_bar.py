@@ -25,17 +25,16 @@ def _draw_chip_goal(surface: pygame.Surface, rect: pygame.Rect) -> None:
 
 
 def _draw_chip_fragile(surface: pygame.Surface, rect: pygame.Rect) -> None:
-    """3. Amber rect with radiating micro white crack for fragile tile."""
-    amber_color = (235, 130, 40)
-    pygame.draw.rect(surface, amber_color, rect, border_radius=2)
-    pygame.draw.rect(surface, (180, 85, 20), rect, 1, border_radius=2)
+    """3. Solid orange rect with diagonal hazard stripes for fragile tile."""
+    pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect, border_radius=2)
+    pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 1, border_radius=2)
 
-    crack_color = (255, 255, 255)
-    p1 = (rect.left + max(2, rect.width // 4), rect.top + 2)
-    p2 = (rect.left + rect.width // 2, rect.top + rect.height // 2)
-    p3 = (rect.left + max(3, rect.width // 3), rect.bottom - 3)
-    p4 = (rect.right - max(2, rect.width // 4), rect.bottom - 2)
-    pygame.draw.lines(surface, crack_color, False, [p1, p2, p3, p4], 1)
+    # Diagonal hazard stripes
+    gap = max(4, rect.width // 4)
+    for offset in range(gap, rect.width, gap):
+        p1 = (rect.left + offset, rect.top)
+        p2 = (rect.left, rect.top + offset)
+        pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p1, p2, 1)
 
 
 def _draw_chip_closed_bridge(surface: pygame.Surface, rect: pygame.Rect) -> None:

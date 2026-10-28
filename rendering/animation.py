@@ -58,6 +58,10 @@ class SolutionReplayer:
             curr = nxt
 
     @property
+    def initial_state(self) -> GameState:
+        return self.states[0]
+
+    @property
     def total_steps(self) -> int:
         return len(self.path)
 
@@ -108,7 +112,11 @@ class SolutionReplayer:
         Advances the replay based on elapsed time dt (in seconds).
         Returns True if the current displayed step changed.
         """
-        if not self.is_playing or self.is_finished:
+        if self.is_finished:
+            self.is_playing = False
+            return False
+
+        if not self.is_playing:
             return False
 
         self.timer += dt
@@ -122,6 +130,9 @@ class SolutionReplayer:
             self.current_index += 1
             changed = True
             steps_taken += 1
+
+        if self.is_finished:
+            self.is_playing = False
 
         return changed
 
