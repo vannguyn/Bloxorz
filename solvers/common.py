@@ -8,7 +8,7 @@ import time
 import tracemalloc
 from abc import ABC, abstractmethod
 
-from core.interfaces import GameState, Level, SolverResult
+from core.interfaces import BlockState, GameState, Level, Orientation, SolverResult, TileType
 
 
 def reconstruct_path(
