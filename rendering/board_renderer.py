@@ -22,23 +22,31 @@ class BoardRenderer:
         self.origin_y = 0
 
     def compute_layout(self, level: Level, area_rect: pygame.Rect | None = None) -> tuple[int, int, int]:
-        """Calculates origin and dynamic tile size to center the board inside the viewport area."""
+        """Calculates origin and dynamic tile size to center active cells inside the viewport area."""
         rect = area_rect or pygame.Rect(0, 0, self.viewport_width, self.viewport_height)
         avail_w = rect.width - 2 * settings.BOARD_MARGIN
         avail_h = rect.height - 2 * settings.BOARD_MARGIN
 
-        max_cols = max(level.width, 1)
-        max_rows = max(level.height, 1)
+        all_cells = set(level.tiles.keys())
+        for b_tiles in level.bridges.values():
+            all_cells.update(b_tiles)
+        if not all_cells:
+            all_cells = {(r, c) for r in range(max(1, level.height)) for c in range(max(1, level.width))}
 
-        size_w = avail_w // max_cols
-        size_h = avail_h // max_rows
-        tile_size = max(24, min(settings.TILE_SIZE, size_w, size_h))
+        min_r = min(r for r, c in all_cells)
+        max_r = max(r for r, c in all_cells)
+        min_c = min(c for r, c in all_cells)
+        max_c = max(c for r, c in all_cells)
 
-        board_w = max_cols * tile_size
-        board_h = max_rows * tile_size
+        span_c = max(1, max_c - min_c + 1)
+        span_r = max(1, max_r - min_r + 1)
 
-        origin_x = rect.x + (rect.width - board_w) // 2
-        origin_y = rect.y + (rect.height - board_h) // 2
+        size_w = avail_w // span_c
+        size_h = avail_h // span_r
+        tile_size = max(10, min(settings.TILE_SIZE, size_w, size_h))
+
+        origin_x = round(rect.centerx - ((min_c + max_c + 1) / 2.0) * tile_size)
+        origin_y = round(rect.centery - ((min_r + max_r + 1) / 2.0) * tile_size)
 
         self.tile_size = tile_size
         self.origin_x = origin_x
@@ -156,12 +164,13 @@ class BoardRenderer:
             pygame.draw.circle(surface, rim_color, center, rad, 1 if is_pressed else 2)
         elif switch.type == "heavy":
             # Industrial cast-metal base plate with rounded corners
-            sub_rect = rect.inflate(-10, -10)
-            pygame.draw.rect(surface, settings.COLOR_HEAVY_BASE, sub_rect, border_radius=4)
-            pygame.draw.rect(surface, (148, 163, 184), sub_rect, 1, border_radius=4)
+            pad = max(2, round(self.tile_size * 0.2))
+            sub_rect = rect.inflate(-pad, -pad)
+            pygame.draw.rect(surface, settings.COLOR_HEAVY_BASE, sub_rect, border_radius=max(1, sub_rect.width // 6))
+            pygame.draw.rect(surface, (148, 163, 184), sub_rect, 1, border_radius=max(1, sub_rect.width // 6))
 
             # 4 corner rivets
-            rivet_offset = 3
+            rivet_offset = max(2, sub_rect.width // 6)
             rivets = [
                 (sub_rect.left + rivet_offset, sub_rect.top + rivet_offset),
                 (sub_rect.right - rivet_offset, sub_rect.top + rivet_offset),
@@ -169,12 +178,12 @@ class BoardRenderer:
                 (sub_rect.right - rivet_offset, sub_rect.bottom - rivet_offset),
             ]
             for rx, ry in rivets:
-                pygame.draw.circle(surface, (148, 163, 184), (rx, ry), 2)
+                pygame.draw.circle(surface, (148, 163, 184), (rx, ry), max(1, sub_rect.width // 10))
 
             # 12-point closed polygon cross
             cx, cy = rect.centerx, rect.centery
-            s = max(7, min(14, self.tile_size // 4))
-            w = max(2, s // 3)
+            s = max(2, min(14, round(self.tile_size * 0.22)))
+            w = max(1, s // 3)
             points = [
                 (cx - s, cy - s + w), (cx - s + w, cy - s), (cx, cy - w),
                 (cx + s - w, cy - s), (cx + s, cy - s + w), (cx + w, cy),

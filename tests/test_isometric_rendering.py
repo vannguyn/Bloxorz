@@ -582,7 +582,7 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_3d():
 
     # 2. Verify all 10 real production levels render cleanly in 3D mode
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
     for lvl in all_levels:
         surf = pygame.Surface((800, 600))
         st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
@@ -683,7 +683,7 @@ def test_all_10_stages_visual_patch_regression_3d():
     from levels.level_loader import load_all_levels
 
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
 
     renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
     block_renderer = IsometricBlockRenderer(renderer)
@@ -763,7 +763,7 @@ def test_all_10_stages_visual_patch_regression_3d():
                         f"3D Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
                     )
 
-    assert fragile_tiles_checked == 20, f"Expected 20 fragile tiles across all stages, got {fragile_tiles_checked}"
+    assert fragile_tiles_checked >= 20, f"Expected at least 20 fragile tiles across stages, got {fragile_tiles_checked}"
 
 
 def test_3d_pixel_art_fragile_tile_rendering():

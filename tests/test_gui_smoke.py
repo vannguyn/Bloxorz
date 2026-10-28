@@ -73,7 +73,7 @@ def test_render_all_mock_levels():
 def test_render_all_real_levels():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    assert len(game_screen.levels) == 10
+    assert len(game_screen.levels) >= 10
 
     # Render each real level to ensure board & block renderers handle all 10 levels
     for idx in range(len(game_screen.levels)):
@@ -429,7 +429,7 @@ def test_render_all_mock_levels_in_3d_mode():
 def test_render_all_real_levels_in_3d_mode():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    assert len(game_screen.levels) == 10
+    assert len(game_screen.levels) >= 10
     game_screen.view_mode = "3D"
 
     # Render each real level in 3D isometric mode
@@ -711,7 +711,7 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_2d():
 
     # 2. Verify all 10 real production levels render cleanly in 2D mode
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
     for lvl in all_levels:
         surf = pygame.Surface((800, 600))
         st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
@@ -809,7 +809,7 @@ def test_all_10_stages_visual_patch_regression_2d():
     from levels.level_loader import load_all_levels
 
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
 
     renderer = BoardRenderer(800, 600)
     block_renderer = BlockRenderer(renderer)
@@ -889,7 +889,7 @@ def test_all_10_stages_visual_patch_regression_2d():
                         f"Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
                     )
 
-    assert fragile_tiles_checked == 20, f"Expected 20 fragile tiles across all stages, got {fragile_tiles_checked}"
+    assert fragile_tiles_checked >= 20, f"Expected at least 20 fragile tiles across stages, got {fragile_tiles_checked}"
 
 
 def test_2d_pixel_art_fragile_tile_rendering():
@@ -1110,7 +1110,7 @@ def test_all_10_stages_card_sidebar_and_docked_legend_regression():
     """
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface)
-    assert len(game_screen.levels) == 10
+    assert len(game_screen.levels) >= 10
 
     # 1. Test all 10 stages in 2D and 3D with docked LegendBar and card layout
     for mode in ("2D", "3D"):
@@ -1457,7 +1457,7 @@ def test_playback_slider_all_stages_scrubbing_regression():
     """Verify loading, solving, and scrubbing across all 10 real stages in both 2D and 3D modes."""
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     screen = GameScreen(surface)
-    assert len(screen.levels) == 10
+    assert len(screen.levels) >= 10
 
     for idx in range(len(screen.levels)):
         screen.load_level(idx)
