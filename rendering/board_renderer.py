@@ -208,21 +208,23 @@ class BoardRenderer:
         elif switch.type == "split":
             # Split switch: dual arched wings with dynamic gap compression
             cx, cy = rect.centerx, rect.centery
-            gap = 2 if is_pressed else 6
-            sw_w = max(8, self.tile_size // 4)
-            sw_h = max(10, self.tile_size // 3)
+            is_pr = is_pressed
+            gap = max(1, round(self.tile_size * 0.03)) if is_pr else max(1, round(self.tile_size * 0.08))
+            sw_w = max(2, round(self.tile_size * 0.14))
+            sw_h = max(3, round(self.tile_size * 0.22))
+            lw = max(1, round(self.tile_size * 0.04))
 
             left_wing = [
-                (cx - gap - sw_w, cy - sw_h), (cx - gap - sw_w // 3, cy - sw_h),
-                (cx - gap - sw_w // 3, cy - sw_h // 3), (cx - gap, cy),
-                (cx - gap - sw_w // 3, cy + sw_h // 3), (cx - gap - sw_w // 3, cy + sw_h),
-                (cx - gap - sw_w, cy + sw_h), (cx - gap - sw_w * 2 // 3, cy),
+                (cx - gap - sw_w, cy - sw_h), (cx - gap - max(1, sw_w // 3), cy - sw_h),
+                (cx - gap - max(1, sw_w // 3), cy - max(1, sw_h // 3)), (cx - gap, cy),
+                (cx - gap - max(1, sw_w // 3), cy + max(1, sw_h // 3)), (cx - gap - max(1, sw_w // 3), cy + sw_h),
+                (cx - gap - sw_w, cy + sw_h), (cx - gap - max(1, sw_w * 2 // 3), cy),
             ]
             right_wing = [
-                (cx + gap + sw_w, cy - sw_h), (cx + gap + sw_w // 3, cy - sw_h),
-                (cx + gap + sw_w // 3, cy - sw_h // 3), (cx + gap, cy),
-                (cx + gap + sw_w // 3, cy + sw_h // 3), (cx + gap + sw_w // 3, cy + sw_h),
-                (cx + gap + sw_w, cy + sw_h), (cx + gap + sw_w * 2 // 3, cy),
+                (cx + gap + sw_w, cy - sw_h), (cx + gap + max(1, sw_w // 3), cy - sw_h),
+                (cx + gap + max(1, sw_w // 3), cy - max(1, sw_h // 3)), (cx + gap, cy),
+                (cx + gap + max(1, sw_w // 3), cy + max(1, sw_h // 3)), (cx + gap + max(1, sw_w // 3), cy + sw_h),
+                (cx + gap + sw_w, cy + sw_h), (cx + gap + max(1, sw_w * 2 // 3), cy),
             ]
             color = (200, 240, 255) if is_pressed else settings.COLOR_SPLIT_CYAN
 
@@ -230,5 +232,5 @@ class BoardRenderer:
             pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, left_wing, 1)
             pygame.draw.polygon(surface, color, right_wing)
             pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, right_wing, 1)
-            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 2), (cx, cy + sw_h + 2), 2)
+            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 1), (cx, cy + sw_h + 1), lw)
 

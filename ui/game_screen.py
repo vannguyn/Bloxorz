@@ -148,12 +148,13 @@ class GameScreen:
 
         # --- Camera HUD Toggle (Top-Left of Board Area) ---
         self.btn_camera_toggle = Button(
-            (16, 16, 32, 32),
+            (16, 14, 42, 42),
             "",
             on_click=self.toggle_zoom_mode,
             icon_drawer=draw_camera_focus_icon,
             enabled=False,
         )
+        self.camera_banner_rect = pygame.Rect(12, 11, 240, 48)
 
         # --- Top Level Switcher / View Controls ---
         top_btn_w = (card_w - 8) // 2
@@ -559,6 +560,12 @@ class GameScreen:
         for btn in self.buttons:
             btn.handle_event(event)
 
+        # Allow clicking anywhere on the camera HUD banner to toggle zoom
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if hasattr(self, "camera_banner_rect") and self.camera_banner_rect.collidepoint(event.pos):
+                if not self.btn_camera_toggle.rect.collidepoint(event.pos):
+                    self.toggle_zoom_mode()
+
         # 2. Key presses for manual gameplay
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_UP, pygame.K_w):
@@ -696,8 +703,45 @@ class GameScreen:
         # 3. Draw Legend Bar docked at the bottom of the board area
         self.legend_bar.draw(self.surface, self.board_rect, self.font_mono)
 
-        # 4. Draw Camera HUD Toggle button at top-left of board area
+        # 4. Draw Camera HUD Toggle Button & Prompt Banner at top-left of board area
+        if self.is_oversized:
+            if self.camera.mode == CameraMode.PANORAMIC:
+                title_str = "Camera Tracking (Z)"
+                sub_str = "Tap to enable camera mode"
+                title_color = settings.COLOR_TEXT_ACCENT
+                sub_color = (175, 215, 245)
+                border_color = (0, 180, 220, 180)
+            else:
+                title_str = "Overview Mode (Z)"
+                sub_str = "Tap to view full map"
+                title_color = settings.COLOR_TEXT_ACCENT
+                sub_color = (175, 215, 245)
+                border_color = (0, 180, 220, 180)
+        else:
+            title_str = "Camera Mode (Z)"
+            sub_str = "Stage fits in view (camera locked)"
+            title_color = (110, 120, 135)
+            sub_color = (80, 90, 105)
+            border_color = (40, 48, 65, 140)
+
+        t1 = self.font_section.render(title_str, True, title_color)
+        t2 = self.font_mono.render(sub_str, True, sub_color)
+        banner_w = max(t1.get_width(), t2.get_width()) + 74
+        self.camera_banner_rect = pygame.Rect(12, 11, banner_w, 48)
+
+        # Translucent HUD plate
+        hud_surf = pygame.Surface((banner_w, 48), pygame.SRCALPHA)
+        pygame.draw.rect(hud_surf, (15, 20, 32, 225), (0, 0, banner_w, 48), border_radius=8)
+        pygame.draw.rect(hud_surf, border_color, (0, 0, banner_w, 48), 1, border_radius=8)
+        self.surface.blit(hud_surf, self.camera_banner_rect)
+
+        # Draw enlarged square HUD button inside banner
+        self.btn_camera_toggle.rect = pygame.Rect(16, 14, 42, 42)
         self.btn_camera_toggle.draw(self.surface)
+
+        # Draw 2-line prompt text
+        self.surface.blit(t1, (68, 17))
+        self.surface.blit(t2, (68, 35))
 
         # 5. Draw Sidebar Panel
         self._draw_sidebar()

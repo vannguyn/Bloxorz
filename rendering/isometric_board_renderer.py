@@ -462,50 +462,58 @@ class IsometricBoardRenderer:
             pygame.draw.line(surface, x_color, p3, p4, lw)
 
         elif switch.type == "split":
-            # 3D Split switch: symmetrical arched bracket wings with dynamic gap compression
-            lift = -1 if is_pressed else -4
-            gap = 2 if is_pressed else 5
-            scy = cy + lift
+            # 3D Split switch: dimetrically projected dual arched wings lying flat on tile face
+            lift = -1 if is_pressed else -max(2, round(self.tile_size * 0.08))
+            drop = -lift
 
-            sw_w = max(6, round(self.tile_size * 0.16))
-            sw_h = max(7, round(self.tile_size * 0.22))
+            # Dimensionless proportions relative to diamond center
+            g = 0.04 if is_pressed else 0.08  # center gap
+            w = 0.32                          # wing width span
+            h = 0.42                          # wing height span
 
-            # Arched left and right bracket wings
+            def to_screen(u_frac: float, v_frac: float, elev_y: int = 0) -> tuple[int, int]:
+                return (
+                    round(cx + u_frac * (self.tile_size * 0.5)),
+                    round(cy + elev_y + v_frac * (self.tile_size * 0.25)),
+                )
+
+            # Left and Right arched wings on the 2:1 dimetric surface
             lw_top = [
-                (cx - gap - sw_w, scy - sw_h),
-                (cx - gap - max(2, sw_w // 3), scy - sw_h),
-                (cx - gap - max(2, sw_w // 3), scy - max(2, sw_h // 3)),
-                (cx - gap, scy),
-                (cx - gap - max(2, sw_w // 3), scy + max(2, sw_h // 3)),
-                (cx - gap - max(2, sw_w // 3), scy + sw_h),
-                (cx - gap - sw_w, scy + sw_h),
-                (cx - gap - max(3, sw_w * 2 // 3), scy),
+                to_screen(-g - w, -h, lift),
+                to_screen(-g - w * 0.35, -h, lift),
+                to_screen(-g - w * 0.35, -h * 0.35, lift),
+                to_screen(-g, 0.0, lift),
+                to_screen(-g - w * 0.35, h * 0.35, lift),
+                to_screen(-g - w * 0.35, h, lift),
+                to_screen(-g - w, h, lift),
+                to_screen(-g - w * 0.7, 0.0, lift),
             ]
             rw_top = [
-                (cx + gap + sw_w, scy - sw_h),
-                (cx + gap + max(2, sw_w // 3), scy - sw_h),
-                (cx + gap + max(2, sw_w // 3), scy - max(2, sw_h // 3)),
-                (cx + gap, scy),
-                (cx + gap + max(2, sw_w // 3), scy + max(2, sw_h // 3)),
-                (cx + gap + max(2, sw_w // 3), scy + sw_h),
-                (cx + gap + sw_w, scy + sw_h),
-                (cx + gap + max(3, sw_w * 2 // 3), scy),
+                to_screen(g + w, -h, lift),
+                to_screen(g + w * 0.35, -h, lift),
+                to_screen(g + w * 0.35, -h * 0.35, lift),
+                to_screen(g, 0.0, lift),
+                to_screen(g + w * 0.35, h * 0.35, lift),
+                to_screen(g + w * 0.35, h, lift),
+                to_screen(g + w, h, lift),
+                to_screen(g + w * 0.7, 0.0, lift),
             ]
 
-            # Lower shadow skirts (10, 60, 100)
-            drop = -lift
             lw_shadow = [(x, y + drop) for (x, y) in lw_top]
             rw_shadow = [(x, y + drop) for (x, y) in rw_top]
+
+            # Shadow skirts on tile surface
             pygame.draw.polygon(surface, (10, 60, 100), lw_shadow)
             pygame.draw.polygon(surface, (10, 60, 100), rw_shadow)
 
-            # Extrusion skirt between top and shadow
-            for i in range(len(lw_top)):
-                ni = (i + 1) % len(lw_top)
-                if lw_top[i][1] >= scy or lw_top[ni][1] >= scy:
-                    pygame.draw.polygon(surface, (10, 60, 100), [lw_top[i], lw_top[ni], lw_shadow[ni], lw_shadow[i]])
-                if rw_top[i][1] >= scy or rw_top[ni][1] >= scy:
-                    pygame.draw.polygon(surface, (10, 60, 100), [rw_top[i], rw_top[ni], rw_shadow[ni], rw_shadow[i]])
+            # Extrusion quads connecting elevated face to tile surface
+            if drop > 0:
+                for i in range(len(lw_top)):
+                    ni = (i + 1) % len(lw_top)
+                    if lw_top[i][1] >= cy + lift or lw_top[ni][1] >= cy + lift:
+                        pygame.draw.polygon(surface, (10, 60, 100), [lw_top[i], lw_top[ni], lw_shadow[ni], lw_shadow[i]])
+                    if rw_top[i][1] >= cy + lift or rw_top[ni][1] >= cy + lift:
+                        pygame.draw.polygon(surface, (10, 60, 100), [rw_top[i], rw_top[ni], rw_shadow[ni], rw_shadow[i]])
 
             # Top polygons
             color = (200, 240, 255) if is_pressed else settings.COLOR_SPLIT_CYAN
@@ -514,5 +522,7 @@ class IsometricBoardRenderer:
             pygame.draw.polygon(surface, color, rw_top)
             pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, rw_top, 1)
 
-            # Center void groove (15, 23, 42)
-            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 2), (cx, cy + sw_h + 2), 2)
+            # Center void groove along the 2:1 dimetric vertical
+            p_top = to_screen(0.0, -h * 1.1, 0)
+            p_bot = to_screen(0.0, h * 1.1, 0)
+            pygame.draw.line(surface, (15, 23, 42), p_top, p_bot, max(1, round(self.tile_size * 0.03)))
