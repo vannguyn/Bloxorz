@@ -77,20 +77,37 @@ def run_solver(solver: Solver, level: Level, start: GameState) -> SolverResult:
     result.search_time_ms = dt
     result.peak_memory_kb = peak // 1024
     return result
-class UCSSolver(Solver):
-    """Uniform-Cost Search using a priority queue ordered by g(n)."""
+class StepCost:
+    """Shared UCS cost policy, copied without changing its formula.
 
-    # Effort of the move itself
-    COST_TIP_OVER = 1.0       # STANDING -> LYING
-    COST_STAND_UP = 1.5       # LYING -> STANDING (lifting the block is harder)
-    COST_ROLL_LYING = 1.2     # LYING -> LYING (rolling the long side)
-    COST_CUBE_MOVE = 0.8      # moving a single split cube (half the weight)
-    COST_SWITCH_CUBE = 0.3    # SPACE: change the controlled cube
-    # Risk / extra penalties on the destination
-    PENALTY_FRAGILE = 0.5     # per occupied fragile cell
-    PENALTY_BRIDGE = 0.3      # per occupied bridge cell
-    PENALTY_EDGE = 0.1        # per occupied cell next to void
-    PENALTY_TOGGLE = 0.5      # pressing a switch that changes the bridges
+    Prepare map penalties once per solve with StepCost(level). The optional
+    constructor also preserves UCSSolver() and its existing prepare/method API
+    when UCS inherits this policy. A policy instance belongs to one map at a
+    time; do not share a prepared instance across concurrent solves.
+    """
+
+    COST_TIP_OVER = 1.0
+    COST_STAND_UP = 1.5
+    COST_ROLL_LYING = 1.2
+    COST_CUBE_MOVE = 0.8
+    COST_SWITCH_CUBE = 0.3
+    PENALTY_FRAGILE = 0.5
+    PENALTY_BRIDGE = 0.3
+    PENALTY_EDGE = 0.1
+    PENALTY_TOGGLE = 0.5
+
+    # Lower bound for the default policy: all destination penalties are >= 0.
+    MIN_EDGE_COST = min(
+        COST_TIP_OVER, COST_STAND_UP, COST_ROLL_LYING,
+        COST_CUBE_MOVE, COST_SWITCH_CUBE,
+    )
+
+    def __init__(self, level: Level | None = None) -> None:
+        if level is not None:
+            self._precompute_cell_penalty(level)
+
+    def __call__(self, state: GameState, action: str, next_state: GameState, level: Level) -> float:
+        return self.step_cost(state, action, next_state, level)
 
     def step_cost(self, state: GameState, action: str, next_state: GameState, level: Level) -> float:
         """Cost of one transition = move effort + risk of the destination cells. Always > 0."""
@@ -130,3 +147,12 @@ class UCSSolver(Solver):
                 penalty += self.PENALTY_EDGE
             if penalty:
                 self._cell_penalty[cell] = penalty
+
+    @staticmethod
+    def _next_to_void(cell: tuple[int, int], level: Level, bridge_cells: set[tuple[int, int]]) -> bool:
+        r, c = cell
+        for nb in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
+            tile = level.tiles.get(nb)
+            if nb not in bridge_cells and (tile is None or tile == TileType.VOID):
+                return True
+        return False
