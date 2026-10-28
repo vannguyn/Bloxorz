@@ -19,6 +19,8 @@ __all__ = [
     "draw_step_forward_icon",
     "draw_speed_icon",
     "draw_metrics_icon",
+    "draw_camera_focus_icon",
+    "draw_camera_overview_icon",
 ]
 
 
@@ -267,3 +269,80 @@ def draw_metrics_icon(
             pygame.Rect(bx, by, bar_w, bar_h),
             border_radius=max(1, bar_w // 4),
         )
+
+
+def draw_camera_focus_icon(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    color: tuple[int, int, int] = (255, 255, 255),
+) -> None:
+    """Draw crosshair / focus corner brackets representing focused tracking mode."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+
+    w, h = rect.width, rect.height
+    pad_x = max(1, int(w * 0.15))
+    pad_y = max(1, int(h * 0.15))
+    arm = max(2, int(min(w, h) * 0.22))
+    lw = max(1, int(min(w, h) * 0.08))
+
+    l = rect.left + pad_x
+    r = rect.right - pad_x - 1
+    t = rect.top + pad_y
+    b = rect.bottom - pad_y - 1
+
+    # Top-Left corner [
+    pygame.draw.line(surface, color, (l, t + arm), (l, t), lw)
+    pygame.draw.line(surface, color, (l, t), (l + arm, t), lw)
+    # Top-Right corner ]
+    pygame.draw.line(surface, color, (r - arm, t), (r, t), lw)
+    pygame.draw.line(surface, color, (r, t), (r, t + arm), lw)
+    # Bottom-Left corner [
+    pygame.draw.line(surface, color, (l, b - arm), (l, b), lw)
+    pygame.draw.line(surface, color, (l, b), (l + arm, b), lw)
+    # Bottom-Right corner ]
+    pygame.draw.line(surface, color, (r - arm, b), (r, b), lw)
+    pygame.draw.line(surface, color, (r, b), (r, b - arm), lw)
+
+    # Center target dot
+    pygame.draw.circle(surface, color, (rect.centerx, rect.centery), max(1, lw))
+
+
+def draw_camera_overview_icon(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    color: tuple[int, int, int] = (255, 255, 255),
+) -> None:
+    """Draw outward expand arrows representing panoramic overview mode."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+
+    w, h = rect.width, rect.height
+    pad_x = max(1, int(w * 0.15))
+    pad_y = max(1, int(h * 0.15))
+    arm = max(2, int(min(w, h) * 0.22))
+    lw = max(1, int(min(w, h) * 0.08))
+
+    l = rect.left + pad_x
+    r = rect.right - pad_x - 1
+    t = rect.top + pad_y
+    b = rect.bottom - pad_y - 1
+    cx, cy = rect.centerx, rect.centery
+
+    # Diagonal corner rays from center
+    diag = max(2, int(min(w, h) * 0.18))
+    pygame.draw.line(surface, color, (cx - diag, cy - diag), (l, t), lw)
+    pygame.draw.line(surface, color, (cx + diag, cy - diag), (r, t), lw)
+    pygame.draw.line(surface, color, (cx - diag, cy + diag), (l, b), lw)
+    pygame.draw.line(surface, color, (cx + diag, cy + diag), (r, b), lw)
+
+    # Arrow heads at corners
+    pygame.draw.line(surface, color, (l, t + arm), (l, t), lw)
+    pygame.draw.line(surface, color, (l, t), (l + arm, t), lw)
+    pygame.draw.line(surface, color, (r - arm, t), (r, t), lw)
+    pygame.draw.line(surface, color, (r, t), (r, t + arm), lw)
+    pygame.draw.line(surface, color, (l, b - arm), (l, b), lw)
+    pygame.draw.line(surface, color, (l, b), (l + arm, b), lw)
+    pygame.draw.line(surface, color, (r - arm, b), (r, b), lw)
+    pygame.draw.line(surface, color, (r, b), (r, b - arm), lw)
+
