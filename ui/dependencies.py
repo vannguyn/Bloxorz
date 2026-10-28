@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from core.interfaces import GameState, Level, SolverResult
 from solvers.common import Solver, run_solver
+from solvers.BFS import BFSSolver
+from solvers.DFS import DFSSolver
 
 # --- Core Transition & Levels (Toggle to real core when M1 lands) ---
 from core.game_rules import apply_move, is_goal, get_successors
@@ -45,12 +47,11 @@ def get_levels() -> list[Level]:
 
 
 def get_solver(algo: str) -> Solver:
-    """Returns an instantiated solver instance for the given algorithm name."""
     name = algo.strip().upper()
     if name == "BFS":
-        return MockBFSSolver()
+        return BFSSolver()
     elif name == "DFS":
-        return MockDFSSolver()
+        return DFSSolver()
     elif name == "UCS":
         return MockUCSSolver()
     elif name in ("ASTAR", "A*"):
