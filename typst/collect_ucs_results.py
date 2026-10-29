@@ -1,5 +1,5 @@
 """
-Collects UCS experiment data for the report (typst/sections/ucs/04_thuc_nghiem.typ).
+Collects UCS experiment data for the report (typst/sections/UCS.typ).
 
 For every level the script runs:
   - UCS with the shared StepCost policy (the submitted solver);
