@@ -27,6 +27,8 @@ from tests.mocks import (
     MockUCSSolver,
     MockAStarSolver,
 )
+#-- Test A-Star
+from solvers.astar import AStarSolver
 IS_MOCK_SOLVERS: bool = True
 
 IS_MOCK_MODE: bool = IS_MOCK_CORE or IS_MOCK_SOLVERS
@@ -54,7 +56,7 @@ def get_solver(algo: str) -> Solver:
     elif name == "UCS":
         return MockUCSSolver()
     elif name in ("ASTAR", "A*"):
-        return MockAStarSolver()
+        return AStarSolver()
     raise ValueError(f"Unknown solver algorithm: {algo}")
 
 
