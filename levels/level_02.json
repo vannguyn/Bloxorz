@@ -2,18 +2,21 @@
   "id": "level_02",
   "name": "Soft Switch Courtyard",
   "difficulty": "basic",
-  "description": "Leave the main lane, press the soft switch in the courtyard, and return across the opened bridge.",
+  "description": "Leave the main lane, press the soft switch in the courtyard, and return across the opened bridge to the eastern terrace.",
   "width": 14,
   "height": 9,
   "start": {"position": [4, 1], "orientation": "standing"},
-  "goal": [4, 9],
+  "goal": [2, 11],
   "tiles": [
     [4, 1], [4, 2], [4, 3], [4, 4], [4, 6], [4, 7], [4, 8], [4, 9],
     [2, 4], [3, 4], [2, 3], [3, 3],
     [1, 2], [1, 3], [1, 4], [1, 5], [2, 5],
     [5, 2], [6, 2], [6, 3], [6, 4], [5, 4],
     [2, 6], [3, 6], [3, 7], [2, 7], [1, 7], [1, 8],
-    [5, 6], [6, 6], [6, 7], [5, 7], [5, 8], [3, 9], [5, 9]
+    [5, 6], [6, 6], [6, 7], [5, 7], [5, 8], [3, 9], [5, 9],
+    [1, 9], [1, 10], [1, 11], [2, 9], [2, 10], [2, 11],
+    [3, 10], [3, 11], [4, 10], [4, 11],
+    [5, 10], [5, 11], [6, 10], [6, 11], [7, 10], [7, 11]
   ],
   "fragile_tiles": [],
   "bridges": [
