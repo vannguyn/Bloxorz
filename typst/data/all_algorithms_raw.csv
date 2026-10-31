@@ -1,0 +1,177 @@
+level,group,algorithm,repetition,order,run_type,success,solution_length,cost,expanded_nodes,time_ms,peak_memory_kb
+level_01,Cơ bản,BFS,1,1,time,True,10,,77,1.767000,
+level_01,Cơ bản,DFS,1,2,time,True,49,,57,1.083100,
+level_01,Cơ bản,UCS,1,3,time,True,10,13.300000000,91,2.828300,
+level_01,Cơ bản,A*,1,4,time,True,10,13.300000000,46,2.509300,
+level_01,Cơ bản,DFS,2,1,time,True,49,,57,1.532900,
+level_01,Cơ bản,UCS,2,2,time,True,10,13.300000000,91,2.204300,
+level_01,Cơ bản,A*,2,3,time,True,10,13.300000000,46,1.814500,
+level_01,Cơ bản,BFS,2,4,time,True,10,,77,1.734400,
+level_01,Cơ bản,UCS,3,1,time,True,10,13.300000000,91,2.510700,
+level_01,Cơ bản,A*,3,2,time,True,10,13.300000000,46,1.525400,
+level_01,Cơ bản,BFS,3,3,time,True,10,,77,1.704900,
+level_01,Cơ bản,DFS,3,4,time,True,49,,57,1.462100,
+level_01,Cơ bản,BFS,0,0,memory,True,10,,77,,32
+level_01,Cơ bản,DFS,0,0,memory,True,49,,57,,29
+level_01,Cơ bản,UCS,0,0,memory,True,10,13.300000000,91,,50
+level_01,Cơ bản,A*,0,0,memory,True,10,13.300000000,46,,32
+level_02,Công tắc/cầu,BFS,1,1,time,True,10,,60,1.476300,
+level_02,Công tắc/cầu,DFS,1,2,time,True,96,,152,4.155900,
+level_02,Công tắc/cầu,UCS,1,3,time,True,10,14.400000000,74,2.567500,
+level_02,Công tắc/cầu,A*,1,4,time,True,10,14.400000000,41,1.658100,
+level_02,Công tắc/cầu,DFS,2,1,time,True,96,,152,5.268200,
+level_02,Công tắc/cầu,UCS,2,2,time,True,10,14.400000000,74,3.031100,
+level_02,Công tắc/cầu,A*,2,3,time,True,10,14.400000000,41,2.360400,
+level_02,Công tắc/cầu,BFS,2,4,time,True,10,,60,1.602900,
+level_02,Công tắc/cầu,UCS,3,1,time,True,10,14.400000000,74,2.821700,
+level_02,Công tắc/cầu,A*,3,2,time,True,10,14.400000000,41,2.396000,
+level_02,Công tắc/cầu,BFS,3,3,time,True,10,,60,1.254200,
+level_02,Công tắc/cầu,DFS,3,4,time,True,96,,152,3.403200,
+level_02,Công tắc/cầu,BFS,0,0,memory,True,10,,60,,25
+level_02,Công tắc/cầu,DFS,0,0,memory,True,96,,152,,60
+level_02,Công tắc/cầu,UCS,0,0,memory,True,10,14.400000000,74,,44
+level_02,Công tắc/cầu,A*,0,0,memory,True,10,14.400000000,41,,29
+level_03,Công tắc/cầu,BFS,1,1,time,True,13,,50,1.259800,
+level_03,Công tắc/cầu,DFS,1,2,time,True,52,,90,2.840200,
+level_03,Công tắc/cầu,UCS,1,3,time,True,13,18.500000000,62,2.192800,
+level_03,Công tắc/cầu,A*,1,4,time,True,13,18.500000000,37,1.397700,
+level_03,Công tắc/cầu,DFS,2,1,time,True,52,,90,2.949900,
+level_03,Công tắc/cầu,UCS,2,2,time,True,13,18.500000000,62,2.288800,
+level_03,Công tắc/cầu,A*,2,3,time,True,13,18.500000000,37,1.416300,
+level_03,Công tắc/cầu,BFS,2,4,time,True,13,,50,1.112300,
+level_03,Công tắc/cầu,UCS,3,1,time,True,13,18.500000000,62,2.257800,
+level_03,Công tắc/cầu,A*,3,2,time,True,13,18.500000000,37,1.860000,
+level_03,Công tắc/cầu,BFS,3,3,time,True,13,,50,1.432300,
+level_03,Công tắc/cầu,DFS,3,4,time,True,52,,90,3.036500,
+level_03,Công tắc/cầu,BFS,0,0,memory,True,13,,50,,23
+level_03,Công tắc/cầu,DFS,0,0,memory,True,52,,90,,38
+level_03,Công tắc/cầu,UCS,0,0,memory,True,13,18.500000000,62,,36
+level_03,Công tắc/cầu,A*,0,0,memory,True,13,18.500000000,37,,27
+level_04,Ô dễ vỡ,BFS,1,1,time,True,11,,73,1.088600,
+level_04,Ô dễ vỡ,DFS,1,2,time,True,16,,16,0.431000,
+level_04,Ô dễ vỡ,UCS,1,3,time,True,11,16.100000000,75,1.580300,
+level_04,Ô dễ vỡ,A*,1,4,time,True,11,16.100000000,42,1.250500,
+level_04,Ô dễ vỡ,DFS,2,1,time,True,16,,16,0.372700,
+level_04,Ô dễ vỡ,UCS,2,2,time,True,11,16.100000000,75,1.697000,
+level_04,Ô dễ vỡ,A*,2,3,time,True,11,16.100000000,42,1.209800,
+level_04,Ô dễ vỡ,BFS,2,4,time,True,11,,73,1.683100,
+level_04,Ô dễ vỡ,UCS,3,1,time,True,11,16.100000000,75,1.789400,
+level_04,Ô dễ vỡ,A*,3,2,time,True,11,16.100000000,42,1.210300,
+level_04,Ô dễ vỡ,BFS,3,3,time,True,11,,73,1.358000,
+level_04,Ô dễ vỡ,DFS,3,4,time,True,16,,16,0.311300,
+level_04,Ô dễ vỡ,BFS,0,0,memory,True,11,,73,,25
+level_04,Ô dễ vỡ,DFS,0,0,memory,True,16,,16,,9
+level_04,Ô dễ vỡ,UCS,0,0,memory,True,11,16.100000000,75,,33
+level_04,Ô dễ vỡ,A*,0,0,memory,True,11,16.100000000,42,,27
+level_05,Ô dễ vỡ,BFS,1,1,time,True,15,,70,1.020500,
+level_05,Ô dễ vỡ,DFS,1,2,time,True,38,,85,1.346000,
+level_05,Ô dễ vỡ,UCS,1,3,time,True,15,23.200000000,75,1.486000,
+level_05,Ô dễ vỡ,A*,1,4,time,True,15,23.200000000,64,1.631300,
+level_05,Ô dễ vỡ,DFS,2,1,time,True,38,,85,1.794500,
+level_05,Ô dễ vỡ,UCS,2,2,time,True,15,23.200000000,75,1.459600,
+level_05,Ô dễ vỡ,A*,2,3,time,True,15,23.200000000,64,1.660300,
+level_05,Ô dễ vỡ,BFS,2,4,time,True,15,,70,1.070800,
+level_05,Ô dễ vỡ,UCS,3,1,time,True,15,23.200000000,75,1.508400,
+level_05,Ô dễ vỡ,A*,3,2,time,True,15,23.200000000,64,1.940900,
+level_05,Ô dễ vỡ,BFS,3,3,time,True,15,,70,1.114600,
+level_05,Ô dễ vỡ,DFS,3,4,time,True,38,,85,1.290000,
+level_05,Ô dễ vỡ,BFS,0,0,memory,True,15,,70,,24
+level_05,Ô dễ vỡ,DFS,0,0,memory,True,38,,85,,34
+level_05,Ô dễ vỡ,UCS,0,0,memory,True,15,23.200000000,75,,34
+level_05,Ô dễ vỡ,A*,0,0,memory,True,15,23.200000000,64,,31
+level_06,Công tắc/cầu,BFS,1,1,time,True,20,,77,2.024800,
+level_06,Công tắc/cầu,DFS,1,2,time,True,36,,92,1.894800,
+level_06,Công tắc/cầu,UCS,1,3,time,True,20,29.000000000,85,2.204600,
+level_06,Công tắc/cầu,A*,1,4,time,True,20,29.000000000,72,2.166800,
+level_06,Công tắc/cầu,DFS,2,1,time,True,36,,92,2.470200,
+level_06,Công tắc/cầu,UCS,2,2,time,True,20,29.000000000,85,2.066100,
+level_06,Công tắc/cầu,A*,2,3,time,True,20,29.000000000,72,2.183800,
+level_06,Công tắc/cầu,BFS,2,4,time,True,20,,77,1.524700,
+level_06,Công tắc/cầu,UCS,3,1,time,True,20,29.000000000,85,2.056300,
+level_06,Công tắc/cầu,A*,3,2,time,True,20,29.000000000,72,2.914000,
+level_06,Công tắc/cầu,BFS,3,3,time,True,20,,77,1.391500,
+level_06,Công tắc/cầu,DFS,3,4,time,True,36,,92,2.004100,
+level_06,Công tắc/cầu,BFS,0,0,memory,True,20,,77,,27
+level_06,Công tắc/cầu,DFS,0,0,memory,True,36,,92,,34
+level_06,Công tắc/cầu,UCS,0,0,memory,True,20,29.000000000,85,,50
+level_06,Công tắc/cầu,A*,0,0,memory,True,20,29.000000000,72,,35
+level_07,Công tắc/cầu,BFS,1,1,time,True,19,,79,1.452100,
+level_07,Công tắc/cầu,DFS,1,2,time,True,43,,84,1.583100,
+level_07,Công tắc/cầu,UCS,1,3,time,True,19,27.100000000,88,2.096900,
+level_07,Công tắc/cầu,A*,1,4,time,True,19,27.100000000,72,2.222200,
+level_07,Công tắc/cầu,DFS,2,1,time,True,43,,84,1.584400,
+level_07,Công tắc/cầu,UCS,2,2,time,True,19,27.100000000,88,2.069700,
+level_07,Công tắc/cầu,A*,2,3,time,True,19,27.100000000,72,3.071900,
+level_07,Công tắc/cầu,BFS,2,4,time,True,19,,79,1.468100,
+level_07,Công tắc/cầu,UCS,3,1,time,True,19,27.100000000,88,2.144200,
+level_07,Công tắc/cầu,A*,3,2,time,True,19,27.100000000,72,2.180400,
+level_07,Công tắc/cầu,BFS,3,3,time,True,19,,79,1.419400,
+level_07,Công tắc/cầu,DFS,3,4,time,True,43,,84,1.571000,
+level_07,Công tắc/cầu,BFS,0,0,memory,True,19,,79,,28
+level_07,Công tắc/cầu,DFS,0,0,memory,True,43,,84,,30
+level_07,Công tắc/cầu,UCS,0,0,memory,True,19,27.100000000,88,,50
+level_07,Công tắc/cầu,A*,0,0,memory,True,19,27.100000000,72,,35
+level_08,Kết hợp,BFS,1,1,time,True,9,,343,8.808700,
+level_08,Kết hợp,DFS,1,2,time,True,30,,54,1.302000,
+level_08,Kết hợp,UCS,1,3,time,True,10,11.000000000,1144,35.101400,
+level_08,Kết hợp,A*,1,4,time,True,10,11.000000000,873,48.127300,
+level_08,Kết hợp,DFS,2,1,time,True,30,,54,1.172000,
+level_08,Kết hợp,UCS,2,2,time,True,10,11.000000000,1144,39.316800,
+level_08,Kết hợp,A*,2,3,time,True,10,11.000000000,873,37.214300,
+level_08,Kết hợp,BFS,2,4,time,True,9,,343,8.364900,
+level_08,Kết hợp,UCS,3,1,time,True,10,11.000000000,1144,37.384400,
+level_08,Kết hợp,A*,3,2,time,True,10,11.000000000,873,38.247100,
+level_08,Kết hợp,BFS,3,3,time,True,9,,343,9.186900,
+level_08,Kết hợp,DFS,3,4,time,True,30,,54,1.194900,
+level_08,Kết hợp,BFS,0,0,memory,True,9,,343,,198
+level_08,Kết hợp,DFS,0,0,memory,True,30,,54,,38
+level_08,Kết hợp,UCS,0,0,memory,True,10,11.000000000,1144,,669
+level_08,Kết hợp,A*,0,0,memory,True,10,11.000000000,873,,549
+level_09,Kết hợp,BFS,1,1,time,True,11,,887,24.816200,
+level_09,Kết hợp,DFS,1,2,time,True,101,,168,4.245700,
+level_09,Kết hợp,UCS,1,3,time,True,11,15.300000000,3354,124.892300,
+level_09,Kết hợp,A*,1,4,time,True,11,15.300000000,2965,145.774300,
+level_09,Kết hợp,DFS,2,1,time,True,101,,168,3.985200,
+level_09,Kết hợp,UCS,2,2,time,True,11,15.300000000,3354,132.693700,
+level_09,Kết hợp,A*,2,3,time,True,11,15.300000000,2965,154.432500,
+level_09,Kết hợp,BFS,2,4,time,True,11,,887,31.520300,
+level_09,Kết hợp,UCS,3,1,time,True,11,15.300000000,3354,174.546600,
+level_09,Kết hợp,A*,3,2,time,True,11,15.300000000,2965,179.698200,
+level_09,Kết hợp,BFS,3,3,time,True,11,,887,30.276300,
+level_09,Kết hợp,DFS,3,4,time,True,101,,168,4.148600,
+level_09,Kết hợp,BFS,0,0,memory,True,11,,887,,453
+level_09,Kết hợp,DFS,0,0,memory,True,101,,168,,105
+level_09,Kết hợp,UCS,0,0,memory,True,11,15.300000000,3354,,1923
+level_09,Kết hợp,A*,0,0,memory,True,11,15.300000000,2965,,1701
+level_10,Kết hợp,BFS,1,1,time,True,17,,2864,88.330600,
+level_10,Kết hợp,DFS,1,2,time,True,710,,769,24.559600,
+level_10,Kết hợp,UCS,1,3,time,True,18,24.500000000,3925,165.639200,
+level_10,Kết hợp,A*,1,4,time,True,18,24.500000000,3924,200.790300,
+level_10,Kết hợp,DFS,2,1,time,True,710,,769,29.670300,
+level_10,Kết hợp,UCS,2,2,time,True,18,24.500000000,3925,175.512700,
+level_10,Kết hợp,A*,2,3,time,True,18,24.500000000,3924,202.004800,
+level_10,Kết hợp,BFS,2,4,time,True,17,,2864,84.229100,
+level_10,Kết hợp,UCS,3,1,time,True,18,24.500000000,3925,169.912100,
+level_10,Kết hợp,A*,3,2,time,True,18,24.500000000,3924,198.303700,
+level_10,Kết hợp,BFS,3,3,time,True,17,,2864,88.741300,
+level_10,Kết hợp,DFS,3,4,time,True,710,,769,24.549000,
+level_10,Kết hợp,BFS,0,0,memory,True,17,,2864,,1165
+level_10,Kết hợp,DFS,0,0,memory,True,710,,769,,673
+level_10,Kết hợp,UCS,0,0,memory,True,18,24.500000000,3925,,2032
+level_10,Kết hợp,A*,0,0,memory,True,18,24.500000000,3924,,1911
+level_11,Kết hợp,BFS,1,1,time,True,55,,25815,767.946400,
+level_11,Kết hợp,DFS,1,2,time,True,95212,,107660,4051.130200,
+level_11,Kết hợp,UCS,1,3,time,True,56,81.100000000,126688,6160.605000,
+level_11,Kết hợp,A*,1,4,time,True,56,81.100000000,114540,6325.771900,
+level_11,Kết hợp,DFS,2,1,time,True,95212,,107660,4173.356100,
+level_11,Kết hợp,UCS,2,2,time,True,56,81.100000000,126688,5937.962700,
+level_11,Kết hợp,A*,2,3,time,True,56,81.100000000,114540,6377.396000,
+level_11,Kết hợp,BFS,2,4,time,True,55,,25815,779.817500,
+level_11,Kết hợp,UCS,3,1,time,True,56,81.100000000,126688,6231.335900,
+level_11,Kết hợp,A*,3,2,time,True,56,81.100000000,114540,6658.187000,
+level_11,Kết hợp,BFS,3,3,time,True,55,,25815,811.464800,
+level_11,Kết hợp,DFS,3,4,time,True,95212,,107660,4352.969700,
+level_11,Kết hợp,BFS,0,0,memory,True,55,,25815,,10456
+level_11,Kết hợp,DFS,0,0,memory,True,95212,,107660,,95141
+level_11,Kết hợp,UCS,0,0,memory,True,56,81.100000000,126688,,70903
+level_11,Kết hợp,A*,0,0,memory,True,56,81.100000000,114540,,60430

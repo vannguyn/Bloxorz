@@ -1,0 +1,5 @@
+algorithm,solved_levels,total_levels,median_time_ms,median_peak_memory_kb,median_expanded_nodes,median_solution_length,repeats_per_level
+BFS,11,11,1.524700,28.0,77.0,13.0,3
+DFS,11,11,2.004100,38.0,90.0,49.0,3
+UCS,11,11,2.510700,50.0,88.0,13.0,3
+A*,11,11,2.222200,35.0,72.0,13.0,3

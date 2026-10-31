@@ -25,7 +25,7 @@ toán tìm kiếm; luật chơi lấy từ `core/game_rules.py`, chi phí lấy 
 - *Trạng thái bắt đầu:* `GameState(level.start, level.initial_bridge_mask)`.
 - *Hành động:* `U`, `D`, `L`, `R` lăn khối theo bốn hướng. Hành động `SPACE`
   chỉ hợp lệ khi khối đã bị tách bởi công tắc tách, dùng để đổi khối lập
-  phương đang điều khiển (mục 2.5 của đề bài).
+  phương đang điều khiển.
 - *Hàm chuyển trạng thái:* `get_successors(state, level)` trả về các cặp
   `(action, next_state)` hợp lệ. Phần lõi đã loại các nước làm khối rơi ra
   ngoài bản đồ, vào ô trống hoặc cầu đang đóng, và các nước đứng thẳng trên
@@ -34,24 +34,10 @@ toán tìm kiếm; luật chơi lấy từ `core/game_rules.py`, chi phí lấy 
   đứng và nằm trên ô đích. Một khối lập phương đơn lẻ trên ô đích không
   được tính là thắng.
 - *Chi phí bước:* `step_cost(state, action, next_state, level)`, luôn dương
-  (mục tiếp theo).
+  .
 
 Mỗi màn có số ô hữu hạn và số cầu hữu hạn, nên không gian trạng thái
 hữu hạn.
-
-== Yêu cầu đầu vào và môi trường chạy
-
-Màn chơi được đọc từ các tệp JSON trong `levels/` bằng
-`levels.level_loader`. Thuật toán nhận một `Level` và một `GameState`
-thuộc màn đó, rồi trả `SolverResult` gồm đường đi, tổng chi phí, số bước
-và số nút mở rộng. Thời gian và bộ nhớ được bổ sung khi gọi qua
-`run_solver()`.
-
-Chương trình được viết bằng Python; phần tìm kiếm dùng thư viện chuẩn
-`heapq` và `itertools`, không phụ thuộc trực tiếp vào Pygame. Giao diện
-dùng `pygame-ce`, còn bộ kiểm thử của dự án dùng `pytest`, theo
-`requirements.txt`. Phiên bản Python và hệ điều hành dùng để tạo số liệu
-được ghi riêng trong phần thực nghiệm, không suy ra từ máy đang xem báo cáo.
 
 == Hàm chi phí
 
@@ -237,83 +223,54 @@ thuật toán có thể chọn đường nhiều bước hơn nếu tổng chi p
 
 == Thực nghiệm
 
-#let records = csv("../data/ucs_results.csv", row-type: dictionary)
+#let all_records = csv("../data/all_algorithms.csv", row-type: dictionary)
+#let records = all_records.filter(row => row.algorithm == "UCS")
+#assert(records.len() == 11)
+#assert(records.filter(row => row.cost == "").len() == 0)
 
-=== Cách bố trí
+=== Thiết lập và kết quả
 
-Chương trình `typst/collect_ucs_results.py` chạy hai cấu hình trên các màn
-`level_01` đến `level_10` trong thư mục `levels/`:
+UCS được đo trên cùng 11 level và từ cùng trạng thái đầu như BFS, DFS và
+A\*.  Bộ nhớ đỉnh
+được đo trong một lượt riêng. Lời giải được phát lại từng bước; trạng
+thái đích, độ dài và tổng `StepCost` tính lại phải khớp kết quả trả về.
+Chi phí tối ưu của UCS được đối chiếu thêm với A\* trên từng level.
 
-- *UCS:* `UCSSolver` với chi phí `StepCost` (bản được nộp).
-- *UCS chi phí 1:* lớp con ghi đè `step_cost` trả về 1 cho mọi nước đi. Cấu
-  hình này có thứ tự mở rộng như BFS, dùng làm đối chứng để thấy ảnh hưởng
-  của hàm chi phí.
-
-Mỗi cấu hình chạy thử một lần không ghi nhận, sau đó đo 5 lần qua
-`run_solver()` (cùng hàm đo với giao diện); bảng lấy trung vị thời gian và
-bộ nhớ. Thời gian đo bằng `perf_counter()` quanh `solve()`, bộ nhớ là mức
-cấp phát Python cao nhất theo `tracemalloc`. Vì `tracemalloc` theo dõi từng
-lần cấp phát, thời gian đo được cao hơn thời gian chạy thuần nhiều lần;
-ảnh hưởng này như nhau cho cả hai cấu hình. Môi trường: Python 3.11.7 trên
-Linux x86-64.
-
-Mỗi lời giải được phát lại bằng `apply_move`: mọi hành động phải hợp lệ,
-trạng thái cuối phải thỏa `is_goal`, và tổng chi phí tính lại phải bằng
-chi phí thuật toán báo cáo. Kết quả của 5 lần đo phải trùng nhau. Tất cả
-các màn đều qua các phép kiểm tra này.
-
-=== Kết quả
+Thời gian được đo bằng `perf_counter()` khi `tracemalloc` tắt; bộ nhớ
+được đo bằng `tracemalloc` riêng. Hai phép đo này dùng cùng quy trình cho
+cả bốn thuật toán; số đo bộ nhớ là đỉnh cấp phát, không phải tổng
+RAM tiến trình.
 
 #styled_table(
-  (1.1fr, 0.6fr, 0.75fr, 0.8fr, 0.9fr, 0.85fr),
-  ([Màn], [Bước], [Chi phí], [Số nút], [Thời gian (ms)], [Bộ nhớ (KB)]),
+  (1fr, 1fr, 0.65fr, 0.8fr, 0.8fr, 0.8fr, 0.8fr, 0.8fr, 0.8fr),
+  ([Màn], [Nhóm], [Giải được], [Bước], [Chi phí], [Thời gian trung vị (ms)], [ĐLC thời gian (ms)], [Bộ nhớ đỉnh (KB)], [Nút mở rộng]),
   records.map(row => (
-    [#row.level], [#row.steps],
+    [#row.level], [#row.group],
+    if row.success == "True" [Có] else [Không],
+    [#row.solution_length],
     [#calc.round(float(row.cost), digits: 2)],
-    [#row.nodes], [#row.time_ms], [#row.memory_kb],
+    [#calc.round(float(row.time_ms_median), digits: 3)],
+    [#calc.round(float(row.time_ms_stdev), digits: 3)],
+    [#calc.round(float(row.peak_memory_kb_median), digits: 1)],
+    [#row.expanded_nodes],
   )).flatten(),
-  inset: 4pt,
-  align: (left, right, right, right, right, right),
-  caption: [Kết quả UCS với chi phí `StepCost` (trung vị 5 lần đo).],
+  inset: 2pt,
+  align: (left, left, center, right, right, right, right, right, right),
+  caption: [Kết quả UCS trên level hiện hành; thời gian là trung vị #records.at(0).repeats lượt đo, bộ nhớ đo riêng một lượt.],
 )
 
-#styled_table(
-  (1.1fr, 0.8fr, 0.8fr, 1fr, 1fr, 0.8fr, 0.8fr),
-  ([Màn], [Bước UCS], [Bước chi phí 1], [Chi phí UCS], [Chi phí đường chi phí 1], [Nút UCS], [Nút chi phí 1]),
-  records.map(row => (
-    [#row.level], [#row.steps], [#row.unit_steps],
-    [#calc.round(float(row.cost), digits: 2)],
-    [#calc.round(float(row.unit_cost_stepcost), digits: 2)],
-    [#row.nodes], [#row.unit_nodes],
-  )).flatten(),
-  inset: 4pt,
-  align: (left, right, right, right, right, right, right),
-  caption: [So sánh với cấu hình chi phí 1. Cột "chi phí đường chi phí 1" là
-    chi phí `StepCost` của lời giải mà cấu hình chi phí 1 tìm được.],
+#figure(
+  image("../figures/ucs_overview.png", width: 100%),
+  caption: [Thời gian, bộ nhớ đỉnh, số nút mở rộng và độ dài lời giải của UCS trên từng level.],
 )
-
-Số nút là số trạng thái được lấy khỏi hàng đợi và mở rộng, kể cả trạng
-thái đích; không tính phần tử cũ bị bỏ qua.
 
 === Nhận xét
 
-- *UCS giải được cả 10 màn.* Lời giải được kiểm chứng bằng luật chơi và có
-  chi phí nhỏ nhất theo `StepCost`.
-- *Hàm chi phí thay đổi lời giải.* Ở `level_10`, UCS chọn đường 18 bước
-  với chi phí 24.5, trong khi đường ngắn nhất 17 bước có chi phí 25.2.
-  Ở `level_02`, hai cấu hình cùng 9 bước nhưng UCS chọn đường có chi phí
-  13.1 thay vì 13.2. Ở các màn còn lại, đường ngắn nhất cũng là đường rẻ
-  nhất.
-- *Các màn có công tắc tách tốn kém nhất.* `level_08`–`level_10` mở rộng
-  hàng nghìn nút, gấp hàng chục lần các màn khác: sau khi tách, vị trí hai
-  khối lập phương cùng khối đang điều khiển làm số trạng thái tăng mạnh.
-- *Chi phí không đều làm UCS mở rộng nhiều nút hơn.* Trên ba màn có công
-  tắc tách, UCS mở rộng khoảng 1.25–2.8 lần số nút của cấu hình chi phí 1.
-  Nước đi của khối lập phương (0.8) và `SPACE` (0.3) rẻ hơn nước đi của khối
-  nguyên, nên UCS khám phá rất nhiều tổ hợp khối lập phương trước khi xét
-  đường dài hơn của khối nguyên. Đây là cái giá của việc tối ưu theo chi
-  phí thay vì số bước. Trên các màn không có công tắc tách, số nút của hai
-  cấu hình gần như nhau.
+UCS tối ưu tổng `StepCost`, không tối ưu số bước. Do đó số bước trong
+bảng có thể khác BFS khi lời giải nhiều bước có chi phí thấp hơn. So sánh
+thời gian và bộ nhớ với solver khác cần dùng cùng các level, trạng thái
+đầu và cách đo; bảng tổng hợp và biểu đồ ở phần đánh giá dùng đúng bộ dữ
+liệu chung này.
 
 #callout_note(title: [Hạn chế])[
   UCS không biết đích nằm ở đâu nên lan đều theo mọi hướng. Để giảm số nút

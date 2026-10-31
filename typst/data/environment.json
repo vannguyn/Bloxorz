@@ -17,7 +17,7 @@
   "loading_rendering_replay": "excluded from measurements",
   "limits": "no timeout/node limit; exceptions stop collection, no partial CSV published",
   "sha256": {
-    "typst/collect_results.py": "c49acdebdd112ebbbccd40e366f52712dd2fd0b07df44aa1290e608c49e216ad",
+    "typst/collect_results.py": "0f08bbfad2beb6684a005084cf41c532cbbd11356742ed5bb4a3d2e8c96aa45a",
     "solvers/astar.py": "9c9c7251be5435375de45c6d67be66bc31b74ae4585551981164b1bde1550ab8",
     "solvers/common.py": "f55f2182353c59790d52342e3f5738af60c9284a6df010c75c237e1e785dd649",
     "core/interfaces.py": "bc55993ff1e9b57f046ca440a868157cc13c5f3613aa5575577c36473fb466fd",

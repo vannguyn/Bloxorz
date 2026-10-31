@@ -1,4 +1,7 @@
-"""Measure A* and h=0 through the same harness used by the UI.
+"""Legacy A* and h=0 diagnostic; this script does not feed the final report.
+
+Use collect_all_results.py to refresh the common four-solver report tables.
+This legacy script still writes validation.csv and raw_runs.csv.
 
 Usage: python typst/collect_results.py [--repeats 5]
 Sequential, cold heuristic cache, one unmeasured warm-up per configuration.

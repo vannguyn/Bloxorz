@@ -1,5 +1,5 @@
-"""
-Collects UCS experiment data for the report (typst/sections/UCS.typ).
+"""Legacy UCS-only collector; final report uses collect_all_results.py.
+Collects UCS experiment data for the report (typst/sections/06_ucs.typ).
 
 For every level the script runs:
   - UCS with the shared StepCost policy (the submitted solver);

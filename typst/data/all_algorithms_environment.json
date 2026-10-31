@@ -1,0 +1,50 @@
+{
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "level_count": 11,
+  "algorithms": [
+    "BFS",
+    "DFS",
+    "UCS",
+    "A*"
+  ],
+  "repeats_per_level_algorithm": 3,
+  "timed_runs": 132,
+  "memory_runs": 44,
+  "total_solver_runs": 176,
+  "warmup": "one unmeasured, validated run per level and algorithm",
+  "aggregation": "median and sample standard deviation of timed runs; one separate peak-allocation run",
+  "timing": "perf_counter around solver.solve; tracemalloc disabled",
+  "memory": "one separate tracemalloc peak-allocation run per level and algorithm; bytes // 1024",
+  "validation": "replay every measured path; check goal, legality, length, and UCS/A* cost",
+  "optimal_cost_cross_check": "UCS and A* reported costs must match on every level",
+  "test_groups": {
+    "Cơ bản": "no fragile tiles and no switches",
+    "Ô dễ vỡ": "fragile tiles, no switches",
+    "Công tắc/cầu": "one or more switches, no fragile tiles",
+    "Kết hợp": "fragile tiles and one or more switches"
+  },
+  "sha256": {
+    "typst/collect_all_results.py": "342598ebdf24656da52a0f1696d4278d753af21847f61dc596f109ed47c4a56f",
+    "solvers/BFS.py": "afaa8a942efb54112a304bb4559dd03f13b5e93f74c28a5ee70acaf78f07f94f",
+    "solvers/DFS.py": "febdb9a473975e98f978f1bbeb13be64e03289e9fcd2f0a8b200d5b91ed2818d",
+    "solvers/UCS.py": "3f855d18552e4f83e61e1db00151c01d050f13d79cf03876cce234010a138510",
+    "solvers/astar.py": "83323ad858245a7c1acfb3cbf5bd37807854a1b7f424ff6f1cc9ad9a1ab16e1d",
+    "solvers/common.py": "376374facf4814dae80fff483e1369d657458bf2761829acb1d88260380a4b80",
+    "core/interfaces.py": "bc55993ff1e9b57f046ca440a868157cc13c5f3613aa5575577c36473fb466fd",
+    "core/game_rules.py": "4927ee149f9402a5bb6fe0ed6e4a6b577589a9e931a6bf72585fc21cd83b7f7e",
+    "core/movement.py": "8d4e4d92d414e7bb0e29265b76dd6d3701ac1da6e6b562a8346cb97c4f17c867",
+    "levels/level_loader.py": "8b8794d83af700f4f22314759901eda2baa55473bb9f69a2562c89a7d7eddab6",
+    "levels/level_01.json": "679b4e8313d83f38e9215a4223c3e7b65f3fb84ecb28f3c69582f557a9731dcc",
+    "levels/level_02.json": "32481e24ea55d879d44f6c2c1dfe873c83aae20b8a6f3bafc7ec921b0cda2a0e",
+    "levels/level_03.json": "4ef6e7a8a82727e5798d7e5806dd31b94333782c1b8d5db9eb7963569d9bb838",
+    "levels/level_04.json": "909466332507e116048e16982baba6cc719eab46fbe60f4fd5ef37e24f0dc2c6",
+    "levels/level_05.json": "212f389568d8b441da9b03b14804e69aa93eaf83ccca0cb361fd4cb0b3983dec",
+    "levels/level_06.json": "a66e927315a8f38b07f57f8fab24bf41332d3519bbaf00841b8b7abfff41099e",
+    "levels/level_07.json": "3bc58b25ccb148f037b291eaa13f5e8aa888222963a8436f160012fe8719d6e6",
+    "levels/level_08.json": "89d4af7fdaf63e9459c2892bf6defd5c63445b2476a6f52086302594bb1eb6c1",
+    "levels/level_09.json": "3d323cea8224baad67b2dfe79d6ad3e5e73681e02dcad21b1f182daecda5ef6b",
+    "levels/level_10.json": "d4566efa31c097ca881326d7c84aab78f94f093d5f9fc613d27d8f7971b53379",
+    "levels/level_11.json": "e86d298bc8f8dc804d829798976ddfe67f6cb1fc334e428c97b87c2f481dba60"
+  }
+}
