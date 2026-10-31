@@ -3,6 +3,7 @@ Depth-First Search solver for Bloxorz (iterative, no recursion).
 
 - LIFO stack + visited set to avoid cycles (state includes bridge bitmask
   and split/active-cube info, so revisiting is judged on the full state).
+- Supports any initial brick placement/standing position via `start` or `position`.
 - A state is marked visited when it is POPPED, and its parent edge is
   recorded at that moment, so the returned path is the real DFS tree path.
 - DFS does NOT guarantee the shortest solution; the path can be long.
@@ -14,16 +15,32 @@ Depth-First Search solver for Bloxorz (iterative, no recursion).
 from __future__ import annotations
 
 from core.game_rules import get_successors, is_goal
-from core.interfaces import GameState, Level, SolverResult
-from solvers.common import Solver, make_result, reconstruct_path
+from core.interfaces import BlockState, GameState, Level, Orientation, SolverResult
+from solvers.common import Solver, is_valid_state, make_result, normalize_start_state, reconstruct_path
 
 
 class DFSSolver(Solver):
-    def solve(self, level: Level, start: GameState) -> SolverResult:
+    def solve(
+        self,
+        level: Level,
+        start: GameState | BlockState | tuple | None = None,
+        *,
+        position: tuple[int, int] | None = None,
+        orientation: Orientation | str | None = None,
+        bridge_mask: int | None = None,
+    ) -> SolverResult:
+        start_state = normalize_start_state(
+            level, start, position=position, orientation=orientation, bridge_mask=bridge_mask
+        )
+        if not is_valid_state(start_state, level):
+            return make_result(None, 0)
+        if is_goal(start_state, level):
+            return make_result([], 0)
+
         came_from: dict[GameState, tuple[GameState, str] | None] = {}
         # Stack entries: (state, parent_state_or_None, action_or_None)
         stack: list[tuple[GameState, GameState | None, str | None]] = [
-            (start, None, None)
+            (start_state, None, None)
         ]
         expanded = 0
 

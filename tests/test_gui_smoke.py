@@ -101,6 +101,62 @@ def test_manual_input_movement():
     assert game_screen.current_state.block.c == start_pos[1] + 1
 
 
+def test_solve_button_starts_from_current_state(monkeypatch):
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.load_level(0)
+    game_screen.handle_manual_move("R")
+    current_state = game_screen.current_state
+    submitted = {}
+
+    def capture_start(algo, level, start):
+        submitted["start"] = start
+
+    monkeypatch.setattr(game_screen.solver_bridge, "start_solve", capture_start)
+    game_screen.trigger_selected_solve()
+
+    assert submitted["start"] == current_state
+    assert game_screen.solve_start_state == current_state
+    assert game_screen.current_state == current_state
+
+
+def test_solve_button_handles_current_state_already_at_goal(monkeypatch):
+    surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.load_level(0)
+    goal_state = GameState(
+        block=BlockState(r=1, c=game_screen.level.goal[1], orientation=Orientation.STANDING),
+        bridge_mask=game_screen.level.initial_bridge_mask,
+    )
+    game_screen.current_state = goal_state
+    game_screen.outcome_status = "WIN"
+
+    def start_solve(algo, level, start):
+        game_screen.solver_bridge.state = SolverBridgeState.RUNNING
+
+    def poll():
+        game_screen.solver_bridge.state = SolverBridgeState.FINISHED
+        return SolverResult(
+            path=[],
+            expanded_nodes=0,
+            search_time_ms=0.0,
+            peak_memory_kb=0,
+            solution_length=0,
+            cost=0.0,
+            success=True,
+        )
+
+    monkeypatch.setattr(game_screen.solver_bridge, "start_solve", start_solve)
+    monkeypatch.setattr(game_screen.solver_bridge, "poll", poll)
+    game_screen.trigger_selected_solve()
+    game_screen.update(0.016)
+
+    assert game_screen.solve_start_state == goal_state
+    assert game_screen.replayer is not None
+    assert game_screen.replayer.total_steps == 0
+    assert game_screen.outcome_status == "WIN"
+
+
 def test_split_level_and_space_key():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     game_screen = GameScreen(surface, levels=_mock_levels())
@@ -1873,7 +1929,7 @@ def test_playback_header_status_pill_states():
     assert len(goal_calls) == 0
 
 
-def test_solver_always_solves_from_initial_state():
+def test_solver_starts_from_current_state():
     surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     screen = GameScreen(surface, levels=_mock_levels())
     screen.load_level(0)  # Simple corridor
@@ -1890,11 +1946,12 @@ def test_solver_always_solves_from_initial_state():
     assert screen.current_state != initial_state
 
     # Trigger solve
+    solve_start_state = screen.current_state
     screen.trigger_solve("BFS")
 
-    # Assert that current_state is reset to initial_state, moves_count reset to 0, outcome_status is None
-    assert screen.current_state == screen.initial_state
-    assert screen.moves_count == 0
+    assert screen.current_state != initial_state
+    assert screen.solve_start_state == screen.current_state
+    assert screen.moves_count == 1
     assert screen.outcome_status is None
 
     # Wait for solve to finish
@@ -1910,7 +1967,7 @@ def test_solver_always_solves_from_initial_state():
     assert screen.latest_result.path is not None
     assert screen.latest_result.solution_length == len(screen.latest_result.path)
     assert screen.replayer is not None
-    assert screen.replayer.initial_state == screen.initial_state
+    assert screen.replayer.initial_state == solve_start_state
     assert screen.replayer.total_steps == screen.latest_result.solution_length
 
 

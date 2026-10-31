@@ -138,25 +138,187 @@ def make_result(
     )
 
 
+def normalize_start_state(
+    level: Level,
+    start: GameState | BlockState | tuple | list | None = None,
+    *,
+    position: tuple[int, int] | list[int] | None = None,
+    orientation: Orientation | str | None = None,
+    bridge_mask: int | None = None,
+) -> GameState:
+    """
+    Normalizes any brick representation into an authoritative GameState.
+
+    Accepts:
+    - start is None (and position is None): defaults to level.start and level.initial_bridge_mask.
+    - start is GameState: used directly, overriding bridge_mask if explicitly provided.
+    - start is BlockState: wrapped with bridge_mask (defaulting to level.initial_bridge_mask).
+    - start is (r, c): standing brick at (r, c).
+    - start is (r, c, orientation): brick at (r, c) with given orientation.
+    - start is (r, c, orientation, mask): full specification tuple.
+    - start is ((r1, c1), (r2, c2)): two cell coordinates (lying block or split cubes).
+    - position=(r, c) keyword: combined with orientation and bridge_mask.
+    """
+    default_mask = getattr(level, "initial_bridge_mask", 0)
+
+    # 1. Explicit position keyword has top priority for coordinates
+    if position is not None:
+        r, c = int(position[0]), int(position[1])
+        ori = Orientation(orientation) if orientation is not None else Orientation.STANDING
+        mask = bridge_mask if bridge_mask is not None else default_mask
+        return GameState(block=BlockState(r=r, c=c, orientation=ori), bridge_mask=mask)
+
+    # 2. start is None -> default from level
+    if start is None:
+        mask = bridge_mask if bridge_mask is not None else default_mask
+        return GameState(block=level.start, bridge_mask=mask)
+
+    # 3. start is already GameState
+    if isinstance(start, GameState):
+        if bridge_mask is not None:
+            return GameState(block=start.block, bridge_mask=bridge_mask)
+        return start
+
+    # 4. start is BlockState
+    if isinstance(start, BlockState):
+        mask = bridge_mask if bridge_mask is not None else default_mask
+        return GameState(block=start, bridge_mask=mask)
+
+    # 5. start is tuple or list
+    if isinstance(start, (tuple, list)):
+        mask = bridge_mask if bridge_mask is not None else default_mask
+
+        # Subcase: ((r1, c1), (r2, c2))
+        if len(start) == 2 and isinstance(start[0], (tuple, list)) and isinstance(start[1], (tuple, list)):
+            p1 = (int(start[0][0]), int(start[0][1]))
+            p2 = (int(start[1][0]), int(start[1][1]))
+            dr = abs(p1[0] - p2[0])
+            dc = abs(p1[1] - p2[1])
+            if dr == 0 and dc == 1:
+                min_c = min(p1[1], p2[1])
+                block = BlockState(r=p1[0], c=min_c, orientation=Orientation.LYING_H)
+            elif dr == 1 and dc == 0:
+                min_r = min(p1[0], p2[0])
+                block = BlockState(r=min_r, c=p1[1], orientation=Orientation.LYING_V)
+            else:
+                block = BlockState(
+                    r=p1[0],
+                    c=p1[1],
+                    orientation=Orientation.STANDING,
+                    is_split=True,
+                    cube_positions=(p1, p2),
+                    active_cube=0,
+                )
+            return GameState(block=block, bridge_mask=mask)
+
+        # Subcase: (r, c)
+        if len(start) == 2:
+            r, c = int(start[0]), int(start[1])
+            ori = Orientation(orientation) if orientation is not None else Orientation.STANDING
+            return GameState(block=BlockState(r=r, c=c, orientation=ori), bridge_mask=mask)
+
+        # Subcase: (r, c, orientation)
+        if len(start) == 3:
+            r, c = int(start[0]), int(start[1])
+            ori = Orientation(start[2])
+            return GameState(block=BlockState(r=r, c=c, orientation=ori), bridge_mask=mask)
+
+        # Subcase: (r, c, orientation, mask)
+        if len(start) == 4:
+            r, c = int(start[0]), int(start[1])
+            ori = Orientation(start[2])
+            m = int(start[3]) if bridge_mask is None else bridge_mask
+            return GameState(block=BlockState(r=r, c=c, orientation=ori), bridge_mask=m)
+
+    raise TypeError(f"Cannot normalize start state from {type(start).__name__}: {start!r}")
+
+
 class Solver(ABC):
     """Abstract Base Class for all search algorithms. Pygame is forbidden here."""
 
     @abstractmethod
-    def solve(self, level: Level, start: GameState) -> SolverResult:
+    def solve(
+        self,
+        level: Level,
+        start: GameState | BlockState | tuple | None = None,
+        *,
+        position: tuple[int, int] | None = None,
+        orientation: Orientation | str | None = None,
+        bridge_mask: int | None = None,
+    ) -> SolverResult:
         ...
 
     def heuristic(self, state: GameState, level: Level) -> float:
         return 0.0
 
 
-def run_solver(solver: Solver, level: Level, start: GameState) -> SolverResult:
+def run_solver(
+    solver: Solver,
+    level: Level,
+    start: GameState | BlockState | tuple | None = None,
+    *,
+    position: tuple[int, int] | None = None,
+    orientation: Orientation | str | None = None,
+    bridge_mask: int | None = None,
+) -> SolverResult:
     """Executes a solver while collecting memory and execution time metrics."""
+    start_state = normalize_start_state(
+        level, start, position=position, orientation=orientation, bridge_mask=bridge_mask
+    )
     tracemalloc.start()
     t0 = time.perf_counter()
-    result = solver.solve(level, start)
+    result = solver.solve(level, start_state)
     dt = (time.perf_counter() - t0) * 1000.0
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     result.search_time_ms = dt
     result.peak_memory_kb = peak // 1024
     return result
+
+
+def is_valid_state(state: GameState, level: Level) -> bool:
+    """
+    Evaluates whether the given GameState has full floor/bridge support
+    and does not violate fragile tile constraints or overlap split cubes.
+    """
+    if not getattr(level, "tiles", None) and not getattr(level, "bridges", None):
+        return True
+
+    if state.block.is_split and state.block.cube_positions:
+        pos0, pos1 = state.block.cube_positions
+        if pos0 == pos1:
+            return False
+
+    bridge_index = getattr(level, "_bridge_index", None)
+    if bridge_index is None:
+        if not level.bridges:
+            bridge_index = {}
+        else:
+            bridge_index = {b_id: i for i, b_id in enumerate(level.bridges.keys())}
+
+    for cell in state.block.occupied_cells():
+        tile = level.tiles.get(cell) if level.tiles else None
+
+        in_bridge = False
+        bridge_open = False
+        if level.bridges:
+            for b_id, b_tiles in level.bridges.items():
+                if cell in b_tiles:
+                    in_bridge = True
+                    idx = bridge_index.get(b_id)
+                    if idx is not None and (state.bridge_mask & (1 << idx)) != 0:
+                        bridge_open = True
+                    break
+
+        if in_bridge:
+            if not bridge_open:
+                return False
+        else:
+            if tile is None or tile == TileType.VOID or tile == TileType.BRIDGE:
+                return False
+
+        if tile == TileType.FRAGILE:
+            if state.block.is_split or state.block.orientation == Orientation.STANDING:
+                return False
+
+    return True

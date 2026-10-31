@@ -85,6 +85,7 @@ class GameScreen:
         init_mask = getattr(self.level, "initial_bridge_mask", 0)
         self.current_state: GameState = GameState(block=self.level.start, bridge_mask=init_mask)
         self.initial_state: GameState = self.current_state
+        self.solve_start_state: GameState = self.initial_state
         self.moves_count = 0
         self.outcome_status: str | None = None  # None, "WIN", "LOST_FALL", "LOST_FRAGILE", "UNSOLVABLE"
 
@@ -326,6 +327,7 @@ class GameScreen:
         init_mask = getattr(self.level, "initial_bridge_mask", 0)
         self.initial_state = GameState(block=self.level.start, bridge_mask=init_mask)
         self.current_state = self.initial_state
+        self.solve_start_state = self.initial_state
         self.timeline_slider.min_val = 0
         self.timeline_slider.max_val = 0
         self.timeline_slider.value = 0
@@ -372,15 +374,24 @@ class GameScreen:
 
         self._update_layout()
 
-    def trigger_solve(self, algo: str) -> None:
+    def trigger_solve(self, algo: str, start: GameState | BlockState | tuple | None = None, from_current: bool = True) -> None:
         if self.solver_bridge.state == SolverBridgeState.RUNNING:
             return
         self.select_algo(algo)
         self.replayer = None
         self.latest_result = None
+
+        if start is not None:
+            solve_start = start
+        elif from_current:
+            solve_start = self.current_state
+        else:
+            self.moves_count = 0
+            self.current_state = self.initial_state
+            solve_start = self.initial_state
+
         self.outcome_status = None
-        self.moves_count = 0
-        self.current_state = self.initial_state
+        self.solve_start_state = solve_start
         self.timeline_slider.min_val = 0
         self.timeline_slider.max_val = 0
         self.timeline_slider.value = 0
@@ -397,7 +408,7 @@ class GameScreen:
             self.btn_camera_toggle.icon_drawer = draw_camera_focus_icon
 
         self._update_layout()
-        self.solver_bridge.start_solve(algo, self.level, self.initial_state)
+        self.solver_bridge.start_solve(algo, self.level, self.solve_start_state)
 
     def cancel_solve(self) -> None:
         self.solver_bridge.cancel()
@@ -594,12 +605,13 @@ class GameScreen:
             res = self.solver_bridge.poll()
             if res:
                 self.latest_result = res
-                if res.success and res.path:
+                if res.success and res.path is not None:
                     self.outcome_status = None
                     current_speed = self.SPEED_PRESETS[self.speed_preset_idx]
+                    start_state = getattr(self, "solve_start_state", self.current_state)
                     self.replayer = SolutionReplayer(
                         self.level,
-                        self.initial_state,
+                        start_state,
                         res.path,
                         speed_multiplier=current_speed,
                     )

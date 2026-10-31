@@ -20,19 +20,11 @@ class SolverBridgeState(Enum):
     ERROR = "error"
 
 
-def on_solve(algo: str, level: Level, start: GameState | BlockState) -> SolverResult:
+def on_solve(algo: str, level: Level, start: GameState | BlockState | tuple | None = None) -> SolverResult:
     """
     Synchronous solver invocation per docs/parallel-engineering-plan.en.md §4.
-    Runs the chosen solver directly and returns SolverResult.
+    Runs the chosen solver directly from any initial brick placement/standing position.
     """
-    # Keep the public helper compatible with older callers that passed only
-    # level.start instead of the complete GameState contract.
-    if isinstance(start, BlockState):
-        start = GameState(
-            block=start,
-            bridge_mask=getattr(level, "initial_bridge_mask", 0),
-        )
-
     solver = get_solver(algo)
     return run_solver(solver, level, start)
 
@@ -40,7 +32,7 @@ def on_solve(algo: str, level: Level, start: GameState | BlockState) -> SolverRe
 def _worker_entry(
     algo: str,
     level: Level,
-    start: GameState,
+    start: GameState | BlockState | tuple | None,
     result_queue: mp.Queue,
 ) -> None:
     """Entry point for the isolated background solver process."""
@@ -66,7 +58,7 @@ class AsyncSolverBridge:
         self.last_result: SolverResult | None = None
         self.error_message: str | None = None
 
-    def start_solve(self, algo: str, level: Level, start: GameState) -> None:
+    def start_solve(self, algo: str, level: Level, start: GameState | BlockState | tuple | None = None) -> None:
         """Launches search in a separate process."""
         self.cancel()  # Clean up any existing run
 

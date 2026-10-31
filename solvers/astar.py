@@ -13,8 +13,8 @@ from itertools import count
 from math import isfinite
 
 from core.game_rules import get_successors, is_goal
-from core.interfaces import GameState, Level, SolverResult
-from .common import Solver, StepCost
+from core.interfaces import BlockState, GameState, Level, Orientation, SolverResult
+from .common import Solver, StepCost, is_valid_state, normalize_start_state
 
 
 Heuristic = Callable[[GameState, Level], float]
@@ -87,7 +87,11 @@ def heuristic(state: GameState, level: Level | None = None) -> float:
         for destination in switch.destinations
     }))
     landmarks = _relaxed_landmarks(level.goal, teleports)
-    return StepCost.MIN_EDGE_COST * min(
+    # Cận dưới thích ứng: Nếu màn không có công tắc split và khối chưa tách,
+    # khối không bao giờ có thể tách; chi phí mỗi bước lăn tối thiểu luôn >= 1.0.
+    # Ngược lại, nếu có công tắc split, dùng cận an toàn 0.3 của lệnh SPACE.
+    min_step = StepCost.COST_SWITCH_CUBE if (teleports or state.block.is_split) else StepCost.COST_TIP_OVER
+    return min_step * min(
         _distance(cell, landmark) + remaining
         for cell in state.occupied_cells()
         for landmark, remaining in landmarks
@@ -141,7 +145,15 @@ class AStarSolver(Solver):
             raise ValueError("A* heuristic must be zero at a goal")
         return value
 
-    def solve(self, level: Level, start: GameState) -> SolverResult:
+    def solve(
+        self,
+        level: Level,
+        start: GameState | BlockState | tuple | None = None,
+        *,
+        position: tuple[int, int] | None = None,
+        orientation: Orientation | str | None = None,
+        bridge_mask: int | None = None,
+    ) -> SolverResult:
         """Giải từ state của level; mỗi lần gọi có dữ liệu tìm kiếm riêng.
 
         expanded_nodes đếm pop còn hiệu lực, bao gồm goal. Start đã thắng
@@ -152,14 +164,38 @@ class AStarSolver(Solver):
         Thời gian/bộ nhớ bằng zero khi gọi trực tiếp; dùng run_solver()
         để đo các trường đó theo quy ước chung.
         """
+        start_state = normalize_start_state(
+            level, start, position=position, orientation=orientation, bridge_mask=bridge_mask
+        )
+        if not is_valid_state(start_state, level):
+            return SolverResult(
+                path=None,
+                expanded_nodes=0,
+                search_time_ms=0.0,
+                peak_memory_kb=0,
+                solution_length=-1,
+                cost=float("inf"),
+                success=False,
+            )
+        if is_goal(start_state, level):
+            return SolverResult(
+                path=[],
+                expanded_nodes=0,
+                search_time_ms=0.0,
+                peak_memory_kb=0,
+                solution_length=0,
+                cost=0.0,
+                success=True,
+            )
+
         # Tính penalty một lần cho level này, tránh cache nhầm giữa các solve.
         cost = self._cost if self._cost is not None else StepCost(level)
         sequence = count()
         # Entry: (f, counter, g, state). Counter xử lý hòa f bằng FIFO
         # và ngăn heap so sánh các GameState không có thứ tự.
-        frontier = [(self.heuristic(start, level), next(sequence), 0.0, start)]
-        best_g: dict[GameState, float] = {start: 0.0}
-        parents: dict[GameState, tuple[GameState, str] | None] = {start: None}
+        frontier = [(self.heuristic(start_state, level), next(sequence), 0.0, start_state)]
+        best_g: dict[GameState, float] = {start_state: 0.0}
+        parents: dict[GameState, tuple[GameState, str] | None] = {start_state: None}
         expanded = 0
 
         while frontier:
