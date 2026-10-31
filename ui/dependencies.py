@@ -5,7 +5,7 @@ Core transition rules and Solvers.
 """
 from __future__ import annotations
 
-from core.interfaces import GameState, Level, SolverResult
+from core.interfaces import Level
 from solvers.common import Solver, run_solver
 from solvers.BFS import BFSSolver
 from solvers.DFS import DFSSolver
@@ -22,14 +22,10 @@ from tests.mocks import (
 
 IS_MOCK_CORE: bool = False
 
-# --- Search Solvers & Harness (Toggle to real solvers when M3-M5 land) ---
-from tests.mocks import (
-    MockBFSSolver,
-    MockDFSSolver,
-    MockUCSSolver,
-    MockAStarSolver,
-)
-IS_MOCK_SOLVERS: bool = True
+# --- Search Solvers & Harness ---
+from solvers.UCS import UCSSolver
+from solvers.astar import AStarSolver
+IS_MOCK_SOLVERS: bool = False
 
 IS_MOCK_MODE: bool = IS_MOCK_CORE or IS_MOCK_SOLVERS
 
@@ -53,9 +49,9 @@ def get_solver(algo: str) -> Solver:
     elif name == "DFS":
         return DFSSolver()
     elif name == "UCS":
-        return MockUCSSolver()
+        return UCSSolver()
     elif name in ("ASTAR", "A*"):
-        return MockAStarSolver()
+        return AStarSolver()
     raise ValueError(f"Unknown solver algorithm: {algo}")
 
 

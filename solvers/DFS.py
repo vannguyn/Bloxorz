@@ -31,7 +31,11 @@ class DFSSolver(Solver):
             state, parent, action = stack.pop()
             if state in came_from:
                 continue
-            came_from[state] = None if parent is None else (parent, action)  # type: ignore[assignment]
+            if parent is None:
+                came_from[state] = None
+            else:
+                assert action is not None
+                came_from[state] = (parent, action)
 
             if is_goal(state, level):
                 return make_result(reconstruct_path(came_from, state), expanded)
