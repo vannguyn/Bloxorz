@@ -29,7 +29,12 @@ class IsometricBoardRenderer:
         self.origin_x = 0
         self.origin_y = 0
 
-    def compute_layout(self, level: Level, area_rect: pygame.Rect | None = None) -> tuple[int, int, int]:
+    def compute_layout(
+        self,
+        level: Level,
+        area_rect: pygame.Rect | None = None,
+        force_tile_size: int | None = None,
+    ) -> tuple[int, int, int]:
         """Calculates origin_x, origin_y, and tile_size to center the isometric board in area_rect."""
         rect = area_rect or pygame.Rect(0, 0, self.viewport_width, self.viewport_height)
         avail_w = rect.width - 2 * settings.BOARD_MARGIN
@@ -55,9 +60,12 @@ class IsometricBoardRenderer:
         # Scale tile_size to fit viewport width and height
         # Width span = delta_u * (tile_size * 0.5)
         # Height span = delta_v * (tile_size * 0.25) + extrusion (0.15) + standing block & hop (1.2)
-        max_size_w = avail_w / (delta_u * 0.5)
-        max_size_h = avail_h / (delta_v * 0.25 + 1.35)
-        tile_size = max(16, min(settings.TILE_SIZE, int(min(max_size_w, max_size_h))))
+        if force_tile_size is not None:
+            tile_size = force_tile_size
+        else:
+            max_size_w = avail_w / (delta_u * 0.5)
+            max_size_h = avail_h / (delta_v * 0.25 + 1.35)
+            tile_size = max(16, min(settings.TILE_SIZE, int(min(max_size_w, max_size_h))))
 
         tile_w = tile_size
         tile_h = tile_size * 0.5
@@ -125,9 +133,13 @@ class IsometricBoardRenderer:
         level: Level,
         state: GameState,
         area_rect: pygame.Rect | None = None,
+        camera_offset: tuple[float, float] = (0.0, 0.0),
+        force_tile_size: int | None = None,
     ) -> None:
         """Draws all board tiles, bridges, and switches in depth-sorted isometric view."""
-        self.compute_layout(level, area_rect)
+        self.compute_layout(level, area_rect, force_tile_size=force_tile_size)
+        self.origin_x += round(camera_offset[0])
+        self.origin_y += round(camera_offset[1])
 
         # Bridge status map
         bridge_index_map = {b_id: i for i, b_id in enumerate(level.bridges.keys())}
@@ -228,49 +240,56 @@ class IsometricBoardRenderer:
 
     def _draw_fragile_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
-        glass_depth = max(2, round(d * 0.35))
+        fragile_d = max(2, round(d * 0.35))
+        border_color = settings.COLOR_FRAGILE_BORDER
 
-        # Side walls with shaded amber tones and glass border
-        self._draw_side_walls(surface, corners, glass_depth, settings.COLOR_FRAGILE, settings.COLOR_GLASS_BORDER)
+        # Thin vertical thickness side walls with shaded orange tones
+        self._draw_side_walls(surface, corners, fragile_d, settings.COLOR_FRAGILE, border_color)
 
-        # Base fill
+        # Top diamond face with solid orange body
         pygame.draw.polygon(surface, settings.COLOR_FRAGILE, corners)
 
-        # Bounding box of top diamond
-        xs = [p[0] for p in corners]
-        ys = [p[1] for p in corners]
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-        tw = max(1, max_x - min_x)
-        th = max(1, max_y - min_y)
+        # Diagonal hazard warning stripes across diamond face (slanted 45-degree straight lines relative to grid)
+        cx = (p_left[0] + p_right[0]) / 2.0
+        cy = (p_top[1] + p_bottom[1]) / 2.0
+        hw = max(1.0, (p_right[0] - p_left[0]) / 2.0)
+        hh = max(1.0, (p_bottom[1] - p_top[1]) / 2.0)
 
-        # Alpha surface for translucent amber glass and pixel-art crack projection
-        iso_crack = pygame.Surface((tw, th), pygame.SRCALPHA)
-        local_corners = [(x - min_x, y - min_y) for (x, y) in corners]
-        pygame.draw.polygon(iso_crack, settings.COLOR_GLASS_FILL, local_corners)
+        step = max(6.0, hw / 3.0)
+        for offset in (-2 * step, -step, 0.0, step, 2 * step):
+            pts = []
+            # Edge 1: top-right (x in [0, hw], y in [-hh, 0])
+            y1 = offset - hw
+            x1 = y1 + offset
+            if 0 <= x1 <= hw and -hh <= y1 <= 0:
+                pts.append((cx + x1, cy + y1))
+            # Edge 2: bottom-right (x in [0, hw], y in [0, hh])
+            y2 = (hw - offset) / 3.0
+            x2 = y2 + offset
+            if 0 <= x2 <= hw and 0 <= y2 <= hh:
+                pts.append((cx + x2, cy + y2))
+            # Edge 3: bottom-left (x in [-hw, 0], y in [0, hh])
+            y3 = hw + offset
+            x3 = y3 + offset
+            if -hw <= x3 <= 0 and 0 <= y3 <= hh:
+                pts.append((cx + x3, cy + y3))
+            # Edge 4: top-left (x in [-hw, 0], y in [-hh, 0])
+            y4 = (-hw - offset) / 3.0
+            x4 = y4 + offset
+            if -hw <= x4 <= 0 and -hh <= y4 <= 0:
+                pts.append((cx + x4, cy + y4))
 
-        pw = max(2, round(tw / 32.0))
-        ph = max(1, round(th / 32.0))
+            if len(pts) >= 2:
+                pygame.draw.line(
+                    surface,
+                    settings.COLOR_FRAGILE_STRIPE,
+                    (round(pts[0][0]), round(pts[0][1])),
+                    (round(pts[1][0]), round(pts[1][1])),
+                    2,
+                )
 
-        # Under-shadow layer (depth)
-        for gx, gy in settings.FRAGILE_CRACK_SHADOW:
-            u = gx / 32.0
-            v = gy / 32.0
-            px = int(round(tw * 0.5 + (u - v) * (tw * 0.5)))
-            py = int(round((u + v) * (th * 0.5)))
-            pygame.draw.rect(iso_crack, settings.COLOR_GLASS_SHADOW, (px, py, pw, ph))
-
-        # White starburst crack highlight layer
-        crack_color = settings.COLOR_GLASS_CRACK[:3]
-        for gx, gy in settings.FRAGILE_CRACK_WHITE:
-            u = gx / 32.0
-            v = gy / 32.0
-            px = int(round(tw * 0.5 + (u - v) * (tw * 0.5)))
-            py = int(round((u + v) * (th * 0.5)))
-            pygame.draw.rect(iso_crack, crack_color, (px, py, pw, ph))
-
-        surface.blit(iso_crack, (min_x, min_y))
-        pygame.draw.polygon(surface, settings.COLOR_GLASS_BORDER, corners, 1)
+        # Crisp perimeter border framing top diamond face (drawn AFTER stripes)
+        pygame.draw.polygon(surface, border_color, corners, 1)
 
     def _draw_goal_tile(self, surface: pygame.Surface, corners: list[tuple[int, int]], d: int) -> None:
         p_top, p_right, p_bottom, p_left = corners
@@ -443,50 +462,58 @@ class IsometricBoardRenderer:
             pygame.draw.line(surface, x_color, p3, p4, lw)
 
         elif switch.type == "split":
-            # 3D Split switch: symmetrical arched bracket wings with dynamic gap compression
-            lift = -1 if is_pressed else -4
-            gap = 2 if is_pressed else 5
-            scy = cy + lift
+            # 3D Split switch: dimetrically projected dual arched wings lying flat on tile face
+            lift = -1 if is_pressed else -max(2, round(self.tile_size * 0.08))
+            drop = -lift
 
-            sw_w = max(6, round(self.tile_size * 0.16))
-            sw_h = max(7, round(self.tile_size * 0.22))
+            # Dimensionless proportions relative to diamond center
+            g = 0.04 if is_pressed else 0.08  # center gap
+            w = 0.32                          # wing width span
+            h = 0.42                          # wing height span
 
-            # Arched left and right bracket wings
+            def to_screen(u_frac: float, v_frac: float, elev_y: int = 0) -> tuple[int, int]:
+                return (
+                    round(cx + u_frac * (self.tile_size * 0.5)),
+                    round(cy + elev_y + v_frac * (self.tile_size * 0.25)),
+                )
+
+            # Left and Right arched wings on the 2:1 dimetric surface
             lw_top = [
-                (cx - gap - sw_w, scy - sw_h),
-                (cx - gap - max(2, sw_w // 3), scy - sw_h),
-                (cx - gap - max(2, sw_w // 3), scy - max(2, sw_h // 3)),
-                (cx - gap, scy),
-                (cx - gap - max(2, sw_w // 3), scy + max(2, sw_h // 3)),
-                (cx - gap - max(2, sw_w // 3), scy + sw_h),
-                (cx - gap - sw_w, scy + sw_h),
-                (cx - gap - max(3, sw_w * 2 // 3), scy),
+                to_screen(-g - w, -h, lift),
+                to_screen(-g - w * 0.35, -h, lift),
+                to_screen(-g - w * 0.35, -h * 0.35, lift),
+                to_screen(-g, 0.0, lift),
+                to_screen(-g - w * 0.35, h * 0.35, lift),
+                to_screen(-g - w * 0.35, h, lift),
+                to_screen(-g - w, h, lift),
+                to_screen(-g - w * 0.7, 0.0, lift),
             ]
             rw_top = [
-                (cx + gap + sw_w, scy - sw_h),
-                (cx + gap + max(2, sw_w // 3), scy - sw_h),
-                (cx + gap + max(2, sw_w // 3), scy - max(2, sw_h // 3)),
-                (cx + gap, scy),
-                (cx + gap + max(2, sw_w // 3), scy + max(2, sw_h // 3)),
-                (cx + gap + max(2, sw_w // 3), scy + sw_h),
-                (cx + gap + sw_w, scy + sw_h),
-                (cx + gap + max(3, sw_w * 2 // 3), scy),
+                to_screen(g + w, -h, lift),
+                to_screen(g + w * 0.35, -h, lift),
+                to_screen(g + w * 0.35, -h * 0.35, lift),
+                to_screen(g, 0.0, lift),
+                to_screen(g + w * 0.35, h * 0.35, lift),
+                to_screen(g + w * 0.35, h, lift),
+                to_screen(g + w, h, lift),
+                to_screen(g + w * 0.7, 0.0, lift),
             ]
 
-            # Lower shadow skirts (10, 60, 100)
-            drop = -lift
             lw_shadow = [(x, y + drop) for (x, y) in lw_top]
             rw_shadow = [(x, y + drop) for (x, y) in rw_top]
+
+            # Shadow skirts on tile surface
             pygame.draw.polygon(surface, (10, 60, 100), lw_shadow)
             pygame.draw.polygon(surface, (10, 60, 100), rw_shadow)
 
-            # Extrusion skirt between top and shadow
-            for i in range(len(lw_top)):
-                ni = (i + 1) % len(lw_top)
-                if lw_top[i][1] >= scy or lw_top[ni][1] >= scy:
-                    pygame.draw.polygon(surface, (10, 60, 100), [lw_top[i], lw_top[ni], lw_shadow[ni], lw_shadow[i]])
-                if rw_top[i][1] >= scy or rw_top[ni][1] >= scy:
-                    pygame.draw.polygon(surface, (10, 60, 100), [rw_top[i], rw_top[ni], rw_shadow[ni], rw_shadow[i]])
+            # Extrusion quads connecting elevated face to tile surface
+            if drop > 0:
+                for i in range(len(lw_top)):
+                    ni = (i + 1) % len(lw_top)
+                    if lw_top[i][1] >= cy + lift or lw_top[ni][1] >= cy + lift:
+                        pygame.draw.polygon(surface, (10, 60, 100), [lw_top[i], lw_top[ni], lw_shadow[ni], lw_shadow[i]])
+                    if rw_top[i][1] >= cy + lift or rw_top[ni][1] >= cy + lift:
+                        pygame.draw.polygon(surface, (10, 60, 100), [rw_top[i], rw_top[ni], rw_shadow[ni], rw_shadow[i]])
 
             # Top polygons
             color = (200, 240, 255) if is_pressed else settings.COLOR_SPLIT_CYAN
@@ -495,5 +522,7 @@ class IsometricBoardRenderer:
             pygame.draw.polygon(surface, color, rw_top)
             pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, rw_top, 1)
 
-            # Center void groove (15, 23, 42)
-            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 2), (cx, cy + sw_h + 2), 2)
+            # Center void groove along the 2:1 dimetric vertical
+            p_top = to_screen(0.0, -h * 1.1, 0)
+            p_bot = to_screen(0.0, h * 1.1, 0)
+            pygame.draw.line(surface, (15, 23, 42), p_top, p_bot, max(1, round(self.tile_size * 0.03)))

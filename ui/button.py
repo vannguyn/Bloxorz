@@ -40,6 +40,7 @@ class Button:
         text: str = "",
         on_click: Callable[[], None] | None = None,
         *,
+        callback: Callable[[], None] | None = None,
         enabled: bool = True,
         primary: bool = False,
         selected: bool = False,
@@ -48,7 +49,8 @@ class Button:
     ):
         self.rect = pygame.Rect(rect)
         self.text = text
-        self.on_click = on_click
+        self.on_click = on_click or callback
+        self.callback = self.on_click
         self.enabled = enabled
         self.primary = primary
         self.selected = selected

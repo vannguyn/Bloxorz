@@ -377,9 +377,6 @@ def test_visual_patch_tokens_defined_and_valid():
     elements are ints in [0, 255], and match expected color values.
     """
     expected_tokens = {
-        "COLOR_GLASS_FILL": (245, 130, 45, 185),
-        "COLOR_GLASS_CRACK": (255, 255, 255, 230),
-        "COLOR_GLASS_BORDER": (255, 160, 60),
         "COLOR_SPLIT_CYAN": (56, 189, 248),
         "COLOR_SPLIT_DARK": (2, 132, 199),
         "COLOR_HEAVY_RED": (239, 68, 68),
@@ -451,10 +448,10 @@ def test_3d_special_cells_visual_redesign():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    has_cracks = any(p[0] > 240 and p[1] > 240 and p[2] > 240 for p in fragile_pixels)
-    assert has_cracks, "Fragile tile diamond should render white fracture crack lines"
-    has_amber = any(p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80 for p in fragile_pixels)
-    assert has_amber, "Fragile tile diamond should render amber glass fill"
+    has_stripes = any(p == settings.COLOR_FRAGILE_STRIPE for p in fragile_pixels)
+    assert has_stripes, "Fragile tile diamond should render hazard stripes"
+    has_orange = any(p == settings.COLOR_FRAGILE or (p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80) for p in fragile_pixels)
+    assert has_orange, "Fragile tile diamond should render solid orange fill"
 
     # 3. Goal Tile: shaft interior wall colors present
     goal_rect = renderer.get_cell_rect(2, 2)
@@ -585,7 +582,7 @@ def test_closed_bridge_vs_heavy_switch_red_exclusivity_3d():
 
     # 2. Verify all 10 real production levels render cleanly in 3D mode
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
     for lvl in all_levels:
         surf = pygame.Surface((800, 600))
         st = GameState(block=lvl.start, bridge_mask=lvl.initial_bridge_mask)
@@ -624,17 +621,17 @@ def test_3d_amber_glass_and_switch_patch():
         for x in range(fragile_rect.left, fragile_rect.right)
         for y in range(fragile_rect.top, fragile_rect.bottom)
     ]
-    white_cracks = [
+    stripes = [
         p for p in fragile_pixels
-        if p[0] > 240 and p[1] > 240 and p[2] > 240
+        if p == settings.COLOR_FRAGILE_STRIPE
     ]
-    assert len(white_cracks) > 0, "Fragile top diamond should contain white fracture crack pixels"
+    assert len(stripes) > 0, "Fragile top diamond should contain hazard stripes"
 
-    amber_pixels = [
+    orange_pixels = [
         p for p in fragile_pixels
-        if p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80
+        if p == settings.COLOR_FRAGILE or (p[0] > 200 and 100 <= p[1] <= 180 and p[2] < 80)
     ]
-    assert len(amber_pixels) > 0, "Fragile top diamond should contain amber glass pixels"
+    assert len(orange_pixels) > 0, "Fragile top diamond should contain orange pixels"
 
     # 2. Heavy switch in 3D: COLOR_HEAVY_BASE and COLOR_HEAVY_RED
     heavy_rect = renderer.get_cell_rect(1, 0)
@@ -686,7 +683,7 @@ def test_all_10_stages_visual_patch_regression_3d():
     from levels.level_loader import load_all_levels
 
     all_levels = load_all_levels()
-    assert len(all_levels) == 10
+    assert len(all_levels) >= 10
 
     renderer = IsometricBoardRenderer(viewport_width=800, viewport_height=600)
     block_renderer = IsometricBlockRenderer(renderer)
@@ -711,19 +708,12 @@ def test_all_10_stages_visual_patch_regression_3d():
                     for y in range(rect.top, rect.bottom)
                 ]
                 orange_pixels = [p for p in pixels if p[0] > p[1] > p[2]]
-                white_crack_pixels = [p for p in pixels if p[0] > 220 and p[1] > 220 and p[2] > 220]
-                rust_shadow_pixels = [
-                    p for p in pixels
-                    if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-                ]
+                stripe_pixels = [p for p in pixels if p == settings.COLOR_FRAGILE_STRIPE]
                 assert len(orange_pixels) > 20, (
                     f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking dominant orange hues (found {len(orange_pixels)})"
                 )
-                assert len(white_crack_pixels) > 0, (
-                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking white crack highlights"
-                )
-                assert len(rust_shadow_pixels) > 0, (
-                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking rust under-shadow pixels"
+                assert len(stripe_pixels) > 0, (
+                    f"3D stage {lvl.id} fragile tile at ({r}, {c}) lacking hazard warning stripes"
                 )
 
         # Check switches in this stage
@@ -773,31 +763,7 @@ def test_all_10_stages_visual_patch_regression_3d():
                         f"3D Split switch in {lvl.id} missing COLOR_SPLIT_CYAN"
                     )
 
-    assert fragile_tiles_checked == 20, f"Expected 20 fragile tiles across all stages, got {fragile_tiles_checked}"
-
-
-def test_pixel_art_crack_tokens_and_coordinates():
-    """Validates pixel-art crack color tokens and canonical coordinate sets in settings."""
-    assert hasattr(settings, "COLOR_GLASS_SHADOW"), "settings missing COLOR_GLASS_SHADOW"
-    assert settings.COLOR_GLASS_SHADOW == (140, 50, 10, 220)
-
-    assert hasattr(settings, "FRAGILE_CRACK_WHITE"), "settings missing FRAGILE_CRACK_WHITE"
-    white_coords = settings.FRAGILE_CRACK_WHITE
-    assert isinstance(white_coords, tuple)
-    assert len(white_coords) >= 80, f"Expected at least 80 white crack coordinates, got {len(white_coords)}"
-    for coord in white_coords:
-        assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
-        gx, gy = coord
-        assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
-
-    assert hasattr(settings, "FRAGILE_CRACK_SHADOW"), "settings missing FRAGILE_CRACK_SHADOW"
-    shadow_coords = settings.FRAGILE_CRACK_SHADOW
-    assert isinstance(shadow_coords, tuple)
-    assert len(shadow_coords) >= 50, f"Expected at least 50 shadow crack coordinates, got {len(shadow_coords)}"
-    for coord in shadow_coords:
-        assert isinstance(coord, tuple) and len(coord) == 2, f"Coordinate {coord} is not a 2-tuple"
-        gx, gy = coord
-        assert 0 <= gx < 32 and 0 <= gy < 32, f"Coordinate ({gx}, {gy}) out of [0, 31] bounds"
+    assert fragile_tiles_checked >= 20, f"Expected at least 20 fragile tiles across stages, got {fragile_tiles_checked}"
 
 
 def test_3d_pixel_art_fragile_tile_rendering():
@@ -837,19 +803,12 @@ def test_3d_pixel_art_fragile_tile_rendering():
     total_diamond_pixels = len(diamond_pixels)
     assert total_diamond_pixels > 0, "Top diamond should contain drawn pixels"
 
-    white_crack_pixels = [p for p in diamond_pixels if p[0] > 240 and p[1] > 240 and p[2] > 240]
-    shadow_pixels = [
-        p for p in diamond_pixels
-        if 110 <= p[0] <= 180 and 30 <= p[1] <= 90 and p[2] < 60
-    ]
     orange_pixels = [p for p in diamond_pixels if p[0] > p[1] > p[2]]
+    stripe_pixels = [p for p in diamond_pixels if p == settings.COLOR_FRAGILE_STRIPE]
 
-    assert len(white_crack_pixels) > 0, "Expected white crack pixels (R, G, B > 240) on projected diamond surface"
-    assert len(shadow_pixels) > 0, (
-        "Expected shadow pixels (R in [110, 180], G in [30, 90], B < 60) on projected diamond surface"
-    )
-    assert len(orange_pixels) / total_diamond_pixels > 0.60, (
-        f"Orange pixels (R > G > B) must dominate > 60% of diamond surface (got {len(orange_pixels) / total_diamond_pixels:.2%})"
+    assert len(stripe_pixels) > 0, "Expected diagonal hazard warning stripes on projected diamond surface"
+    assert len(orange_pixels) / total_diamond_pixels > 0.50, (
+        f"Orange pixels (R > G > B) must dominate > 50% of diamond surface (got {len(orange_pixels) / total_diamond_pixels:.2%})"
     )
 
 

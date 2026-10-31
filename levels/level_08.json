@@ -22,7 +22,7 @@
       "id": "split_garden_gate",
       "type": "split",
       "position": [4, 4],
-      "effect": {"type": "split", "destinations": [[4, 5], [4, 6]], "trigger": "enter"}
+      "effect": {"type": "split", "destinations": [[4, 5], [2, 7]], "trigger": "enter"}
     }
   ],
   "split_rules": {

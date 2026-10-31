@@ -21,24 +21,40 @@ class BoardRenderer:
         self.origin_x = 0
         self.origin_y = 0
 
-    def compute_layout(self, level: Level, area_rect: pygame.Rect | None = None) -> tuple[int, int, int]:
-        """Calculates origin and dynamic tile size to center the board inside the viewport area."""
+    def compute_layout(
+        self,
+        level: Level,
+        area_rect: pygame.Rect | None = None,
+        force_tile_size: int | None = None,
+    ) -> tuple[int, int, int]:
+        """Calculates origin and dynamic tile size to center active cells inside the viewport area."""
         rect = area_rect or pygame.Rect(0, 0, self.viewport_width, self.viewport_height)
         avail_w = rect.width - 2 * settings.BOARD_MARGIN
         avail_h = rect.height - 2 * settings.BOARD_MARGIN
 
-        max_cols = max(level.width, 1)
-        max_rows = max(level.height, 1)
+        all_cells = set(level.tiles.keys())
+        for b_tiles in level.bridges.values():
+            all_cells.update(b_tiles)
+        if not all_cells:
+            all_cells = {(r, c) for r in range(max(1, level.height)) for c in range(max(1, level.width))}
 
-        size_w = avail_w // max_cols
-        size_h = avail_h // max_rows
-        tile_size = max(24, min(settings.TILE_SIZE, size_w, size_h))
+        min_r = min(r for r, c in all_cells)
+        max_r = max(r for r, c in all_cells)
+        min_c = min(c for r, c in all_cells)
+        max_c = max(c for r, c in all_cells)
 
-        board_w = max_cols * tile_size
-        board_h = max_rows * tile_size
+        span_c = max(1, max_c - min_c + 1)
+        span_r = max(1, max_r - min_r + 1)
 
-        origin_x = rect.x + (rect.width - board_w) // 2
-        origin_y = rect.y + (rect.height - board_h) // 2
+        if force_tile_size is not None:
+            tile_size = force_tile_size
+        else:
+            size_w = avail_w // span_c
+            size_h = avail_h // span_r
+            tile_size = max(10, min(settings.TILE_SIZE, size_w, size_h))
+
+        origin_x = round(rect.centerx - ((min_c + max_c + 1) / 2.0) * tile_size)
+        origin_y = round(rect.centery - ((min_r + max_r + 1) / 2.0) * tile_size)
 
         self.tile_size = tile_size
         self.origin_x = origin_x
@@ -57,9 +73,13 @@ class BoardRenderer:
         level: Level,
         state: GameState,
         area_rect: pygame.Rect | None = None,
+        camera_offset: tuple[float, float] = (0.0, 0.0),
+        force_tile_size: int | None = None,
     ) -> None:
         """Draws all board tiles, bridges, and switches."""
-        self.compute_layout(level, area_rect)
+        self.compute_layout(level, area_rect, force_tile_size=force_tile_size)
+        self.origin_x += round(camera_offset[0])
+        self.origin_y += round(camera_offset[1])
 
         # Build bridge open/closed status map from state.bridge_mask
         bridge_index_map = {b_id: i for i, b_id in enumerate(level.bridges.keys())}
@@ -106,32 +126,18 @@ class BoardRenderer:
         pygame.draw.circle(surface, settings.COLOR_GOAL_RING, center, radius, 2)
 
     def _draw_fragile_tile(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
-        # Draw base orange tile rect and highlight border
+        # Solid orange fragile body
         pygame.draw.rect(surface, settings.COLOR_FRAGILE, rect)
-        pygame.draw.rect(surface, settings.COLOR_GLASS_BORDER, rect, 2)
 
-        # Dynamic cell scale based on canonical 32x32 matrix
-        step_x = max(1.0, rect.width / 32.0)
-        step_y = max(1.0, rect.height / 32.0)
-        pw = max(1, math.ceil(step_x))
-        ph = max(1, math.ceil(step_y))
+        # Diagonal hazard warning stripes (shorter loop, trimmed at bottom right)
+        gap = max(6, self.tile_size // 6)
+        for offset in range(gap, rect.width, gap):
+            p1 = (rect.left + offset, rect.top)
+            p2 = (rect.left, rect.top + offset)
+            pygame.draw.line(surface, settings.COLOR_FRAGILE_STRIPE, p1, p2, 2)
 
-        crack_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-
-        # Draw rust-brown fracture under-shadows first (depth layer)
-        for gx, gy in settings.FRAGILE_CRACK_SHADOW:
-            px = int(gx * step_x)
-            py = int(gy * step_y)
-            pygame.draw.rect(crack_surf, settings.COLOR_GLASS_SHADOW, (px, py, pw, ph))
-
-        # Draw white starburst crack pixels second (highlight layer)
-        crack_color = settings.COLOR_GLASS_CRACK[:3]
-        for gx, gy in settings.FRAGILE_CRACK_WHITE:
-            px = int(gx * step_x)
-            py = int(gy * step_y)
-            pygame.draw.rect(crack_surf, crack_color, (px, py, pw, ph))
-
-        surface.blit(crack_surf, rect.topleft)
+        # Perimeter warning border
+        pygame.draw.rect(surface, settings.COLOR_FRAGILE_BORDER, rect, 2)
 
     def _draw_bridge_tile(self, surface: pygame.Surface, rect: pygame.Rect, is_open: bool) -> None:
         if is_open:
@@ -170,12 +176,13 @@ class BoardRenderer:
             pygame.draw.circle(surface, rim_color, center, rad, 1 if is_pressed else 2)
         elif switch.type == "heavy":
             # Industrial cast-metal base plate with rounded corners
-            sub_rect = rect.inflate(-10, -10)
-            pygame.draw.rect(surface, settings.COLOR_HEAVY_BASE, sub_rect, border_radius=4)
-            pygame.draw.rect(surface, (148, 163, 184), sub_rect, 1, border_radius=4)
+            pad = max(2, round(self.tile_size * 0.2))
+            sub_rect = rect.inflate(-pad, -pad)
+            pygame.draw.rect(surface, settings.COLOR_HEAVY_BASE, sub_rect, border_radius=max(1, sub_rect.width // 6))
+            pygame.draw.rect(surface, (148, 163, 184), sub_rect, 1, border_radius=max(1, sub_rect.width // 6))
 
             # 4 corner rivets
-            rivet_offset = 3
+            rivet_offset = max(2, sub_rect.width // 6)
             rivets = [
                 (sub_rect.left + rivet_offset, sub_rect.top + rivet_offset),
                 (sub_rect.right - rivet_offset, sub_rect.top + rivet_offset),
@@ -183,12 +190,12 @@ class BoardRenderer:
                 (sub_rect.right - rivet_offset, sub_rect.bottom - rivet_offset),
             ]
             for rx, ry in rivets:
-                pygame.draw.circle(surface, (148, 163, 184), (rx, ry), 2)
+                pygame.draw.circle(surface, (148, 163, 184), (rx, ry), max(1, sub_rect.width // 10))
 
             # 12-point closed polygon cross
             cx, cy = rect.centerx, rect.centery
-            s = max(7, min(14, self.tile_size // 4))
-            w = max(2, s // 3)
+            s = max(2, min(14, round(self.tile_size * 0.22)))
+            w = max(1, s // 3)
             points = [
                 (cx - s, cy - s + w), (cx - s + w, cy - s), (cx, cy - w),
                 (cx + s - w, cy - s), (cx + s, cy - s + w), (cx + w, cy),
@@ -201,21 +208,23 @@ class BoardRenderer:
         elif switch.type == "split":
             # Split switch: dual arched wings with dynamic gap compression
             cx, cy = rect.centerx, rect.centery
-            gap = 2 if is_pressed else 6
-            sw_w = max(8, self.tile_size // 4)
-            sw_h = max(10, self.tile_size // 3)
+            is_pr = is_pressed
+            gap = max(1, round(self.tile_size * 0.03)) if is_pr else max(1, round(self.tile_size * 0.08))
+            sw_w = max(2, round(self.tile_size * 0.14))
+            sw_h = max(3, round(self.tile_size * 0.22))
+            lw = max(1, round(self.tile_size * 0.04))
 
             left_wing = [
-                (cx - gap - sw_w, cy - sw_h), (cx - gap - sw_w // 3, cy - sw_h),
-                (cx - gap - sw_w // 3, cy - sw_h // 3), (cx - gap, cy),
-                (cx - gap - sw_w // 3, cy + sw_h // 3), (cx - gap - sw_w // 3, cy + sw_h),
-                (cx - gap - sw_w, cy + sw_h), (cx - gap - sw_w * 2 // 3, cy),
+                (cx - gap - sw_w, cy - sw_h), (cx - gap - max(1, sw_w // 3), cy - sw_h),
+                (cx - gap - max(1, sw_w // 3), cy - max(1, sw_h // 3)), (cx - gap, cy),
+                (cx - gap - max(1, sw_w // 3), cy + max(1, sw_h // 3)), (cx - gap - max(1, sw_w // 3), cy + sw_h),
+                (cx - gap - sw_w, cy + sw_h), (cx - gap - max(1, sw_w * 2 // 3), cy),
             ]
             right_wing = [
-                (cx + gap + sw_w, cy - sw_h), (cx + gap + sw_w // 3, cy - sw_h),
-                (cx + gap + sw_w // 3, cy - sw_h // 3), (cx + gap, cy),
-                (cx + gap + sw_w // 3, cy + sw_h // 3), (cx + gap + sw_w // 3, cy + sw_h),
-                (cx + gap + sw_w, cy + sw_h), (cx + gap + sw_w * 2 // 3, cy),
+                (cx + gap + sw_w, cy - sw_h), (cx + gap + max(1, sw_w // 3), cy - sw_h),
+                (cx + gap + max(1, sw_w // 3), cy - max(1, sw_h // 3)), (cx + gap, cy),
+                (cx + gap + max(1, sw_w // 3), cy + max(1, sw_h // 3)), (cx + gap + max(1, sw_w // 3), cy + sw_h),
+                (cx + gap + sw_w, cy + sw_h), (cx + gap + max(1, sw_w * 2 // 3), cy),
             ]
             color = (200, 240, 255) if is_pressed else settings.COLOR_SPLIT_CYAN
 
@@ -223,5 +232,5 @@ class BoardRenderer:
             pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, left_wing, 1)
             pygame.draw.polygon(surface, color, right_wing)
             pygame.draw.polygon(surface, settings.COLOR_SPLIT_DARK, right_wing, 1)
-            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 2), (cx, cy + sw_h + 2), 2)
+            pygame.draw.line(surface, (15, 23, 42), (cx, cy - sw_h - 1), (cx, cy + sw_h + 1), lw)
 
