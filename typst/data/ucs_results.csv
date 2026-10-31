@@ -1,0 +1,11 @@
+level,success,steps,cost,nodes,time_ms,memory_kb,unit_steps,unit_cost_stepcost,unit_nodes,unit_time_ms,path
+level_01,True,10,13.3,68,23.35,31,10,13.3,65,22.16,R R U U R D D R R R
+level_02,True,9,13.1,41,19.68,25,9,13.2,44,17.48,R R R R D L U R R
+level_03,True,9,13.5,24,10.85,16,9,13.5,25,10.53,R R D R U R R R R
+level_04,True,7,10.5,37,12.66,20,7,10.5,32,9.36,R D R R R R R
+level_05,True,12,19.3,65,19.77,30,12,19.3,62,17.13,R R U U R D D R R R R R
+level_06,True,12,18.3,42,17.4,23,12,18.3,43,15.12,R U D R R R U D R R R R
+level_07,True,12,17.6,36,14.73,20,12,17.6,37,13.78,R R U U D D R R R R R R
+level_08,True,9,12.2,1444,572.6,939,9,12.2,511,207.24,R R SPACE R U R D R R
+level_09,True,11,15.3,3354,1520.54,1923,11,15.3,1261,561.28,R R R D R SPACE U R R R R
+level_10,True,18,24.5,3925,1809.89,2032,17,25.2,3134,1390.92,R R R SPACE R U U R SPACE D D R R R R R R R

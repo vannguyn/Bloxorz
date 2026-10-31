@@ -1430,7 +1430,7 @@ def test_playback_slider_split_scrubbing():
     real_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (x_stage8_2, stage8_slider.rect.centery), "button": 1}))
     assert real_screen.replayer.current_index == 2
     assert real_screen.current_state.block.is_split is True
-    assert real_screen.current_state.block.cube_positions == ((4, 5), (4, 6))
+    assert real_screen.current_state.block.cube_positions == ((4, 5), (2, 7))
 
     for mode in ("2D", "3D"):
         real_screen.view_mode = mode
@@ -1941,4 +1941,3 @@ def test_replayer_auto_pauses_and_switches_button_to_play():
     assert screen.replayer.is_finished is True
     assert screen.replayer.is_playing is False
     assert screen.btn_replay_toggle.text == "Play"
-

@@ -12,12 +12,10 @@ from core.interfaces import BlockState, GameState, Level, Orientation, SolverRes
 
 
 class StepCost:
-    """Shared UCS cost policy, copied without changing its formula.
+    """Shared transition-cost policy used by UCS and A*.
 
-    Prepare map penalties once per solve with StepCost(level). The optional
-    constructor also preserves UCSSolver() and its existing prepare/method API
-    when UCS inherits this policy. A policy instance belongs to one map at a
-    time; do not share a prepared instance across concurrent solves.
+    A* prepares the policy with ``StepCost(level)``. UCS inherits it and
+    prepares the map penalties at the start of each solve.
     """
 
     COST_TIP_OVER = 1.0
@@ -37,6 +35,7 @@ class StepCost:
     )
 
     def __init__(self, level: Level | None = None) -> None:
+        self._cell_penalty: dict[tuple[int, int], float] | None = None
         if level is not None:
             self._precompute_cell_penalty(level)
 
@@ -45,6 +44,9 @@ class StepCost:
 
     def step_cost(self, state: GameState, action: str, next_state: GameState, level: Level) -> float:
         """Cost of one transition = move effort + risk of the destination cells. Always > 0."""
+        if self._cell_penalty is None:
+            raise RuntimeError("StepCost must be prepared with a level before use")
+
         cost = self._move_effort(state.block, action, next_state.block)
 
         for cell in next_state.occupied_cells():
