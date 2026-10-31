@@ -27,7 +27,6 @@ from tests.mocks import (
     mock_level_with_fragile,
     mock_level_with_bridge,
     mock_level_split,
-    MockBFSSolver,
 )
 
 
@@ -145,7 +144,8 @@ def test_sync_solver_bridge_contract():
     result = on_solve("BFS", level, state)
 
     assert result.success is True
-    assert result.path == ["R", "R", "R", "R"]
+    assert result.path is not None
+    assert result.solution_length == len(result.path)
     assert result.expanded_nodes > 0
     assert result.search_time_ms >= 0
     assert result.peak_memory_kb >= 0
@@ -171,7 +171,7 @@ def test_async_solver_bridge_and_replayer():
     assert game_screen.solver_bridge.state == SolverBridgeState.FINISHED
     assert game_screen.latest_result is not None
     assert game_screen.replayer is not None
-    assert game_screen.replayer.total_steps == 4
+    assert game_screen.replayer.total_steps == game_screen.latest_result.solution_length
 
     # Test stepping forward in replay
     init_idx = game_screen.replayer.current_index
@@ -1237,7 +1237,7 @@ def test_playback_slider_drag_auto_pause():
     screen = GameScreen(surface, levels=_mock_levels())
     screen.load_level(0)
 
-    # Solve level (4 steps)
+    # Solve the level with BFS.
     screen.trigger_solve("BFS")
     t0 = time.time()
     while screen.solver_bridge.state == SolverBridgeState.RUNNING:
@@ -1249,11 +1249,11 @@ def test_playback_slider_drag_auto_pause():
     assert screen.replayer is not None
     assert screen.replayer.is_playing is True
     total_steps = screen.replayer.total_steps
-    assert total_steps == 4
 
     # Simulate mouse drag at 50% of the slider track
     slider = screen.timeline_slider
-    click_mid_x = slider.rect.left + slider.rect.width // 2
+    midpoint = total_steps // 2
+    click_mid_x = slider.rect.left + round(midpoint / total_steps * slider.rect.width)
     click_y = slider.rect.centery
 
     down_ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (click_mid_x, click_y), "button": 1})
@@ -1263,18 +1263,17 @@ def test_playback_slider_drag_auto_pause():
     assert screen.replayer.is_playing is False
     assert screen.btn_replay_toggle.text == "Play"
 
-    # Value should scrub to step 2 (50% of 4)
-    assert screen.timeline_slider.value == 2
-    assert screen.replayer.current_index == 2
+    assert screen.timeline_slider.value == midpoint
+    assert screen.replayer.current_index == midpoint
     assert screen.current_state == screen.replayer.current_state
     assert screen.outcome_status is None
 
-    # Scrub to step 1 (25% of 4)
-    click_q_x = slider.rect.left + slider.rect.width // 4
+    quarter_step = round(total_steps / 4)
+    click_q_x = slider.rect.left + round(quarter_step / total_steps * slider.rect.width)
     move_q_ev = pygame.event.Event(pygame.MOUSEMOTION, {"pos": (click_q_x, click_y), "buttons": (1, 0, 0)})
     screen.handle_event(move_q_ev)
-    assert screen.timeline_slider.value == 1
-    assert screen.replayer.current_index == 1
+    assert screen.timeline_slider.value == quarter_step
+    assert screen.replayer.current_index == quarter_step
     assert screen.current_state == screen.replayer.current_state
 
     # Scrub back to start (step 0)
@@ -1293,7 +1292,7 @@ def test_playback_slider_drag_auto_pause():
     # Verify scrubbing clears existing win status
     screen.outcome_status = "WIN"
     slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (click_q_x, click_y), "button": 1}))
-    assert screen.replayer.current_index == 1
+    assert screen.replayer.current_index == quarter_step
     assert screen.outcome_status is None
 
 
@@ -1462,13 +1461,13 @@ def test_playback_slider_all_stages_scrubbing_regression():
     for idx in range(len(screen.levels)):
         screen.load_level(idx)
 
-        # Trigger solve (BFS solves mock/stub paths instantly)
+        # Solve each stage with the real BFS implementation.
         screen.trigger_solve("BFS")
         t0 = time.time()
         while screen.solver_bridge.state == SolverBridgeState.RUNNING:
             screen.update(0.05)
             time.sleep(0.005)
-            if time.time() - t0 > 3.0:
+            if time.time() - t0 > 15.0:
                 pytest.fail(f"Stage {idx + 1} solve timed out")
 
         assert screen.replayer is not None
@@ -1908,11 +1907,11 @@ def test_solver_always_solves_from_initial_state():
 
     assert screen.latest_result is not None
     assert screen.latest_result.success is True
-    # Path must be full solution from initial_state (4 steps: ["R", "R", "R", "R"])
-    assert screen.latest_result.path == ["R", "R", "R", "R"]
+    assert screen.latest_result.path is not None
+    assert screen.latest_result.solution_length == len(screen.latest_result.path)
     assert screen.replayer is not None
     assert screen.replayer.initial_state == screen.initial_state
-    assert screen.replayer.total_steps == 4
+    assert screen.replayer.total_steps == screen.latest_result.solution_length
 
 
 def test_replayer_auto_pauses_and_switches_button_to_play():

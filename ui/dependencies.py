@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from core.interfaces import Level
 from solvers.common import Solver, run_solver
+from solvers.BFS import BFSSolver
+from solvers.DFS import DFSSolver
 
 # --- Core Transition & Levels (Toggle to real core when M1 lands) ---
 from core.game_rules import apply_move, is_goal, get_successors
@@ -21,14 +23,9 @@ from tests.mocks import (
 IS_MOCK_CORE: bool = False
 
 # --- Search Solvers & Harness ---
-from tests.mocks import (
-    MockBFSSolver,
-    MockDFSSolver,
-)
 from solvers.UCS import UCSSolver
 from solvers.astar import AStarSolver
-# BFS and DFS remain stubs; UCS and A* use their real implementations.
-IS_MOCK_SOLVERS: bool = True
+IS_MOCK_SOLVERS: bool = False
 
 IS_MOCK_MODE: bool = IS_MOCK_CORE or IS_MOCK_SOLVERS
 
@@ -46,12 +43,11 @@ def get_levels() -> list[Level]:
 
 
 def get_solver(algo: str) -> Solver:
-    """Returns an instantiated solver instance for the given algorithm name."""
     name = algo.strip().upper()
     if name == "BFS":
-        return MockBFSSolver()
+        return BFSSolver()
     elif name == "DFS":
-        return MockDFSSolver()
+        return DFSSolver()
     elif name == "UCS":
         return UCSSolver()
     elif name in ("ASTAR", "A*"):

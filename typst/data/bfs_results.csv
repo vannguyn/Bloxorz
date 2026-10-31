@@ -1,0 +1,12 @@
+level,success,time_ms_mean,time_ms_stdev,peak_memory_kb,expanded_nodes,solution_length
+level_01,True,0.525,0.046,17,52,10
+level_02,True,0.5,0.131,12,37,9
+level_03,True,0.373,0.028,7,20,9
+level_04,True,0.325,0.085,8,23,7
+level_05,True,0.552,0.138,16,51,12
+level_06,True,0.564,0.116,12,39,12
+level_07,True,0.463,0.071,9,31,12
+level_08,True,5.143,0.633,125,292,9
+level_09,True,17.156,0.783,333,887,11
+level_10,True,60.742,6.993,1060,2864,17
+level_11,True,584.956,33.589,10552,25815,55
