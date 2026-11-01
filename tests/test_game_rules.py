@@ -141,21 +141,18 @@ class TestFragileTiles:
         next_state = apply_move(state, "R", level)
         assert next_state is None
 
-    def test_lying_on_fragile_supported(self):
+    def test_lying_across_fragile_and_floor_collapses(self):
         tiles = {(r, c): TileType.FLOOR for r in range(4) for c in range(6)}
         tiles[(1, 2)] = TileType.FRAGILE
         level = create_simple_level(tiles=tiles)
 
-        # Standing at (1, 1). Rolling R lies horizontally at (1, 2) occupying (1, 2) [fragile] & (1, 3) [floor]
+        # Standing at (1, 1). Rolling R lies across (1, 2) [fragile] and (1, 3) [floor].
         state = GameState(
             block=BlockState(r=1, c=1, orientation=Orientation.STANDING),
             bridge_mask=0,
         )
         next_state = apply_move(state, "R", level)
-        assert next_state is not None
-        assert next_state.block.orientation == Orientation.LYING_H
-        assert next_state.block.r == 1
-        assert next_state.block.c == 2
+        assert next_state is None
 
     def test_lying_across_both_fragile_tiles_supported(self):
         tiles = {(r, c): TileType.FLOOR for r in range(4) for c in range(6)}
@@ -626,4 +623,3 @@ class TestGetSuccessors:
         succs = get_successors(state, level)
         actions = [a for a, s in succs]
         assert "SPACE" in actions
-

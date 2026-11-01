@@ -19,6 +19,7 @@ from rendering.block_renderer import BlockRenderer
 from rendering.animation import SolutionReplayer
 from ui.button import Button
 from ui.game_screen import GameScreen
+from ui.menu_screen import MenuScreen
 from ui.result_screen import ResultOverlay
 from ui.solver_bridge import on_solve, AsyncSolverBridge, SolverBridgeState
 from ui.dependencies import is_goal
@@ -53,6 +54,88 @@ def test_headless_game_initialization():
     assert game_screen.surface.get_size() == (settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT)
     assert len(game_screen.levels) >= 4
     assert game_screen.current_state.block.orientation == Orientation.STANDING
+
+
+def test_menu_screen_starts_game_only_after_button_click():
+    surface = pygame.Surface((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    menu_screen = MenuScreen(surface)
+
+    menu_screen.draw()
+    assert not menu_screen.started
+
+    outside = (0, 0)
+    menu_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=outside))
+    menu_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=outside))
+    assert not menu_screen.started
+
+    click = menu_screen.start_button.rect.center
+    menu_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=click))
+    menu_screen.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=click))
+    assert menu_screen.started
+
+
+def test_run_game_creates_game_after_start_button_click(monkeypatch):
+    import main
+    import ui.game_screen
+
+    batches = iter(
+        [
+            [],
+            [
+                pygame.event.Event(
+                    pygame.MOUSEBUTTONDOWN,
+                    button=1,
+                    pos=(settings.WINDOW_WIDTH // 2, settings.WINDOW_HEIGHT // 2 + 46),
+                ),
+                pygame.event.Event(
+                    pygame.MOUSEBUTTONUP,
+                    button=1,
+                    pos=(settings.WINDOW_WIDTH // 2, settings.WINDOW_HEIGHT // 2 + 46),
+                ),
+            ],
+            [pygame.event.Event(pygame.QUIT)],
+        ]
+    )
+    event_polls = 0
+
+    def get_events():
+        nonlocal event_polls
+        event_polls += 1
+        return next(batches)
+
+    class StubGameScreen:
+        def __init__(self, surface):
+            assert event_polls == 2
+            self.solver_bridge = self
+            self.update_calls = 0
+
+        def handle_event(self, event):
+            pass
+
+        def update(self, dt):
+            self.update_calls += 1
+
+        def draw(self):
+            pass
+
+        def cancel(self):
+            pass
+
+    created_screens = []
+
+    def create_game_screen(surface):
+        game_screen = StubGameScreen(surface)
+        created_screens.append(game_screen)
+        return game_screen
+
+    monkeypatch.setattr(pygame.event, "get", get_events)
+    monkeypatch.setattr(pygame, "quit", lambda: None)
+    monkeypatch.setattr(ui.game_screen, "GameScreen", create_game_screen)
+
+    main.run_game()
+
+    assert len(created_screens) == 1
+    assert created_screens[0].update_calls == 2
 
 
 def test_render_all_mock_levels():
@@ -99,6 +182,16 @@ def test_manual_input_movement():
     assert game_screen.moves_count == 1
     assert game_screen.current_state.block.orientation == Orientation.LYING_H
     assert game_screen.current_state.block.c == start_pos[1] + 1
+
+
+def test_mixed_fragile_and_floor_move_shows_fragile_loss():
+    surface = pygame.Surface((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
+    game_screen = GameScreen(surface, levels=_mock_levels())
+    game_screen.load_level(1)
+
+    game_screen.handle_manual_move("R")
+
+    assert game_screen.outcome_status == "LOST_FRAGILE"
 
 
 def test_solve_button_starts_from_current_state(monkeypatch):

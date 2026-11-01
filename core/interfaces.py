@@ -30,7 +30,7 @@ class TileType(Enum):
     VOID = 0
     FLOOR = 1
     GOAL = 2
-    FRAGILE = 3    # orange — only supports lying block
+    FRAGILE = 3    # orange — collapse when stood on or paired with regular floor
     BRIDGE = 4     # passability controlled by switches
     SWITCH = 5
 

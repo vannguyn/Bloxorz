@@ -16,3 +16,8 @@ Các mục tiêu chính:
   kiểm tra lời giải bằng cách phát lại qua luật trò chơi.
 - Trình bày thiết kế, kết quả và giới hạn của từng thuật toán trong các
   mục riêng của báo cáo.
+
+== Video giới thiệu
+
+Video giới thiệu và minh họa đồ án:
+#link("https://youtu.be/XMKaTLub6uA")[https://youtu.be/XMKaTLub6uA]

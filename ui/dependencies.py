@@ -11,7 +11,7 @@ from solvers.BFS import BFSSolver
 from solvers.DFS import DFSSolver
 
 # --- Core Transition & Levels (Toggle to real core when M1 lands) ---
-from core.game_rules import apply_move, is_goal, get_successors
+from core.game_rules import apply_move, causes_fragile_collapse, is_goal, get_successors
 from levels.level_loader import load_all_levels
 from tests.mocks import (
     mock_level_simple,
@@ -71,6 +71,7 @@ __all__ = [
     "IS_MOCK_SOLVERS",
     "IS_MOCK_MODE",
     "apply_move",
+    "causes_fragile_collapse",
     "is_goal",
     "get_successors",
     "get_levels",

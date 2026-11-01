@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import pygame
 from config import settings
-from core.interfaces import GameState, Level, Orientation, SolverResult, TileType
+from core.interfaces import GameState, Level, Orientation, SolverResult
+from core.movement import roll_block
 from rendering.board_renderer import BoardRenderer
 from rendering.block_renderer import BlockRenderer
 from rendering.isometric_board_renderer import IsometricBoardRenderer
@@ -34,6 +35,7 @@ from ui.result_screen import ResultOverlay
 from ui.solver_bridge import AsyncSolverBridge, SolverBridgeState
 from ui.dependencies import (
     apply_move,
+    causes_fragile_collapse,
     is_goal,
     get_levels,
     get_mode_badge_text,
@@ -546,12 +548,10 @@ class GameScreen:
 
         next_state = apply_move(self.current_state, action, self.level)
         if next_state is None:
-            # Check why it's illegal
-            if self.current_state.block.orientation == Orientation.STANDING:
-                stand_cell = (self.current_state.block.r, self.current_state.block.c)
-                if self.level.tiles.get(stand_cell) == TileType.FRAGILE:
-                    self.outcome_status = "LOST_FRAGILE"
-                    return
+            next_block = roll_block(self.current_state.block, action)
+            if causes_fragile_collapse(next_block, self.level):
+                self.outcome_status = "LOST_FRAGILE"
+                return
             self.outcome_status = "LOST_FALL"
             return
 

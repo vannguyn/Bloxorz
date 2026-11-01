@@ -50,6 +50,19 @@ def is_goal(state: GameState, level: Level) -> bool:
     return (state.block.r, state.block.c) == level.goal
 
 
+def causes_fragile_collapse(block: BlockState, level: Level) -> bool:
+    """Returns whether the block's current footprint overloads a fragile tile."""
+    occupied_cells = block.occupied_cells()
+    fragile_cells = [
+        cell for cell in occupied_cells if level.tiles.get(cell) == TileType.FRAGILE
+    ]
+    if not fragile_cells:
+        return False
+    if block.is_split or block.orientation == Orientation.STANDING:
+        return True
+    return any(level.tiles.get(cell) == TileType.FLOOR for cell in occupied_cells)
+
+
 def apply_move(state: GameState, action: str, level: Level) -> GameState | None:
     """
     Applies an action to the game state and returns the resulting GameState,
@@ -105,10 +118,8 @@ def apply_move(state: GameState, action: str, level: Level) -> GameState | None:
             if tile is None or tile == TileType.VOID or tile == TileType.BRIDGE:
                 return None  # Void or unlinked bridge tile -> fall into void
 
-        # Fragile tile check: standing upright or single split cube collapses fragile tile
-        if tile == TileType.FRAGILE:
-            if next_block.is_split or next_block.orientation == Orientation.STANDING:
-                return None  # Falls through fragile tile
+    if causes_fragile_collapse(next_block, level):
+        return None  # Falls through or overloads a fragile tile
 
     # 4. Adjacency & Merge for split cubes
     if next_block.is_split and next_block.cube_positions and len(next_block.cube_positions) == 2:
@@ -194,7 +205,7 @@ def get_successors(state: GameState, level: Level) -> list[tuple[str, GameState]
 __all__ = [
     "VALID_ACTIONS",
     "is_goal",
+    "causes_fragile_collapse",
     "apply_move",
     "get_successors",
 ]
-

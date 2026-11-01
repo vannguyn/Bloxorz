@@ -70,6 +70,7 @@ def run_game() -> None:
 
     from config import settings
     from ui.game_screen import GameScreen
+    from ui.menu_screen import MenuScreen
 
     pygame.init()
     pygame.font.init()
@@ -79,7 +80,8 @@ def run_game() -> None:
     pygame.display.set_caption("Bloxorz Solver — AI Project 1")
     clock = pygame.time.Clock()
 
-    game_screen = GameScreen(screen)
+    menu_screen = MenuScreen(screen)
+    game_screen: GameScreen | None = None
     running = True
 
     try:
@@ -94,17 +96,25 @@ def run_game() -> None:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
+                elif game_screen is None:
+                    menu_screen.handle_event(event)
+                    if menu_screen.started:
+                        game_screen = GameScreen(screen)
                 else:
                     game_screen.handle_event(event)
 
             # Update & Render
-            game_screen.update(dt)
-            game_screen.draw()
+            if game_screen is None:
+                menu_screen.draw()
+            else:
+                game_screen.update(dt)
+                game_screen.draw()
             pygame.display.flip()
 
     finally:
         # Clean up solver worker process if any
-        game_screen.solver_bridge.cancel()
+        if game_screen is not None:
+            game_screen.solver_bridge.cancel()
         pygame.quit()
 
 

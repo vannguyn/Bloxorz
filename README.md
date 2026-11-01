@@ -126,7 +126,8 @@ Các trường dưới đây mô tả dữ liệu cơ chế; phần code đọc 
 được triển khai trong `core/` và `levels/`.
 
 - **`fragile_tiles`**: Danh sách tọa độ `[x, y]` của ô dễ vỡ. Mỗi tọa độ cũng
-  phải có trong `tiles`. Khối đứng trên ô này thì rơi; khối nằm bắc qua ô thì
+  phải có trong `tiles`. Khối đứng trên ô dễ vỡ sẽ rơi; khối nằm bắc qua một ô
+  dễ vỡ và một ô sàn thường cũng sẽ thua do quá tải. Khối nằm trên hai ô dễ vỡ
   vẫn an toàn.
 - **`bridges`**: Mỗi cầu có `id` duy nhất, `tiles` là các tọa độ thuộc cầu và
   `initial_state` là `"open"` hoặc `"closed"`. Cầu đóng được xem như khoảng
@@ -193,8 +194,8 @@ số node mở rộng và độ dài lời giải để phục vụ phần thự
 
 ### `ui/` — màn hình và thao tác người chơi
 
-- **`menu_screen.py`**: Màn hình bắt đầu, cho phép bắt đầu game và mở các lựa
-  chọn cần thiết.
+- **`menu_screen.py`**: Màn hình khởi động; nhấn **START GAME** để vào màn chơi
+  đầu tiên.
 - **`game_screen.py`**: Kết hợp hiển thị bàn/khối với HUD (ví dụ số bước và tên
   màn), nhận lệnh điều khiển và chuyển lệnh tới phần logic.
 - **`pause_screen.py`**: Giao diện tạm dừng, tiếp tục chơi hoặc quay lại menu.
@@ -260,5 +261,6 @@ python main.py
 python -m pytest
 ```
 
-Nếu dự án chọn công cụ kiểm thử khác pytest, cập nhật lệnh và khai báo thư viện
-trong `requirements.txt` cho nhất quán.
+Khi cửa sổ game mở, nhấn **START GAME** để bắt đầu. Dùng WASD hoặc các phím mũi
+tên để di chuyển; nhấn Esc để thoát.
+
